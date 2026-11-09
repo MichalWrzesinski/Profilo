@@ -55,4 +55,12 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 
 ## Commands
 
-Added in iteration 0.
+- `make up` (first run creates `.env`), `make down`, `make logs`, `make migrate`, `make seed`, `make check` (= `make lint` + `make test`), `make format`, `make api-shell`, `make hooks`.
+- Only Docker and make are needed; tools run in containers (`docker compose run --rm api|client …`). Host Node/Python versions are irrelevant.
+- Backend tests use the `profilo_test` database (`TEST_DATABASE_URL`), created by `infra/postgres/init/`.
+- Baseline (TASK-001): backend 11 tests, coverage 90.6 % (threshold 80 %), Ruff and mypy strict clean; client 1 test, coverage 100 % (threshold 80 %), ESLint, Prettier, `tsc` clean.
+
+## Pitfalls
+
+- The client image is built with the repository root as context (`client/Dockerfile`, root `.dockerignore`) because the app imports `docs/design/tokens.css`. Fonts come from `next/font` (self-hosted); do not add the Google Fonts `@import` to the app.
+- Compose named volumes `client_node_modules` and `client_next` shadow the bind mount; after changing `package.json` run `docker compose build client` and `docker compose up -d --renew-anon-volumes client` (or `make down` + remove the volume).
