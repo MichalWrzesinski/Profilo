@@ -16,8 +16,9 @@ materials:
 Production database and media are backed up daily, encrypted and off-site, and restoring is tested automatically every month.
 
 ## Scope
-- Backup container or scheduled job: encrypted PostgreSQL dumps and media archive to the Storage Box in another location, retention 30 days.
-- Monthly restore test into a temporary database with a report (log + alert on failure); alert when a daily backup fails.
+- `backup` service in the production Compose (runs on the server, not in GitHub Actions): daily encrypted PostgreSQL dumps and media archive to the Storage Box in another location, retention 30 days.
+- Monthly restore test on the server into a temporary database with a report (log + alert e-mail on failure); alert e-mail when a daily backup fails.
+- Storage Box credentials and encryption key delivered to the server by `deploy-production` from `PROD_*` repository secrets (AGENTS.md).
 
 ## Out of scope
 - Point-in-time recovery.
@@ -34,7 +35,7 @@ Production database and media are backed up daily, encrypted and off-site, and r
 - When the Storage Box is unreachable, then the backup job fails and an alert e-mail is sent.
 
 ## Technical notes
-Needs from the user: Storage Box and its credentials as repository secrets.
+Needs from the user: Storage Box; its credentials and the backup encryption key as `PROD_*` repository secrets, used only by the deploy workflow.
 
 ## Report
 Filled in by development after the task.

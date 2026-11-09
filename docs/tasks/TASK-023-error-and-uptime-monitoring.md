@@ -15,8 +15,8 @@ materials:
 Errors in api, worker and client and unavailability of staging and production are reported and alerted.
 
 ## Scope
-- Sentry SDK in api, worker and client (EU region, `send_default_pii` off, sensitive fields filtered), release = commit SHA, environment name; CI creates releases and uploads client source maps without publishing them.
-- Better Stack Uptime monitors for `/ready` on staging and production; alerts by e-mail on downtime, error spikes and failed deployments.
+- Sentry SDK in api, worker and client (EU region, `send_default_pii` off, sensitive fields filtered), release = commit SHA, environment name; `deploy-staging` and `deploy-production` create the Sentry release and upload client source maps (not published on the server). No Sentry token in `ci.yml` (AGENTS.md).
+- Better Stack Uptime monitors for `/ready` on staging and production with e-mail alerts on downtime; Sentry alert rule for error spikes; failed deployments alerted by GitHub Actions failure notifications of the deploy workflows (e-mail to the user).
 
 ## Out of scope
 - Performance tracing and dashboards.
@@ -33,7 +33,7 @@ Errors in api, worker and client and unavailability of staging and production ar
 - When an error happens during registration, then the Sentry event contains no e-mail, password or token.
 
 ## Technical notes
-Needs from the user: Sentry and Better Stack accounts and their keys as repository secrets.
+Needs from the user: Sentry and Better Stack accounts; keys as repository secrets used only by the deploy workflows; GitHub Actions failure e-mails enabled in the user notification settings.
 
 ## Report
 Filled in by development after the task.
