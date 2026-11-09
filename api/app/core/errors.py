@@ -9,8 +9,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.core.logging import log
-
 PROBLEM_JSON = "application/problem+json"
 PROBLEM_BASE = "https://profilo.pl/problems/"
 
@@ -79,8 +77,3 @@ def register_error_handlers(app: FastAPI) -> None:
             for err in exc.errors()
         ]
         return problem_response(422, "validation_error", errors=errors)
-
-    @app.exception_handler(Exception)
-    async def _unhandled(_: Request, exc: Exception) -> JSONResponse:
-        log.error("unhandled_exception", exc_info=exc)
-        return problem_response(500, "internal_error")

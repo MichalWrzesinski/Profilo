@@ -31,13 +31,18 @@ async def _check_valkey() -> None:
 async def ready() -> object:
     """The app can serve requests: PostgreSQL and Valkey are reachable."""
     timeout = get_settings().dependency_timeout_seconds
-    failed: list[str] = []
-    for name, check in (("database", _check_database), ("valkey", _check_valkey)):
+    checks = {"database": _check_database, "valkey": _check_valkey}
+
+    async def run(name: str) -> str | None:
         try:
-            await asyncio.wait_for(check(), timeout=timeout)
-        except Exception as exc:  # any failure means "not ready"
+            await asyncio.wait_for(checks[name](), timeout=timeout)
+        except Exception as exc:  # any failure, including timeout, means "not ready"
             log.warning("readiness_check_failed", dependency=name, error=type(exc).__name__)
-            failed.append(name)
+            return name
+        return None
+
+    results = await asyncio.gather(*(run(name) for name in checks))
+    failed = [name for name in results if name]
     if failed:
         return problem_response(
             503,

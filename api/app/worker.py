@@ -19,7 +19,9 @@ celery_app.conf.update(
     timezone="UTC",
     beat_schedule={},
 )
-celery_app.autodiscover_tasks(["app.modules"])
+celery_app.autodiscover_tasks(
+    [f"app.modules.{name}" for name in ("accounts", "profiles", "media", "notifications", "qr")]
+)
 
 
 @celery_app.task(name="system.ping")  # type: ignore[untyped-decorator]
