@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Build context: repository root (the app imports docs/design/tokens.css).
-FROM node:26-alpine AS base
+FROM node:26.13.0-alpine AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /repo/client
 
@@ -27,7 +27,7 @@ COPY client/ ./
 RUN npm run build
 
 # Production image: Next.js standalone server only.
-FROM node:26-alpine AS prod
+FROM node:26.13.0-alpine AS prod
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 WORKDIR /app
 COPY --from=build --chown=node:node /repo/client/.next/standalone ./
