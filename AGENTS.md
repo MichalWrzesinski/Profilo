@@ -30,6 +30,13 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 - No admin panel in v1 (product brief); operator actions via CLI commands in the `api` image.
 - Mode without an agent account (project-setup standard): the agent works on the user's GitHub account `MichalWrzesinski`. Rules forbidding changes to repository settings, branch protection and environments still apply, although not enforced technically. Production deployment (`Deploy production` workflow) is started and approved only by the user; the agent reports readiness and gives the workflow link (overrides deployment standard: the agent never starts the production workflow).
 
+- No branch protection, required reviewers or secret scanning: the repository is private on a free GitHub plan (user decision 2026-11-09). The agent still never pushes to `main`, merges only through a PR with a green `check`, and never starts production deployments. Secret scanning is replaced by gitleaks in CI. Re-run `scripts/setup-github.sh` if the plan is upgraded.
+
+## Conventions
+
+- Commit area tags: `[api]` backend, `[client]` Next.js app, `[infra]` Docker, CI, Caddy, scripts, `[docs]` documentation outside application folders. Task tag: `[TASK-NNN]` from `docs/tasks/`.
+- No AI attribution in commits or PRs (git-workflow standard).
+
 ## Commands
 
 Added in iteration 0.
