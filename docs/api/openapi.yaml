@@ -209,7 +209,7 @@ paths:
         '204': { description: 'Changed.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
-          description: Current password wrong (`invalid_password`).
+          description: Current password wrong (`invalid_password`) or e-mail not confirmed (`email_not_confirmed`).
           content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
