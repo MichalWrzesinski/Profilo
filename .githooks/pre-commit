@@ -1,0 +1,25 @@
+#!/bin/sh
+# Pre-commit checks run in Docker, so only Docker and make are needed (devops standard).
+#  1. gitleaks: blocks commits containing secrets (compensates for missing GitHub secret scanning).
+#  2. Ruff (api) and Prettier (client) in check mode, only when such files are staged.
+set -e
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+docker run --rm -v "$root":/repo -w /repo \
+  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/repo \
+  zricethezav/gitleaks:v8.28.0 git --pre-commit --staged --redact --no-banner /repo
+
+staged() { git diff --cached --name-only --diff-filter=ACMR -- "$@"; }
+
+py_files="$(staged 'api/*.py' 'api/**/*.py' | sed 's#^api/##')"
+if [ -n "$py_files" ]; then
+  # shellcheck disable=SC2086
+  docker compose run --rm --no-deps -T api sh -c "ruff format --check $(echo $py_files) && ruff check $(echo $py_files)"
+fi
+
+client_files="$(staged 'client/*' | grep -E '\.(ts|tsx|js|mjs|json|css|md)$' | grep -v 'package-lock.json' | sed 's#^client/##' || true)"
+if [ -n "$client_files" ]; then
+  # shellcheck disable=SC2086
+  docker compose run --rm --no-deps -T client npx prettier --check $(echo $client_files)
+fi

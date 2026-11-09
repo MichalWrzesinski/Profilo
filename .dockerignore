@@ -1,0 +1,13 @@
+# Used by builds with the repository root as context (client image).
+**/.git
+**/node_modules
+**/.next
+**/coverage
+.env
+.env.*
+api
+infra
+scripts
+e2e
+docs/**
+!docs/design/tokens.css
