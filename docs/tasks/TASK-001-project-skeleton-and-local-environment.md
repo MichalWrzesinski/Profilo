@@ -51,12 +51,14 @@ A developer starts the whole stack locally with `make up` and sees the Profilo p
 
 Acceptance criteria:
 - Stack starts — met; all containers healthy (start time on this machine with cached base images ≈ 1 min; a first build downloads ≈ 1 GB of images).
-- Checks pass — met: backend 11 tests, coverage 90.6 %, Ruff + mypy strict clean; client 1 test, coverage 100 %, ESLint, Prettier, `tsc` clean.
+- Checks pass — met: backend 16 tests, coverage 90.3 %, Ruff + mypy strict clean; client 1 test, coverage 100 %, ESLint, Prettier, `tsc` clean.
 - Dependency down — met: with `db` stopped, `/health` 200 and `/ready` 503 `application/problem+json`, `code: dependency_unavailable`, `Retry-After: 5`.
 - Secret in a commit — met: the hook rejected a staged AWS key.
 
 Decisions:
-- Git hook is a plain script in `.githooks/` (installed by `make hooks` via `core.hooksPath`) running gitleaks, Ruff and Prettier in Docker, instead of the `pre-commit` framework with `.pre-commit-config.yaml`: the framework needs Python on the host, which conflicts with the devops standard (only Docker and make). Same checks, different mechanism.
+- Git hook is a plain script in `.githooks/` (installed by `make hooks` via `core.hooksPath`) running gitleaks, then Ruff and Prettier on the staged content, in Docker — instead of the `pre-commit` framework with `.pre-commit-config.yaml`, which needs Python on the host (devops standard: only Docker and make). Recorded in AGENTS.md overrides.
+- Review fixes: pure ASGI request-context middleware (request id also on 500 responses, one log entry per unhandled error, id restricted to `[A-Za-z0-9._-]{1,64}`); uvicorn access log disabled and forwarded headers trusted only from `FORWARDED_ALLOW_IPS`; readiness checks in parallel; Celery autodiscovery per module package; base images pinned to patch versions, `uv` not in the production image; local ports bound to 127.0.0.1; code map in architecture.md.
+- Moved to TASK-002 (notes added there): Linux uid on bind mounts in CI, dependency audits, image digests/updates, beat healthcheck.
 - Fonts via `next/font` (self-hosted); the Google Fonts `@import` was moved from `docs/design/tokens.css` to `<link>` tags in the mockup pages, so visitors' browsers never contact Google (GDPR). Verified: no Google references in the production build.
 - Client image built from the repository root so the app imports `docs/design/tokens.css` directly (single source of tokens). Brand files copied to `client/public/`.
 - Backend tests run against a separate `profilo_test` database created by `infra/postgres/init/`.

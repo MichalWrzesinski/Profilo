@@ -28,7 +28,7 @@ flowchart LR
 | `beat` | Celery Beat schedule (single instance) |
 | `db`, `valkey` | PostgreSQL 18, Valkey 9 |
 
-## Backend modules (`api/app/modules/`)
+## Backend modules (`api/app/modules/`, shared code in `api/app/core/`)
 
 | Module | Product area | Owns tables | Public interface for other modules |
 |---|---|---|---|
@@ -37,7 +37,7 @@ flowchart LR
 | `media` | Profile (images) | `images` | `store_upload(...)`, `url_for(image, size)`, `delete_for_account(id)` |
 | `notifications` | All | — | `send(template, to, params)` as a Celery task; templates in Polish |
 | `qr` | Public page | — | `render(url, format)` |
-| `core` | — | — | settings, DB session, auth dependencies, rate limiter, Problem Details, logging, storage adapter |
+| `core` (`api/app/core/`) | — | — | settings, DB session, Valkey client, request context, Problem Details, logging, health; later auth dependencies, rate limiter, storage adapter |
 
 Rules: a module reads and writes only its own tables; other modules call its service functions. Account deletion: `accounts` deletes the account in one transaction (FK cascades remove profile, links, snapshot, image rows), then enqueues `media.delete_files(account_id)` and the "account deleted" e-mail. `ops` CLI commands (`profilo block-profile <nick>`, `unblock-profile`) cover operator actions (PUB-BR-10) — no admin panel in v1.
 
@@ -181,4 +181,19 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 
 ## Code map
 
-Filled in by iteration 0.
+| Path | Responsibility | State |
+|---|---|---|
+| `api/app/main.py` | FastAPI app factory: error handlers, request-context middleware, routers | TASK-001 |
+| `api/app/core/settings.py` | Settings from environment (`Settings`, `get_settings`) | TASK-001 |
+| `api/app/core/db.py` | Async SQLAlchemy engine, session dependency, declarative `Base` | TASK-001 |
+| `api/app/core/valkey.py` | Shared Valkey (Redis protocol) client | TASK-001 |
+| `api/app/core/errors.py` | Problem Details responses, `ProblemError`, handlers for HTTP and validation errors | TASK-001 |
+| `api/app/core/request_context.py` | Pure ASGI middleware: `X-Request-ID`, log context, single log + 500 Problem for unhandled errors | TASK-001 |
+| `api/app/core/health.py` | `/health`, `/ready` (PostgreSQL and Valkey in parallel, one timeout) | TASK-001 |
+| `api/app/core/logging.py` | structlog JSON to stdout; uvicorn access log disabled | TASK-001 |
+| `api/app/worker.py` | Celery app (`worker`, `beat`), task autodiscovery per module package | TASK-001 |
+| `api/app/modules/<module>/` | Product modules (empty packages until their tasks) | — |
+| `api/alembic/` | Migrations (`0001`: citext extension) | TASK-001 |
+| `api/tests/` | pytest; integration tests use the `profilo_test` database | TASK-001 |
+| `client/src/app/` | Next.js App Router: `layout.tsx` (font, metadata, tokens), `page.tsx` placeholder | TASK-001 |
+| `infra/` | Local Caddy config, PostgreSQL init (test database) | TASK-001 |
