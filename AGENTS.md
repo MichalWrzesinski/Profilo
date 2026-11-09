@@ -22,13 +22,36 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 - UI language: Polish only; product docs and code in English
 - Runtime: Docker Compose (caddy, client, api, worker, beat, db, valkey); same Compose for staging and production
 - Hosting: Hetzner Cloud — production CX33, staging CX23, off-site backups to Storage Box (ADR 0004)
-- CI/CD: GitHub Actions; required check `check`; images in GHCR; staging auto-deploy, production via protected `production` environment
+- CI/CD: GitHub Actions; required check `check`; images in GHCR; staging auto-deploy on main; production by `deploy-production` workflow started manually by the user (no GitHub environments — see overrides)
 - Monitoring: Sentry (EU region), Better Stack Uptime on `/ready`
 
 ## Project overrides of standards
 
 - No admin panel in v1 (product brief); operator actions via CLI commands in the `api` image.
-- Mode without an agent account (project-setup standard): the agent works on the user's GitHub account `MichalWrzesinski`. Rules forbidding changes to repository settings, branch protection and environments still apply, although not enforced technically. Production deployment (`Deploy production` workflow) is started and approved only by the user; the agent reports readiness and gives the workflow link (overrides deployment standard: the agent never starts the production workflow).
+- Mode without an agent account (project-setup standard): the agent works on the user's GitHub account `MichalWrzesinski`. Rules forbidding changes to repository settings, branch protection and environments still apply, although not enforced technically. Production deployment (`deploy-production` workflow) is started only by the user (rollback: see below); the agent reports readiness and gives the workflow link (overrides deployment standard: the agent never starts the production workflow).
+- Free GitHub plan for a private repository (user decision 2026-11-09): no branch protection, no GitHub environments (so no environment secrets and no deployment approval), no GitHub secret scanning. Compensation:
+  - The agent never pushes to `main` and merges only through a PR with a green `check` and an approving review by the reviewer subagent.
+  - Secrets are repository-level. Only `deploy-staging`, `deploy-production` and `rollback-production` reference deployment secrets; the agent never adds secret references to other workflows. Production secret names are prefixed `PROD_`.
+  - `deploy-production` and `rollback-production` run only on `workflow_dispatch` from `main` and stop unless `github.actor == 'MichalWrzesinski'`. This guard only blocks other accounts: the agent acts as the same account, so keeping the agent away from production is a behavioural rule, not a technical control.
+  - Starting `deploy-production` is the user's approval; the agent never starts it. `rollback-production` follows the deployment standard: the agent may start it without consent (only images deployed to production before) and informs the user immediately.
+  - Secrets needed at runtime (Sentry, Brevo, Storage Box, uptime keys) reach the servers only through the deploy workflows; release creation and source-map upload to Sentry also happen there, never in `ci.yml`.
+  - Secrets: gitleaks as a local pre-commit hook and in the `check` job (both added in iteration 0). A secret is caught before commit locally, but after push if the hook is bypassed — accepted gap.
+- `scripts/setup-github.sh` changes repository settings, so only the user runs it (e.g. again after upgrading to GitHub Pro, which would restore branch protection and environments).
+
+## Conventions
+
+- Commit area tags by path (first matching row wins). Task tag: `[TASK-NNN]` from `docs/tasks/`.
+
+  | Path | Tag |
+  |---|---|
+  | `api/**` (incl. `api/Dockerfile`, migrations, tests) and `docs/api/openapi.yaml` | `[api]` |
+  | `client/**` (incl. `client/Dockerfile`, unit tests) and `docs/design/tokens.css` | `[client]` |
+  | `e2e/**` (Playwright) | `[client]` |
+  | `infra/**`, `.github/**`, `.claude/**`, `docker-compose*.yml`, `Makefile`, `.env.example`, `.pre-commit-config.yaml`, `scripts/**`, other root config files | `[infra]` |
+  | `docs/**` (other than above), `README.md`, `AGENTS.md`, `CLAUDE.md` | `[docs]` |
+
+  A contract change in `docs/api/openapi.yaml` goes into the `[api]` commit that implements it, before the `[client]` commit that uses it.
+- No AI attribution in commits or PRs (git-workflow standard).
 
 ## Commands
 
