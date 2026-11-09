@@ -1,0 +1,42 @@
+#!/bin/sh
+# Pre-commit checks in Docker (only Docker and make are needed — see AGENTS.md):
+#  1. gitleaks on staged changes (compensates for missing GitHub secret scanning);
+#  2. Ruff (api) and Prettier (client) on the *staged* content of changed files.
+# Ruff/Prettier use the dev images built by `make up`; without them the hook says so and stops.
+set -e
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+docker run --rm -v "$root":/repo -w /repo \
+  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/repo \
+  zricethezav/gitleaks:v8.28.0 git --pre-commit --staged --redact --no-banner /repo
+
+staged() { git diff --cached --name-only --diff-filter=ACMR -- "$@"; }
+py_files="$(staged 'api/*.py' 'api/**/*.py')"
+client_files="$(staged 'client/*' | grep -E '\.(ts|tsx|js|mjs|json|css|md)$' | grep -v 'package-lock.json' || true)"
+[ -z "$py_files$client_files" ] && exit 0
+
+need_image() {
+  docker image inspect "$1" >/dev/null 2>&1 || { echo "pre-commit: image $1 missing — run 'make up' first." >&2; exit 1; }
+}
+
+# Export the staged versions (plus tool configs) to a temporary directory.
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+# shellcheck disable=SC2086
+git checkout-index --prefix="$tmp/" -- $py_files $client_files
+git checkout-index --prefix="$tmp/" -- api/pyproject.toml client/.prettierrc.json client/.prettierignore
+
+if [ -n "$py_files" ]; then
+  need_image profilo-api:dev
+  rel="$(echo "$py_files" | sed 's#^api/##' | tr '\n' ' ')"
+  docker run --rm -v "$tmp/api":/check -w /check -e RUFF_CACHE_DIR=/tmp/ruff profilo-api:dev \
+    sh -c "ruff format --check $rel && ruff check $rel"
+fi
+
+if [ -n "$client_files" ]; then
+  need_image profilo-client:dev
+  rel="$(echo "$client_files" | sed 's#^client/##' | tr '\n' ' ')"
+  docker run --rm -v "$tmp/client":/check -w /check profilo-client:dev \
+    /repo/client/node_modules/.bin/prettier --check $rel
+fi

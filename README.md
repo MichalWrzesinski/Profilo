@@ -13,4 +13,29 @@ A simple, professional personal page that works as an online business card — o
 
 ## Development
 
-Local setup and commands are added in iteration 0 (Docker Compose + `make`).
+Requirements: Docker (with Compose v2) and `make`. Nothing else is installed locally — all tools run in containers.
+
+```bash
+make up      # first run: creates .env, builds images, starts everything, runs migrations
+make hooks   # once per clone: gitleaks secret scan before each commit
+```
+
+| URL | What |
+|---|---|
+| http://localhost:8080 | App (Caddy → Next.js `client`, `/api`, `/health`, `/ready` → FastAPI `api`) |
+| http://localhost:8080/api/docs | API docs (local only) |
+| http://localhost:8025 | Mailpit — e-mails sent locally |
+
+| Command | Does |
+|---|---|
+| `make up` / `make down` | Start / stop the stack |
+| `make logs` | Follow logs |
+| `make migrate` | Apply database migrations |
+| `make seed` | Load demo data (none yet) |
+| `make test` | Backend and frontend tests with coverage (backend uses the `profilo_test` database) |
+| `make lint` | Formatters in check mode, linters, type checks |
+| `make format` | Format code |
+| `make check` | Everything CI runs (`lint` + `test`) |
+| `make api-shell` | Shell in the api container |
+
+Local credentials in `.env.example` are for local development only.

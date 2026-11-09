@@ -1,7 +1,7 @@
 ---
 id: TASK-001
 title: Project skeleton and local environment
-status: READY
+status: DONE
 priority: highest
 iteration: ITER-00
 depends_on: []
@@ -46,4 +46,21 @@ A developer starts the whole stack locally with `make up` and sees the Profilo p
 - When `make hooks` was run and a staged file contains a string matching a secret pattern, then the commit is rejected by gitleaks.
 
 ## Report
-Filled in by development after the task.
+
+**Done.** `make up` on a clean checkout starts 8 healthy containers (caddy, client, api, worker, beat, db, valkey, mailpit); `http://localhost:8080/` shows the Profilo placeholder with the logo; `/ready` checks PostgreSQL and Valkey; migration `0001` (citext) applied.
+
+Acceptance criteria:
+- Stack starts — met; all containers healthy (start time on this machine with cached base images ≈ 1 min; a first build downloads ≈ 1 GB of images).
+- Checks pass — met: backend 16 tests, coverage 90.3 %, Ruff + mypy strict clean; client 1 test, coverage 100 %, ESLint, Prettier, `tsc` clean.
+- Dependency down — met: with `db` stopped, `/health` 200 and `/ready` 503 `application/problem+json`, `code: dependency_unavailable`, `Retry-After: 5`.
+- Secret in a commit — met: the hook rejected a staged AWS key.
+
+Decisions:
+- Git hook is a plain script in `.githooks/` (installed by `make hooks` via `core.hooksPath`) running gitleaks, then Ruff and Prettier on the staged content, in Docker — instead of the `pre-commit` framework with `.pre-commit-config.yaml`, which needs Python on the host (devops standard: only Docker and make). Recorded in AGENTS.md overrides.
+- Review fixes: pure ASGI request-context middleware (request id also on 500 responses, one log entry per unhandled error, id restricted to `[A-Za-z0-9._-]{1,64}`); uvicorn access log disabled and forwarded headers trusted only from `FORWARDED_ALLOW_IPS`; readiness checks in parallel; Celery autodiscovery per module package; base images pinned to patch versions, `uv` not in the production image; local ports bound to 127.0.0.1; code map in architecture.md.
+- Moved to TASK-002 (notes added there): Linux uid on bind mounts in CI, dependency audits, image digests/updates, beat healthcheck.
+- Fonts via `next/font` (self-hosted); the Google Fonts `@import` was moved from `docs/design/tokens.css` to `<link>` tags in the mockup pages, so visitors' browsers never contact Google (GDPR). Verified: no Google references in the production build.
+- Client image built from the repository root so the app imports `docs/design/tokens.css` directly (single source of tokens). Brand files copied to `client/public/`.
+- Backend tests run against a separate `profilo_test` database created by `infra/postgres/init/`.
+
+Limitations: no CI yet (TASK-002); local Caddy has no security headers yet (TASK-003); `make seed` has no data until the first features.

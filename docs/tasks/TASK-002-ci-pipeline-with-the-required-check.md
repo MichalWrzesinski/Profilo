@@ -41,5 +41,11 @@ Every pull request runs one required `check` job, and every merge to main publis
 ## Technical notes
 Branch protection is not available (free plan); the agent treats a green `check` as mandatory before merging (AGENTS.md).
 
+From the TASK-001 review, to handle here:
+- Dev containers run as uid 999 (`app`) and 1000 (`node`) and write into bind mounts (`.coverage`, caches, `coverage/`, `next-env.d.ts`); on Linux runners (uid 1001) this may fail with EACCES — run CI checks so that they work on Linux (e.g. matching uid or no bind mount).
+- Dependency audits: `npm audit --omit=dev` must be clean (0 today); dev dependencies have 8 moderate advisories (minimatch via eslint tooling) — report, do not fail on dev-only moderate; add `pip-audit` for the API.
+- Base images are pinned to patch versions; add digests and Renovate/Dependabot updates for Docker tags.
+- Beat healthcheck only checks that the schedule file exists — acceptable until beat has schedules (TASK-017).
+
 ## Report
 Filled in by development after the task.

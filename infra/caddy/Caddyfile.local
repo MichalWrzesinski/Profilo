@@ -1,0 +1,13 @@
+# Local development proxy: http://localhost:8080
+:80 {
+	encode zstd gzip
+
+	@api path /api/* /media/* /health /ready
+	handle @api {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy client:3000
+	}
+}

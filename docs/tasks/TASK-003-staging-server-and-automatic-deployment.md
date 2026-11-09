@@ -35,6 +35,8 @@ Each merge to main is deployed automatically to staging and verified by smoke te
 - When staging is opened over HTTP, then it redirects to HTTPS with HSTS and the security headers present.
 
 ## Technical notes
+Set `FORWARDED_ALLOW_IPS` for the api to the Caddy container network so that client IPs from `X-Forwarded-For` are trusted only from Caddy (see AGENTS.md pitfalls).
+
 Needs from the user before it can be completed: Hetzner account with the CX23 server (or API token), staging domain DNS (e.g. `staging.profilo.pl`), repository secrets for SSH (`STAGING_SSH_HOST`, `STAGING_SSH_KEY`; no GitHub environments on the free plan — AGENTS.md). Until then the task can be implemented and tested against a local VM, and reported as waiting for access.
 
 ## Report

@@ -1,0 +1,29 @@
+.main {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.logo {
+  width: 220px;
+  height: auto;
+  margin: 0 auto var(--space-8);
+}
+
+.title {
+  font-size: clamp(var(--text-2xl), 5vw, var(--text-3xl));
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--color-heading);
+  margin: 0 0 var(--space-4);
+}
+
+.lead {
+  font-size: var(--text-lg);
+  color: var(--color-text-strong-muted);
+  max-width: 34ch;
+  margin: 0 auto;
+}

@@ -36,6 +36,7 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
   - Starting `deploy-production` is the user's approval; the agent never starts it. `rollback-production` follows the deployment standard: the agent may start it without consent (only images deployed to production before) and informs the user immediately.
   - Secrets needed at runtime (Sentry, Brevo, Storage Box, uptime keys) reach the servers only through the deploy workflows; release creation and source-map upload to Sentry also happen there, never in `ci.yml`.
   - Secrets: gitleaks as a local pre-commit hook and in the `check` job (both added in iteration 0). A secret is caught before commit locally, but after push if the hook is bypassed — accepted gap.
+- Pre-commit hook is a plain script in `.githooks/pre-commit` (installed by `make hooks`), not the `pre-commit` framework named in TASK-001: the framework needs Python on the host, which conflicts with the devops standard (only Docker and make). It runs gitleaks, then Ruff and Prettier on the staged content using the dev images from `make up`.
 - `scripts/setup-github.sh` changes repository settings, so only the user runs it (e.g. again after upgrading to GitHub Pro, which would restore branch protection and environments).
 
 ## Conventions
@@ -55,4 +56,15 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 
 ## Commands
 
-Added in iteration 0.
+- `make up` (first run creates `.env`), `make down`, `make logs`, `make migrate`, `make seed`, `make check` (= `make lint` + `make test`), `make format`, `make api-shell`, `make hooks`.
+- Only Docker and make are needed; tools run in containers (`docker compose run --rm api|client …`). Host Node/Python versions are irrelevant.
+- Backend tests use the `profilo_test` database (`TEST_DATABASE_URL`), created by `infra/postgres/init/`.
+- Baseline (TASK-001): backend 16 tests, coverage 90.3 % (threshold 80 %), Ruff and mypy strict clean; client 1 test, coverage 100 % (threshold 80 %), ESLint, Prettier, `tsc` clean.
+
+## Pitfalls
+
+- The client image is built with the repository root as context (`client/Dockerfile`, root `.dockerignore`) because the app imports `docs/design/tokens.css`. Fonts come from `next/font` (self-hosted); do not add the Google Fonts `@import` to the app.
+- Local ports bind to `127.0.0.1` only (8080 app, 8025 Mailpit).
+- The API trusts `X-Forwarded-*` only from `FORWARDED_ALLOW_IPS` (uvicorn default `127.0.0.1`); staging/production must set it to the Caddy container network, otherwise client IPs (rate limits) are wrong.
+- The API has no access log by design (no visitor IPs in app logs); request ids link Caddy and API logs.
+- Compose named volumes `client_node_modules` and `client_next` shadow the bind mount; after changing `package.json` run `docker compose build client` and `docker compose up -d --renew-anon-volumes client` (or `make down` + remove the volume).
