@@ -61,18 +61,27 @@ The service has a landing page, legal pages, abuse handling, production deployme
 
 | Order | Task | Priority | Depends on | Areas |
 |---|---|---|---|---|
-| 1 | [TASK-019 Landing page and legal pages](TASK-019-landing-page-and-legal-pages.md) | high | TASK-012 | client |
-| 2 | [TASK-020 Abuse reports and operator blocking](TASK-020-abuse-reports-and-operator-blocking.md) | medium | TASK-007 | api, client |
-| 3 | [TASK-021 Production deployment, rollback, backups and monitoring](TASK-021-production-deployment-rollback-backups-and-monitoring.md) | highest | TASK-003 | infra, api, client |
+| 1 | [TASK-021 Production deployment and rollback](TASK-021-production-deployment-and-rollback.md) | highest | TASK-003 | infra |
+| 2 | [TASK-022 Daily off-site backups and restore test](TASK-022-daily-off-site-backups-and-restore.md) | high | TASK-021 | infra |
+| 3 | [TASK-023 Error and uptime monitoring](TASK-023-error-and-uptime-monitoring.md) | high | TASK-003 | infra, api, client |
+| 4 | [TASK-019 Landing page and legal pages](TASK-019-landing-page-and-legal-pages.md) | high | TASK-012 | client |
+| 5 | [TASK-020 Abuse reports and operator blocking](TASK-020-abuse-reports-and-operator-blocking.md) | medium | TASK-007 | api, client |
+
+## Needed to complete ITER-00 (from the user)
+
+- Hetzner Cloud account with the CX23 staging server (or an API token to create it).
+- Domain (e.g. `profilo.pl`) with a DNS record for staging (e.g. `staging.profilo.pl`).
+- Repository secrets for staging SSH (`STAGING_SSH_HOST`, `STAGING_SSH_KEY`).
+- Brevo account and staging SMTP key (needed by TASK-005 on staging; locally Mailpit).
 
 ## Before production (from the readiness gate)
 
-- Domain (e.g. `profilo.pl`) with DNS for production and staging; SPF, DKIM, DMARC for Brevo.
-- Hetzner Cloud account: CX33 (production), CX23 (staging), Storage Box; SSH access for GitHub Actions.
-- Brevo account and SMTP keys (staging, production).
+- Production DNS; SPF, DKIM, DMARC for Brevo.
+- Hetzner CX33 (production) and Storage Box.
+- Brevo production SMTP key.
 - Sentry (EU region) and Better Stack Uptime accounts.
 - Operator data (company or person, address, contact e-mail) for terms, privacy policy and abuse reports; review of the legal texts drafted in TASK-019.
-- GitHub environment secrets for staging and production.
+- Repository secrets `PROD_*` (no GitHub environments on the free plan).
 
 ## Assumptions to check on staging
 

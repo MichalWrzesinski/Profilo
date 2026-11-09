@@ -16,7 +16,8 @@ An owner who forgot the password sets a new one through an e-mail link.
 
 ## Scope
 - Endpoints `POST /auth/password-resets` and `/confirm`; 1-hour single-use token; all sessions revoked after reset; security notice e-mail.
-- Client: "Nie pamiętam hasła" link, request page, new password page, expired link state.
+- Client: "Nie pamiętam hasła" link on the login page and in the `email_taken` message, request page, new password page, expired link state.
+- Rate limits per IP and per e-mail for reset requests.
 
 ## Out of scope
 - Changing the login e-mail (Later).
@@ -31,6 +32,9 @@ An owner who forgot the password sets a new one through an e-mail link.
 
 ### Scenario 3: Expired link (negative)
 - When the link is older than 1 hour or used, then the page shows "Link wygasł" with a way to request a new one.
+
+### Scenario 4: Too many requests (negative)
+- When more than 5 reset requests come from one IP within an hour, then 429 with `Retry-After` is returned.
 
 ## Technical notes
 High-risk change: security review.

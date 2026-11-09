@@ -34,10 +34,13 @@ The owner confirms the e-mail address with a link, which unlocks publishing.
 - When the owner clicks "Wyślij ponownie", then a new e-mail is sent and previous links stop working.
 - When resend is clicked twice within a minute, then the second request returns 429.
 
-### Scenario 3: Expired or used link (negative)
+### Scenario 3: Logged out
+- When the link is opened while logged out, then the e-mail is confirmed and the login page shows „Adres potwierdzony — zaloguj się”.
+
+### Scenario 4: Expired or used link (negative)
 - When the link is older than 48 hours or already used, then the page shows "Link wygasł" with a button to send a new one.
 
-### Scenario 4: Provider down (negative)
+### Scenario 5: Provider down (negative)
 - When the SMTP provider fails, then registration still succeeds, the task retries with backoff and the failure after the last retry is logged as error.
 
 ## Report

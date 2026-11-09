@@ -20,10 +20,10 @@ The owner gets a nick proposed from the display name, sees availability live and
 - Nick normalisation (PRF-BR-2) as a shared pure function with unit tests, including Polish letters.
 - Reserved nicks table seeded with the system list (PRF-BR-4); endpoints `GET /nicks/suggestion`, `GET /nicks/{nick}/availability`, `PUT /me/profile/nick` with suggestions (PRF-BR-5).
 - Nick assignment and uniqueness in one transaction (PRF-BR-6); change allowed until first publication (PRF-BR-7).
-- Client: wizard shell with stepper, step 1 screen with live check (debounce 300 ms), suggestion chips, states: checking, available, taken, invalid.
+- Client: wizard shell with stepper, step 1 screen with live check (debounce 300 ms), suggestion chips, states: checking, available, taken, invalid. Until later steps exist, „Dalej” leads to the panel.
 
 ## Out of scope
-- Steps 2–4 of the wizard (TASK-009, TASK-011, TASK-012).
+- Wizard step 2 (TASK-012) and steps 3–4 (TASK-011).
 
 ## Scenarios
 

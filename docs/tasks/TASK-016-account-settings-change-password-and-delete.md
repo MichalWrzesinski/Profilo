@@ -16,7 +16,7 @@ materials:
 The owner changes the password and can permanently delete the account with the profile.
 
 ## Scope
-- `PUT /me/password` (revokes other sessions, security e-mail); `POST /me/deletion` with password: cascade delete, nick quarantine 30 days, media files deleted by a task, confirmation e-mail.
+- `PUT /me/password` for confirmed accounts only (roles table in accounts.md; 403 `email_not_confirmed` otherwise), revokes other sessions, sends a security e-mail; `POST /me/deletion` with password: cascade delete, nick quarantine 30 days, media files deleted by a task, confirmation e-mail.
 - Client: account settings page and the deletion dialog from the design system.
 
 ## Out of scope
@@ -32,6 +32,9 @@ The owner changes the password and can permanently delete the account with the p
 
 ### Scenario 3: Wrong password (negative)
 - When the current password is wrong, then 403 `invalid_password` is shown and nothing changes.
+
+### Scenario 4: Unconfirmed account (negative)
+- When an owner with an unconfirmed e-mail tries to change the password, then 403 `email_not_confirmed` is returned and deletion of the account remains available.
 
 ## Technical notes
 High-risk change (personal data deletion): security review.

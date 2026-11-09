@@ -27,7 +27,10 @@ Shared profile links show the name, headline and photo in messengers and social 
 ### Scenario 1: Preview tags
 - When a published page is fetched, then title "{name} — {headline}", description from the bio and an og:image URL returning 200 are present.
 
-### Scenario 2: Unpublished (negative)
+### Scenario 2: Performance
+- When a published page with an avatar is measured with Lighthouse (mobile) on staging, then Largest Contentful Paint is under 2.5 s.
+
+### Scenario 3: Unpublished (negative)
 - When the page is unpublished, then it is removed from the sitemap and its URL returns 404.
 
 ## Report

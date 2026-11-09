@@ -19,7 +19,7 @@ materials:
 The owner chooses Classic, Split or Card and one of 8 accent colours, and the public page renders accordingly on phones and desktops.
 
 ## Scope
-- Layout and accent fields in the draft and snapshot; Split and Card layouts per mockups (Card: icon links, list below the card when more than 6 links).
+- Renderers for the Split and Card layouts per mockups (Card: icon links, list below the card when more than 6 links); layout and accent fields already exist since TASK-004, snapshot schema unchanged.
 - Wizard step 2 with layout options and swatches; "Wygląd" section in the editor.
 - Default hero graphic in the accent colour when no background image is set.
 
@@ -34,7 +34,10 @@ The owner chooses Classic, Split or Card and one of 8 accent colours, and the pu
 ### Scenario 2: Responsive
 - When any layout is opened at 320 px and 1440 px widths, then there is no horizontal scroll and all text meets WCAG AA contrast (automated axe check).
 
-### Scenario 3: Invalid value (negative)
+### Scenario 3: Text over images
+- When a very light background image is used in Card or Classic, then text over the image keeps contrast ≥ 4.5:1 thanks to the overlay (pixel sampling in a visual test).
+
+### Scenario 4: Invalid value (negative)
 - When the API receives an accent outside the palette, then 422 is returned and the draft is unchanged.
 
 ## Report
