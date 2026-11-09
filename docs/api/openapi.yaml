@@ -1,0 +1,714 @@
+openapi: 3.1.0
+info:
+  title: Profilo API
+  version: 1.0.0
+  summary: Personal business-card pages — owner panel and public pages.
+  description: |
+    Contract-first specification for version 1. Rules referenced as `ACC-BR-*`, `PRF-BR-*`, `PUB-BR-*` are defined in `docs/product/areas/`.
+
+    Conventions
+    - JSON field names: camelCase. Times: ISO 8601 UTC.
+    - Errors: Problem Details (RFC 9457), `application/problem+json`, with a stable `code`.
+    - Auth: `Authorization: Bearer <accessToken>` (JWT, 15 min). Refresh token in HttpOnly cookie `profilo_rt` (path `/api/v1/auth`).
+    - Concurrency on the draft: optimistic locking with `version`; a stale version returns `409 draft_conflict`.
+    - Rate-limited endpoints return `429` with `Retry-After`.
+servers:
+  - url: https://profilo.pl
+    description: Production (domain to be confirmed)
+  - url: https://staging.profilo.pl
+    description: Staging
+  - url: http://localhost:8080
+    description: Local (Caddy in Docker Compose)
+tags:
+  - name: auth
+  - name: account
+  - name: profile
+  - name: links
+  - name: images
+  - name: public
+  - name: system
+
+paths:
+  /api/v1/accounts:
+    post:
+      tags: [auth]
+      operationId: register
+      summary: Register an account and log in (ACC-US-1, ACC-BR-2, ACC-BR-4)
+      description: Creates the account and an empty profile, sends the confirmation e-mail in the background, sets the refresh cookie and returns an access token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+            example: { displayName: Anna Wiśniewska, email: anna@example.pl, password: 'jasne-niebo-nad-krakowem', acceptTerms: true, challenge: null }
+      responses:
+        '201':
+          description: Account created and logged in.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/RefreshCookie' }
+            Location: { schema: { type: string }, example: /api/v1/me }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '409':
+          description: E-mail already registered (`email_taken`).
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' }, example: { type: 'https://profilo.pl/problems/email-taken', title: Account already exists, status: 409, code: email_taken, detail: 'Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło.' } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '428':
+          description: Proof-of-work challenge required (`challenge_required`) after the per-IP threshold; the response contains a new challenge.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/ChallengeProblem' } } }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Log in with e-mail and password (ACC-US-3)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+            example: { email: anna@example.pl, password: 'jasne-niebo-nad-krakowem' }
+      responses:
+        '200':
+          description: Logged in.
+          headers: { Set-Cookie: { $ref: '#/components/headers/RefreshCookie' } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Session' } } }
+        '401':
+          description: Wrong e-mail or password (`invalid_credentials`) — identical for unknown e-mail.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' }, example: { type: 'https://profilo.pl/problems/invalid-credentials', title: Invalid credentials, status: 401, code: invalid_credentials, detail: 'Nieprawidłowy e-mail lub hasło.' } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refreshSession
+      summary: Rotate the refresh token and get a new access token
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - { name: profilo_rt, in: cookie, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: New session.
+          headers: { Set-Cookie: { $ref: '#/components/headers/RefreshCookie' } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Session' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: End the current session (ACC-BR-8)
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+        - { name: profilo_rt, in: cookie, required: false, schema: { type: string } }
+      responses:
+        '204':
+          description: Logged out; refresh cookie cleared. Idempotent.
+          headers: { Set-Cookie: { $ref: '#/components/headers/RefreshCookie' } }
+
+  /api/v1/auth/email-confirmations:
+    post:
+      tags: [auth]
+      operationId: resendEmailConfirmation
+      summary: Resend the confirmation link (ACC-US-7, ACC-BR-5)
+      responses:
+        '202': { description: 'E-mail queued. Earlier links are invalidated.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Already confirmed (`email_already_confirmed`).
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/auth/email-confirmations/confirm:
+    post:
+      tags: [auth]
+      operationId: confirmEmail
+      summary: Confirm the e-mail with a token from the link (ACC-US-2)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TokenRequest' }
+      responses:
+        '204': { description: 'Confirmed (idempotent for an already used valid token of a confirmed account).' }
+        '410':
+          description: Link expired or used (`token_expired`) — UI offers "Wyślij nowy link".
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/v1/auth/password-resets:
+    post:
+      tags: [auth]
+      operationId: requestPasswordReset
+      summary: Request a password reset e-mail (ACC-US-4, ACC-BR-7)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, required: [email], properties: { email: { $ref: '#/components/schemas/Email' } } }
+      responses:
+        '202': { description: 'Always the same response, whether or not the account exists.' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/auth/password-resets/confirm:
+    post:
+      tags: [auth]
+      operationId: confirmPasswordReset
+      summary: Set a new password with a reset token; logs out all sessions (ACC-BR-7)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token, newPassword]
+              properties: { token: { type: string, minLength: 20, maxLength: 200 }, newPassword: { $ref: '#/components/schemas/Password' } }
+      responses:
+        '204': { description: 'Password changed.' }
+        '410':
+          description: Link expired or used (`token_expired`).
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/v1/me:
+    get:
+      tags: [account]
+      operationId: getAccount
+      summary: Current account
+      responses:
+        '200': { description: 'Account.', content: { application/json: { schema: { $ref: '#/components/schemas/Account' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/me/password:
+    put:
+      tags: [account]
+      operationId: changePassword
+      summary: Change password; other sessions are logged out (ACC-US-5)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [currentPassword, newPassword]
+              properties: { currentPassword: { type: string, maxLength: 128 }, newPassword: { $ref: '#/components/schemas/Password' } }
+      responses:
+        '204': { description: 'Changed.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Current password wrong (`invalid_password`).
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/me/deletion:
+    post:
+      tags: [account]
+      operationId: deleteAccount
+      summary: Permanently delete the account and profile (ACC-US-6, ACC-BR-9, ACC-BR-10)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, required: [password], properties: { password: { type: string, maxLength: 128 } } }
+      responses:
+        '204': { description: 'Deleted; refresh cookie cleared; nick quarantined for 30 days.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Password wrong (`invalid_password`).
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/me/profile:
+    get:
+      tags: [profile]
+      operationId: getProfile
+      summary: Owner's profile — draft, status and address
+      responses:
+        '200': { description: 'Profile.', content: { application/json: { schema: { $ref: '#/components/schemas/OwnerProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [profile]
+      operationId: updateDraft
+      summary: Autosave draft fields (PRF-US-3, PRF-US-5, PUB-US-1, PUB-US-2, PRF-BR-14)
+      description: Partial update. Send `version` from the last response; only listed fields change. `null` clears an optional field.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DraftPatch' }
+            example: { version: 7, headline: Projektantka UX/UI i konsultantka produktowa, layout: split, accent: granat }
+      responses:
+        '200': { description: 'Saved.', content: { application/json: { schema: { $ref: '#/components/schemas/OwnerProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/DraftConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/v1/me/profile/nick:
+    put:
+      tags: [profile]
+      operationId: setNick
+      summary: Set or change the nick before first publication (PRF-US-2, PRF-BR-1…7)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, required: [nick], properties: { nick: { type: string, maxLength: 60, description: Normalised by the server (PRF-BR-2) before validation. } } }
+            example: { nick: anna-wisniewska-krakow }
+      responses:
+        '200': { description: 'Nick assigned.', content: { application/json: { schema: { $ref: '#/components/schemas/OwnerProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Nick unavailable (`nick_taken`, `nick_reserved`) with suggestions, or locked after publication (`nick_locked`).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/NickProblem' }
+              example: { type: 'https://profilo.pl/problems/nick-taken', title: Nick unavailable, status: 409, code: nick_taken, detail: 'Ten adres jest już zajęty.', suggestions: [anna-wisniewska-2, anna-wisniewska-krakow, anna-wisniewska-3] }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/v1/nicks/{nick}/availability:
+    get:
+      tags: [profile]
+      operationId: checkNickAvailability
+      summary: Live availability hint while typing (PRF-BR-3); not authoritative
+      parameters:
+        - { name: nick, in: path, required: true, schema: { type: string, maxLength: 60 } }
+      responses:
+        '200':
+          description: Result after normalisation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NickAvailability' }
+              example: { nick: anna-wisniewska, available: false, reason: taken, suggestions: [anna-wisniewska-2, anna-wisniewska-krakow, anna-wisniewska-3] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/nicks/suggestion:
+    get:
+      tags: [profile]
+      operationId: suggestNick
+      summary: Propose a nick from a display name (PRF-BR-2)
+      parameters:
+        - { name: displayName, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 60 } }
+      responses:
+        '200':
+          description: Proposed available nick, or null when the name gives fewer than 3 characters.
+          content: { application/json: { schema: { type: object, required: [nick], properties: { nick: { type: [string, 'null'] } } }, example: { nick: anna-wisniewska } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/me/profile/links:
+    post:
+      tags: [links]
+      operationId: addLink
+      summary: Add a link at the end (PRF-US-6, PRF-BR-11)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LinkInput' }
+            example: { url: 'https://www.linkedin.com/in/anna-wisniewska', label: LinkedIn }
+      responses:
+        '201':
+          description: Created; returns the whole profile so the client keeps one source of truth.
+          headers: { Location: { schema: { type: string }, example: /api/v1/me/profile/links/5b1c7c38-0d55-4c55-9a8e-1b2f0c3d4e5f } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/OwnerProfile' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Limit of 20 links reached (`links_limit_reached`).
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/v1/me/profile/links/order:
+    put:
+      tags: [links]
+      operationId: reorderLinks
+      summary: Replace link order with the full list of ids
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, required: [linkIds], properties: { linkIds: { type: array, maxItems: 20, uniqueItems: true, items: { type: string, format: uuid } } } }
+      responses:
+        '200': { description: 'Reordered.', content: { application/json: { schema: { $ref: '#/components/schemas/OwnerProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: List does not match the existing links exactly (`link_order_mismatch`) or other validation error.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/ValidationProblem' } } }
+
+  /api/v1/me/profile/links/{linkId}:
+    parameters:
+      - { name: linkId, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [links]
+      operationId: updateLink
+      summary: Change URL or label
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LinkPatch' } } }
+      responses:
+        '200': { description: 'Updated.', content: { application/json: { schema: { $ref: '#/components/schemas/OwnerProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [links]
+      operationId: deleteLink
+      summary: Remove a link
+      responses:
+        '204': { description: 'Removed (also when it did not exist — idempotent).' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/me/profile/images/{kind}:
+    parameters:
+      - { name: kind, in: path, required: true, schema: { $ref: '#/components/schemas/ImageKind' } }
+    put:
+      tags: [images]
+      operationId: uploadImage
+      summary: Upload avatar or background image (PRF-US-4, PRF-BR-13)
+      description: Avatar must already be cropped to a square in the browser. JPEG, PNG or WebP, max 10 MB. EXIF is removed and sizes are generated synchronously (target < 2 s).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { type: object, required: [file], properties: { file: { type: string, contentMediaType: application/octet-stream } } }
+      responses:
+        '200': { description: 'Stored and set on the draft.', content: { application/json: { schema: { $ref: '#/components/schemas/OwnerProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '413':
+          description: File larger than 10 MB (`file_too_large`).
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '415':
+          description: Not a JPEG, PNG or WebP image (`unsupported_image`).
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+    delete:
+      tags: [images]
+      operationId: removeImage
+      summary: Remove the image from the draft
+      responses:
+        '200': { description: 'Removed.', content: { application/json: { schema: { $ref: '#/components/schemas/OwnerProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/me/profile/publish:
+    post:
+      tags: [profile]
+      operationId: publish
+      summary: Publish the draft (first publication or "Opublikuj zmiany") (PRF-US-9, PRF-BR-8, PRF-BR-15)
+      description: Idempotent — publishing an unchanged draft returns the same result.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: false, required: [version], properties: { version: { type: integer, minimum: 1 } } } } }
+      responses:
+        '200': { description: 'Published.', content: { application/json: { schema: { $ref: '#/components/schemas/OwnerProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: E-mail not confirmed (`email_not_confirmed`) or profile blocked (`profile_blocked`).
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '409': { $ref: '#/components/responses/DraftConflict' }
+        '422':
+          description: Required fields missing (`profile_incomplete`), e.g. no nick.
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/ValidationProblem' } } }
+
+  /api/v1/me/profile/unpublish:
+    post:
+      tags: [profile]
+      operationId: unpublish
+      summary: Hide the public page (PRF-BR-17). Idempotent.
+      responses:
+        '200': { description: 'Hidden.', content: { application/json: { schema: { $ref: '#/components/schemas/OwnerProfile' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/me/profile/qr:
+    get:
+      tags: [profile]
+      operationId: getQrCode
+      summary: QR code of the canonical page address (PUB-US-6, PUB-BR-12)
+      parameters:
+        - { name: format, in: query, required: false, schema: { type: string, enum: [svg, png], default: svg } }
+      responses:
+        '200':
+          description: QR image as attachment `profilo-{nick}.{format}`.
+          content:
+            image/svg+xml: { schema: { type: string } }
+            image/png: { schema: { type: string, contentMediaType: image/png } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Profile never published (`not_published`).
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /api/v1/public/profiles/{nick}:
+    get:
+      tags: [public]
+      operationId: getPublicProfile
+      summary: Published profile for the public page (PUB-US-3, PUB-BR-6)
+      security: []
+      parameters:
+        - { name: nick, in: path, required: true, schema: { type: string, maxLength: 60 } }
+      responses:
+        '200':
+          description: 'Published snapshot. `Cache-Control: no-store`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/PublicProfile' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /media/{imageId}/{size}.webp:
+    get:
+      tags: [public]
+      operationId: getImage
+      summary: Image variant — owner, or referenced by a visible published profile
+      security: [{}, { bearerAuth: [] }]
+      parameters:
+        - { name: imageId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: size, in: path, required: true, schema: { type: string, enum: ['128', '256', '512', '960', '1600', '2400'] } }
+      responses:
+        '200': { description: 'Image. `Cache-Control: public, max-age=31536000, immutable` for public images.', content: { image/webp: { schema: { type: string, contentMediaType: image/webp } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /health:
+    get:
+      tags: [system]
+      operationId: health
+      security: []
+      responses: { '200': { description: 'Process is running.', content: { application/json: { schema: { type: object, properties: { status: { const: ok } } } } } } }
+  /ready:
+    get:
+      tags: [system]
+      operationId: ready
+      security: []
+      responses:
+        '200': { description: 'Database and Valkey reachable.' }
+        '503': { description: 'A required dependency is unavailable.', content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+
+  headers:
+    RefreshCookie:
+      description: '`profilo_rt=<token>; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=2592000` (cleared with Max-Age=0).'
+      schema: { type: string }
+
+  parameters:
+    CsrfHeader:
+      name: X-Requested-With
+      in: header
+      required: true
+      schema: { const: profilo }
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid access token (`unauthorized`).
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' }, example: { type: 'https://profilo.pl/problems/unauthorized', title: Unauthorized, status: 401, code: unauthorized } } }
+    NotFound:
+      description: Not found or not visible (`not_found`).
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' }, example: { type: 'https://profilo.pl/problems/not-found', title: Not found, status: 404, code: not_found } } }
+    ValidationError:
+      description: Field validation errors (`validation_error`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ValidationProblem' }
+          example: { type: 'https://profilo.pl/problems/validation-error', title: Validation failed, status: 422, code: validation_error, errors: [ { field: password, code: too_short, message: 'Hasło jest za krótkie. Użyj co najmniej 10 znaków.' } ] }
+    DraftConflict:
+      description: Draft changed in another window (`draft_conflict`); response contains the current profile.
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/DraftConflictProblem' } } }
+    TooManyRequests:
+      description: Rate limit exceeded (`rate_limited`).
+      headers: { Retry-After: { schema: { type: integer }, example: 60 } }
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  schemas:
+    Email: { type: string, format: email, maxLength: 254, example: anna@example.pl }
+    Password: { type: string, minLength: 10, maxLength: 128, description: Rejected if on the common/breached list (code `password_too_common`). }
+    Layout: { type: string, enum: [classic, split, card] }
+    Accent: { type: string, enum: [granat, niebieski, blekit, morski, zielen, bordo, miedz, fiolet] }
+    ImageKind: { type: string, enum: [avatar, background] }
+    LinkService: { type: string, enum: [linkedin, github, x, instagram, facebook, youtube, behance, dribbble, tiktok, other] }
+    ProfileStatus: { type: string, enum: [never_published, published, unpublished, blocked] }
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [displayName, email, password, acceptTerms]
+      properties:
+        displayName: { type: string, minLength: 1, maxLength: 60 }
+        email: { $ref: '#/components/schemas/Email' }
+        password: { $ref: '#/components/schemas/Password' }
+        acceptTerms: { const: true }
+        challenge: { type: [string, 'null'], maxLength: 2000, description: ALTCHA solution, required only after a 428 response. }
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties: { email: { $ref: '#/components/schemas/Email' }, password: { type: string, maxLength: 128 } }
+    TokenRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties: { token: { type: string, minLength: 20, maxLength: 200 } }
+    Session:
+      type: object
+      required: [accessToken, expiresIn, account]
+      properties:
+        accessToken: { type: string }
+        expiresIn: { type: integer, example: 900 }
+        account: { $ref: '#/components/schemas/Account' }
+    Account:
+      type: object
+      required: [id, email, emailConfirmed, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { $ref: '#/components/schemas/Email' }
+        emailConfirmed: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    ImageRef:
+      type: object
+      required: [id, urls]
+      properties:
+        id: { type: string, format: uuid }
+        urls:
+          type: object
+          description: Size → URL. Avatar sizes 128/256/512, background 960/1600/2400.
+          additionalProperties: { type: string }
+          example: { '128': /media/2f6c…/128.webp, '256': /media/2f6c…/256.webp, '512': /media/2f6c…/512.webp }
+    Link:
+      type: object
+      required: [id, url, label, service]
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri, maxLength: 2000 }
+        label: { type: string, minLength: 1, maxLength: 40 }
+        service: { $ref: '#/components/schemas/LinkService' }
+    LinkInput:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url: { type: string, maxLength: 2000, description: '`https://` is added when the scheme is missing; only http/https allowed (`invalid_url`).' }
+        label: { type: string, minLength: 1, maxLength: 40, description: Defaults to the service name or domain. }
+    LinkPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        url: { type: string, maxLength: 2000 }
+        label: { type: string, minLength: 1, maxLength: 40 }
+
+    ProfileContent:
+      type: object
+      required: [displayName, layout, accent, links]
+      properties:
+        displayName: { type: string, minLength: 1, maxLength: 60, example: Anna Wiśniewska }
+        headline: { type: [string, 'null'], maxLength: 80, example: Projektantka UX/UI i konsultantka produktowa }
+        bio: { type: [string, 'null'], maxLength: 500 }
+        city: { type: [string, 'null'], maxLength: 60, example: Kraków }
+        company: { type: [string, 'null'], maxLength: 60, example: Studio Wiśniewska }
+        position: { type: [string, 'null'], maxLength: 60, example: Właścicielka }
+        publicEmail: { oneOf: [ { $ref: '#/components/schemas/Email' }, { type: 'null' } ] }
+        publicPhone: { type: [string, 'null'], description: E.164, example: '+48601234567' }
+        layout: { $ref: '#/components/schemas/Layout' }
+        accent: { $ref: '#/components/schemas/Accent' }
+        avatar: { oneOf: [ { $ref: '#/components/schemas/ImageRef' }, { type: 'null' } ] }
+        background: { oneOf: [ { $ref: '#/components/schemas/ImageRef' }, { type: 'null' } ] }
+        links: { type: array, maxItems: 20, items: { $ref: '#/components/schemas/Link' } }
+    DraftPatch:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version: { type: integer, minimum: 1 }
+        displayName: { type: string, minLength: 1, maxLength: 60 }
+        headline: { type: [string, 'null'], maxLength: 80 }
+        bio: { type: [string, 'null'], maxLength: 500 }
+        city: { type: [string, 'null'], maxLength: 60 }
+        company: { type: [string, 'null'], maxLength: 60 }
+        position: { type: [string, 'null'], maxLength: 60 }
+        publicEmail: { type: [string, 'null'], maxLength: 254 }
+        publicPhone: { type: [string, 'null'], maxLength: 32, description: 'Any common format; server normalises to E.164 with default +48 (`invalid_phone`).' }
+        layout: { $ref: '#/components/schemas/Layout' }
+        accent: { $ref: '#/components/schemas/Accent' }
+    OwnerProfile:
+      type: object
+      required: [nick, nickLocked, status, hasUnpublishedChanges, version, draft, publicUrl]
+      properties:
+        nick: { type: [string, 'null'], example: anna-wisniewska-krakow }
+        nickLocked: { type: boolean }
+        status: { $ref: '#/components/schemas/ProfileStatus' }
+        hasUnpublishedChanges: { type: boolean }
+        publishedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, example: 8 }
+        draftUpdatedAt: { type: string, format: date-time }
+        publicUrl: { type: [string, 'null'], example: 'https://profilo.pl/user/anna-wisniewska-krakow' }
+        draft: { $ref: '#/components/schemas/ProfileContent' }
+    PublicProfile:
+      type: object
+      required: [nick, canonicalUrl, publishedAt, content]
+      properties:
+        nick: { type: string }
+        canonicalUrl: { type: string }
+        publishedAt: { type: string, format: date-time }
+        content: { $ref: '#/components/schemas/ProfileContent' }
+    NickAvailability:
+      type: object
+      required: [nick, available]
+      properties:
+        nick: { type: string, description: Normalised value. }
+        available: { type: boolean }
+        reason: { type: [string, 'null'], enum: [taken, reserved, invalid_format, null] }
+        suggestions: { type: array, maxItems: 3, items: { type: string } }
+
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string, description: Stable machine-readable code. }
+        detail: { type: string, description: User-facing Polish message where useful. }
+        instance: { type: string }
+    ValidationProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [errors]
+          properties:
+            errors:
+              type: array
+              items:
+                type: object
+                required: [field, code, message]
+                properties: { field: { type: string }, code: { type: string }, message: { type: string } }
+    NickProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties: { suggestions: { type: array, maxItems: 3, items: { type: string } } }
+    DraftConflictProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [current]
+          properties: { current: { $ref: '#/components/schemas/OwnerProfile' } }
+    ChallengeProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [challenge]
+          properties: { challenge: { type: object, description: ALTCHA challenge parameters. } }

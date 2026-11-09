@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profilo — design system</title>
+<link rel="icon" href="brand/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  .ds { max-width: 1120px; margin: 0 auto; padding: var(--space-10) var(--space-6) var(--space-24); }
+  .ds > header { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-3); }
+  .ds > header h1 { font-size: var(--text-xl); }
+  .ds nav { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); font-size: var(--text-sm); margin-bottom: var(--space-10); }
+  .ds h2 { font-size: var(--text-lg); margin: var(--space-12) 0 var(--space-2); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+  .ds h3 { font-size: var(--text-base); margin: var(--space-6) 0 var(--space-3); }
+  .ds .desc { color: var(--color-text-muted); font-size: var(--text-sm); margin-bottom: var(--space-4); max-width: 75ch; }
+  .grid { display: grid; gap: var(--space-4); }
+  .g-colors { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .tok { border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; background: var(--color-surface); font-size: var(--text-xs); }
+  .tok i { display: block; height: 64px; border-bottom: 1px solid var(--color-border); }
+  .tok div { padding: 8px 10px; }
+  .tok code { display: block; color: var(--color-heading); font-weight: 600; font-size: 11.5px; word-break: break-all; }
+  .row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+  .state-grid { display: grid; grid-template-columns: 110px repeat(6, auto); gap: var(--space-3); align-items: center; justify-content: start; font-size: var(--text-xs); color: var(--color-text-muted); }
+  .state-grid .h { font-weight: 600; color: var(--color-heading); }
+  .type-row { display: grid; grid-template-columns: 170px 1fr; gap: var(--space-4); align-items: baseline; padding: var(--space-2) 0; border-bottom: 1px dashed var(--color-border); }
+  .type-row code { font-size: var(--text-xs); color: var(--color-text-muted); }
+  .space-row { display: flex; align-items: center; gap: var(--space-4); font-size: var(--text-xs); margin-bottom: 6px; }
+  .space-row b { display: block; height: 14px; background: var(--color-blue-700); border-radius: 3px; }
+  .space-row code { width: 160px; }
+  .boxes { display: flex; flex-wrap: wrap; gap: var(--space-5); }
+  .box { width: 120px; height: 84px; background: var(--color-surface); border: 1px solid var(--color-border); display: grid; place-items: center; font-size: var(--text-xs); text-align: center; color: var(--color-text-muted); }
+  .demo { padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); }
+  .accents { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3); }
+  .accents .a { border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--color-border); background: var(--color-surface); }
+  .accents .a .hero-art { height: 84px; }
+  .accents .a div.t { padding: 8px 10px; font-size: var(--text-xs); }
+  @media (max-width: 860px) { .two { grid-template-columns: 1fr; } .accents { grid-template-columns: repeat(2, 1fr); } .state-grid { grid-template-columns: repeat(2, auto); } .state-grid .h { display: none; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="0 0 44 44"><rect width="44" height="44" rx="11" fill="#0F2747"/><path d="M15 32V12h8.5a6.5 6.5 0 0 1 0 13H15" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="31" cy="31" r="3.4" fill="#E0592A"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.5v.01"/></symbol>
+  <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke-width="3"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></symbol>
+  <symbol id="i-hide" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3 3.6M6.6 6.6A17 17 0 0 0 2 12s3.5 6 10 6a10 10 0 0 0 4.4-1"/></symbol>
+</svg>
+
+<div class="ds">
+  <header><svg width="40" height="40" viewBox="0 0 44 44"><use href="#logo"/></svg><h1>Profilo — design system</h1></header>
+  <p class="desc">Ta strona wynika z wariantu A „Granat korporacyjny” i makiet docelowych. Tokeny są w <code>tokens.css</code>, a frontend korzysta z nich bezpośrednio. Wzorcowe style komponentów są w <code>components.css</code>. Aplikacja ma tylko tryb jasny.</p>
+  <nav><a href="#colors">Kolory</a><a href="#accents">Kolory przewodnie</a><a href="#type">Typografia</a><a href="#space">Odstępy</a><a href="#radius">Zaokrąglenia i cienie</a><a href="#motion">Animacje</a><a href="#buttons">Przyciski</a><a href="#forms">Formularze</a><a href="#feedback">Komunikaty</a><a href="#nav">Nawigacja</a><a href="#profile">Elementy profilu</a><a href="#states">Stany puste i ładowanie</a><a href="#modal">Okno dialogowe</a><a href="#icons">Ikony</a><a href="mockups/final/index.html">Makiety docelowe →</a></nav>
+
+  <h2 id="colors">Kolory</h2>
+  <p class="desc">Para tekst i tło spełnia WCAG AA (≥ 4,5:1), a obramowania pól i pierścień fokusu mają kontrast ≥ 3:1. Kolor <code>--color-accent</code> służy tylko do dekoracji, nigdy jako kolor tekstu.</p>
+  <div id="colorGroups"></div>
+
+  <h2 id="accents">Kolory przewodnie właściciela (PUB-BR-3)</h2>
+  <p class="desc">Właściciel wybiera jeden z 8 kolorów. Kolor trafia do <code>--page-accent</code> i zmienia przyciski kontaktu, ikony, awatar z inicjałami oraz domyślną grafikę tła. Każdy kolor ma kontrast ≥ 5:1 z białym tekstem.</p>
+  <div class="accents" id="accentList"></div>
+
+  <h2 id="type">Typografia</h2>
+  <p class="desc">Krój Plus Jakarta Sans (Google Fonts, licencja OFL) w grubościach 400–800. Nagłówki mają zacieśnione odstępy między literami (<code>--tracking-tight</code>).</p>
+  <div id="typeScale"></div>
+
+  <h2 id="space">Odstępy</h2>
+  <p class="desc">Skala oparta na 4 px. Minimalny rozmiar elementu dotykowego to <code>--tap-target-min</code> (44 px), a wysokość kontrolki to <code>--control-height</code> (48 px).</p>
+  <div id="spaceScale"></div>
+
+  <h2 id="radius">Zaokrąglenia, obramowania i cienie</h2>
+  <div class="boxes" id="radii"></div>
+  <h3>Cienie</h3>
+  <div class="boxes" id="shadows"></div>
+
+  <h2 id="motion">Animacje</h2>
+  <p class="desc">Wszystkie przejścia używają <code>--ease-standard</code>. Przy ustawieniu <code>prefers-reduced-motion: reduce</code> czasy animacji spadają do 0.</p>
+  <div class="row" style="font-size:var(--text-sm)"><code>--duration-fast</code> 120 ms: najechanie, fokus · <code>--duration-base</code> 180 ms: zmiana tła, cień · <code>--duration-slow</code> 280 ms: panele, okna dialogowe</div>
+
+  <h2 id="buttons">Przyciski</h2>
+  <p class="desc"><b>primary</b> to jedno główne działanie na ekranie. <b>secondary</b> to działania pomocnicze. <b>ghost</b> służy w paskach i menu. <b>danger</b> jest tylko do usunięcia konta. Rozmiary: domyślny (48 px) i <code>btn-sm</code> (36 px, w pasku górnym).</p>
+  <div class="state-grid" id="btnStates"></div>
+  <h3>Z ikoną, rozmiar mały, tylko ikona, pełna szerokość</h3>
+  <div class="row"><button class="btn btn-primary"><svg class="i"><use href="#i-mail"/></svg>Napisz e-mail</button><button class="btn btn-secondary btn-sm"><svg class="i sm"><use href="#i-eye"/></svg>Podgląd</button><button class="btn btn-ghost btn-icon" aria-label="Edytuj"><svg class="i sm"><use href="#i-edit"/></svg></button><button class="btn btn-ghost btn-icon" aria-label="Usuń"><svg class="i sm"><use href="#i-trash"/></svg></button></div>
+  <div style="max-width:360px;margin-top:var(--space-3)"><button class="btn btn-primary btn-block">Załóż konto</button></div>
+
+  <h2 id="forms">Formularze</h2>
+  <p class="desc">Etykieta jest zawsze nad polem. Pola opcjonalne mają dopisek „(opcjonalnie)”. Błąd pokazujemy pod polem, z ikoną i tekstem, a nie samym kolorem. Walidacja działa po opuszczeniu pola i przy zapisie.</p>
+  <div class="two">
+    <div>
+      <div class="field"><label class="field-label">Domyślne</label><input class="input" value="Anna Wiśniewska"><span class="hint">Tak podpiszesz swoją stronę.</span></div>
+      <div class="field"><label class="field-label">Placeholder <span class="opt">(opcjonalnie)</span></label><input class="input" placeholder="np. Projektantka UX/UI"></div>
+      <div class="field"><label class="field-label">Fokus</label><input class="input is-focus" value="Kraków"></div>
+      <div class="field"><label class="field-label">Błąd</label><input class="input is-error" value="anna@example" aria-invalid="true"><span class="hint is-error"><svg class="i sm"><use href="#i-alert"/></svg>Wpisz pełny adres e-mail, np. anna@example.pl.</span></div>
+      <div class="field"><label class="field-label">Wyłączone</label><input class="input is-disabled" value="anna-wisniewska" disabled><span class="hint">Adresu nie można zmienić po pierwszej publikacji.</span></div>
+    </div>
+    <div>
+      <div class="field"><label class="field-label">Pole tekstowe z licznikiem</label><textarea class="input">Od 9 lat pomagam firmom projektować aplikacje, z których ludzie chętnie korzystają.</textarea><span class="counter">82 / 500</span></div>
+      <div class="field"><label class="field-label">Adres strony: sprawdzanie</label><div class="input-group"><span class="prefix">profilo.pl/user/</span><input class="input" value="anna-wisniewska"><span class="state"><span class="spinner"></span></span></div><span class="hint">Sprawdzamy, czy adres jest wolny…</span></div>
+      <div class="field"><label class="field-label">Adres strony: wolny</label><div class="input-group is-success"><span class="prefix">profilo.pl/user/</span><input class="input" value="anna-wisniewska-krakow"><span class="state" style="color:var(--color-success)"><svg class="i"><use href="#i-check"/></svg></span></div><span class="hint is-success"><svg class="i sm"><use href="#i-check"/></svg>Adres wolny.</span></div>
+      <div class="field"><label class="field-label">Adres strony: zajęty, z propozycjami</label><div class="input-group is-error"><span class="prefix">profilo.pl/user/</span><input class="input" value="anna-wisniewska"><span class="state" style="color:var(--color-danger)"><svg class="i"><use href="#i-x"/></svg></span></div><span class="hint is-error"><svg class="i sm"><use href="#i-alert"/></svg>Ten adres jest już zajęty. Może któryś z tych?</span><div class="row"><button class="chip">anna-wisniewska-2</button><button class="chip">anna-wisniewska-krakow</button></div></div>
+      <label class="checkbox" style="margin-bottom:var(--space-3)"><span class="box is-checked"><svg class="i sm"><use href="#i-check"/></svg></span><span>Zaznaczony checkbox</span></label>
+      <label class="checkbox"><span class="box"></span><span>Niezaznaczony checkbox</span></label>
+    </div>
+  </div>
+
+  <h2 id="feedback">Komunikaty</h2>
+  <h3>Alerty (w treści) i banery (pełna szerokość, pod paskiem górnym)</h3>
+  <div class="grid">
+    <div class="alert alert-info"><svg class="i"><use href="#i-info"/></svg><span class="grow">Adres możesz zmienić tylko przed pierwszą publikacją.</span></div>
+    <div class="alert alert-success"><svg class="i"><use href="#i-check"/></svg><span class="grow"><b>Gotowe!</b> Hasło zostało zmienione.</span></div>
+    <div class="alert alert-warning"><svg class="i"><use href="#i-mail"/></svg><span class="grow"><b>Potwierdź e-mail, żeby opublikować stronę.</b> Wysłaliśmy link na anna@example.pl.</span><button class="btn btn-ghost btn-sm">Wyślij ponownie</button></div>
+    <div class="alert alert-danger"><svg class="i"><use href="#i-alert"/></svg><span class="grow"><b>Nie udało się zapisać zmian.</b> Sprawdź połączenie z internetem.</span><button class="btn btn-secondary btn-sm">Spróbuj ponownie</button></div>
+  </div>
+  <h3>Etykiety stanu</h3>
+  <div class="row"><span class="badge badge-success">Opublikowana</span><span class="badge badge-warning">Masz nieopublikowane zmiany</span><span class="badge badge-neutral">Nieopublikowana</span><span class="badge badge-neutral">Ukryta</span><span class="badge badge-danger">Zablokowana</span></div>
+  <h3>Powiadomienie (toast) i stan zapisu</h3>
+  <div class="row"><div class="toast is-static" role="status"><svg class="i sm"><use href="#i-check"/></svg>Skopiowano link</div><div class="toast is-static" role="status">Zmiany są już na Twojej stronie.<button class="btn btn-ghost btn-sm">Zobacz</button></div><span class="save-state"><span class="spinner"></span>Zapisywanie…</span><span class="save-state"><span class="dot"></span>Zapisano</span><span class="save-state is-error"><span class="dot"></span>Nie zapisano</span></div>
+
+  <h2 id="nav">Nawigacja</h2>
+  <div class="demo" style="padding:0;overflow:hidden">
+    <div class="topbar" style="position:relative"><a class="brand" href="#"><svg viewBox="0 0 44 44"><use href="#logo"/></svg><span>Profilo</span></a><span class="save-state"><span class="dot"></span>Zapisano</span><span class="spacer"></span><span class="badge badge-warning">Masz nieopublikowane zmiany</span><button class="btn btn-secondary btn-sm">Podgląd</button><button class="btn btn-primary btn-sm">Opublikuj zmiany</button></div>
+    <div style="padding:var(--space-6);display:grid;gap:var(--space-6);grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+      <div><h3 style="margin-top:0">Wskaźnik kroków kreatora</h3><div class="stepper"><span class="bars"><i class="done"></i><i class="now"></i><i></i><i></i></span><b>Krok 2 z 4</b><span>· Wygląd</span></div></div>
+      <div><h3 style="margin-top:0">Przełącznik</h3><div class="seg"><button aria-pressed="true">Komputer</button><button aria-pressed="false">Telefon</button></div></div>
+      <div><h3 style="margin-top:0">Zakładki (telefon)</h3><div class="tabs" role="tablist"><button role="tab" aria-selected="true">Edycja</button><button role="tab" aria-selected="false">Podgląd</button></div></div>
+      <div><h3 style="margin-top:0">Menu konta</h3><div class="menu"><a href="#"><svg class="i sm"><use href="#i-qr"/></svg>Udostępnij: adres i kod QR</a><a href="#"><svg class="i sm"><use href="#i-hide"/></svg>Ukryj stronę</a><a href="#"><svg class="i sm"><use href="#i-gear"/></svg>Ustawienia konta</a><hr><a href="#"><svg class="i sm"><use href="#i-logout"/></svg>Wyloguj się</a></div></div>
+    </div>
+  </div>
+
+  <h2 id="profile">Elementy profilu</h2>
+  <div class="two">
+    <div>
+      <h3>Awatar: inicjały (domyślnie), rozmiary L / S / XS</h3>
+      <div class="row"><div class="avatar">AW</div><div class="avatar avatar-sm">AW</div><div class="avatar avatar-xs">AW</div><div class="avatar" style="--page-accent:var(--page-accent-morski)">JK</div></div>
+      <h3>Karta linku (strona publiczna)</h3>
+      <a class="link-card" href="#"><span class="link-ico">in</span><span class="txt"><strong>LinkedIn</strong><small>linkedin.com/in/anna-wisniewska</small></span><svg class="i arrow"><use href="#i-arrow"/></svg></a>
+      <h3>Przyciski kontaktu na stronie publicznej</h3>
+      <div class="pp" style="min-height:0;background:transparent"><div class="contact" style="margin:0"><a class="btn btn-primary" href="#"><svg class="i"><use href="#i-mail"/></svg>Napisz e-mail</a><a class="btn btn-secondary" href="#"><svg class="i"><use href="#i-phone"/></svg>Zadzwoń</a></div></div>
+    </div>
+    <div>
+      <h3>Wiersz linku w edytorze: domyślny i przeciągany</h3>
+      <div class="link-row"><span class="handle"><svg class="i"><use href="#i-grip"/></svg></span><span class="link-ico">Bē</span><span class="txt"><b>Portfolio na Behance</b><small>behance.net/annawisniewska</small></span><button class="btn btn-ghost btn-icon" aria-label="Edytuj"><svg class="i sm"><use href="#i-edit"/></svg></button><button class="btn btn-ghost btn-icon" aria-label="Usuń"><svg class="i sm"><use href="#i-trash"/></svg></button></div>
+      <div class="link-row is-dragging"><span class="handle"><svg class="i"><use href="#i-grip"/></svg></span><span class="link-ico">Dr</span><span class="txt"><b>Dribbble</b><small>dribbble.com/annawisniewska</small></span><button class="btn btn-ghost btn-icon" aria-label="Edytuj"><svg class="i sm"><use href="#i-edit"/></svg></button><button class="btn btn-ghost btn-icon" aria-label="Usuń"><svg class="i sm"><use href="#i-trash"/></svg></button></div>
+      <h3>Wybór koloru przewodniego</h3>
+      <div class="swatches" id="swatchDemo"></div>
+      <h3>Wybór układu: zaznaczony i niezaznaczony</h3>
+      <div class="layout-opts" style="grid-template-columns:1fr 1fr"><button class="layout-opt" role="radio" aria-checked="true"><div class="thumb hero-art" style="height:72px"></div><b>Dzielony</b><span class="tick"><svg class="i sm"><use href="#i-check"/></svg></span></button><button class="layout-opt" role="radio" aria-checked="false"><div class="thumb" style="height:72px;background:var(--color-blue-100)"></div><b>Klasyczny</b><span class="tick"></span></button></div>
+    </div>
+  </div>
+
+  <h2 id="states">Stany puste i ładowanie</h2>
+  <div class="two">
+    <div class="empty"><div class="ill"><svg class="i"><use href="#i-link"/></svg></div><b>Nie masz jeszcze linków</b><p>Dodaj LinkedIn, portfolio albo stronę firmy, żeby łatwiej było Cię znaleźć.</p><button class="btn btn-primary btn-sm"><svg class="i sm"><use href="#i-plus"/></svg>Dodaj pierwszy link</button></div>
+    <div class="card card-pad"><div class="skel" style="height:64px;width:64px;margin-bottom:12px;border-radius:16px"></div><div class="skel" style="height:16px;width:60%;margin-bottom:10px"></div><div class="skel" style="height:44px;margin-bottom:10px"></div><div class="skel" style="height:44px"></div></div>
+  </div>
+
+  <h2 id="modal">Okno dialogowe: usunięcie konta (ACC-BR-9)</h2>
+  <div class="demo" style="display:grid;place-items:center;background:rgba(10,27,51,.55)">
+    <div class="modal" role="dialog" aria-labelledby="mt">
+      <h2 id="mt">Usunąć konto na zawsze?</h2>
+      <p class="muted" style="font-size:var(--text-sm)">Usuniemy Twoją stronę, zdjęcia i wszystkie dane. Adres <b>profilo.pl/user/anna-wisniewska</b> przestanie działać od razu. Tego nie da się cofnąć.</p>
+      <div class="field" style="margin:var(--space-5) 0 0"><label class="field-label">Wpisz hasło, aby potwierdzić</label><input class="input" type="password" value="••••••••••••"></div>
+      <div class="actions"><button class="btn btn-secondary">Anuluj</button><button class="btn btn-danger">Usuń konto</button></div>
+    </div>
+  </div>
+
+  <h2 id="icons">Ikony</h2>
+  <p class="desc">Ikony liniowe 24 × 24 z kreską 1,8 px w kolorze <code>currentColor</code>, w rozmiarach 20 px i 16 px (<code>.sm</code>). Rekomendowana biblioteka do implementacji to Lucide, która ma ten sam styl. Ikony serwisów (LinkedIn, GitHub itd.) to skróty literowe w kafelku albo, w implementacji, znaki towarowe z Simple Icons.</p>
+  <div class="row" id="iconList" style="color:var(--color-navy-900)"></div>
+</div>
+
+<script>
+const css = getComputedStyle(document.documentElement);
+const v = n => css.getPropertyValue(n).trim();
+const groups = {
+  'Marka': ['--color-navy-950','--color-navy-900','--color-navy-800','--color-blue-700','--color-blue-600','--color-blue-400','--color-blue-100','--color-blue-50','--color-accent','--color-accent-soft'],
+  'Tła i obramowania': ['--color-bg','--color-surface','--color-surface-input','--color-border','--color-border-strong','--color-border-input'],
+  'Tekst': ['--color-heading','--color-text','--color-text-strong-muted','--color-text-muted'],
+  'Komunikaty': ['--color-success','--color-success-bg','--color-danger','--color-danger-bg','--color-warning','--color-warning-bg','--color-info','--color-info-bg'],
+};
+document.getElementById('colorGroups').innerHTML = Object.entries(groups).map(([g, list]) =>
+  `<h3>${g}</h3><div class="grid g-colors">${list.map(n => `<div class="tok"><i style="background:var(${n})"></i><div><code>${n}</code>${v(n)}</div></div>`).join('')}</div>`).join('');
+const acc = [['granat','Granat (domyślny)'],['niebieski','Niebieski'],['blekit','Błękit'],['morski','Morski'],['zielen','Zieleń'],['bordo','Bordo'],['miedz','Miedź'],['fiolet','Fiolet']];
+document.getElementById('accentList').innerHTML = acc.map(([k,n]) => `<div class="a" style="--page-accent:var(--page-accent-${k})"><div class="hero-art"></div><div class="t"><b>${n}</b><br><code>--page-accent-${k}</code> ${v('--page-accent-'+k)}<div class="pp" style="min-height:0;background:transparent;margin-top:8px"><div class="contact" style="margin:0"><span class="btn btn-primary btn-sm">Napisz e-mail</span></div></div></div></div>`).join('');
+document.getElementById('swatchDemo').innerHTML = acc.map(([k,n],i) => `<button class="swatch" role="radio" aria-checked="${i===0}" aria-label="${n}" style="background:var(--page-accent-${k})">${i===0?'<svg class="i sm"><use href="#i-check"/></svg>':''}</button>`).join('');
+const types = [['--text-4xl','800','Anna Wiśniewska','Nazwa na stronie publicznej (komputer)'],['--text-3xl','800','Twoja wizytówka w sieci','Nagłówek na landingu'],['--text-2xl','800','Anna Wiśniewska','Nazwa (telefon, Wizytówka)'],['--text-xl','700','Jak masz się przedstawiać?','Tytuł ekranu w panelu'],['--text-lg','500','Projektantka UX/UI i konsultantka produktowa','Nagłówek profilu, tytuły sekcji'],['--text-md','400','Od 9 lat pomagam firmom projektować aplikacje…','Opis na stronie publicznej'],['--text-base','400','Tekst podstawowy, pola, przyciski','Tekst'],['--text-sm','400','Co najmniej 10 znaków.','Podpowiedzi, tekst pomocniczy'],['--text-xs','600','ZNAJDZIESZ MNIE TUTAJ','Etykiety, liczniki']];
+document.getElementById('typeScale').innerHTML = types.map(([t,w,s,d]) => `<div class="type-row"><code>${t} · ${v(t)} · ${w}<br>${d}</code><span style="font-size:var(${t});font-weight:${w};color:var(--color-heading);line-height:1.2;${t==='--text-xs'?'letter-spacing:var(--tracking-caps)':w>=700?'letter-spacing:var(--tracking-tight)':''}">${s}</span></div>`).join('');
+document.getElementById('spaceScale').innerHTML = [1,2,3,4,5,6,8,10,12,16,24].map(n => `<div class="space-row"><code>--space-${n} · ${v('--space-'+n)}</code><b style="width:var(--space-${n})"></b></div>`).join('');
+document.getElementById('radii').innerHTML = ['sm','md','lg','xl','2xl','full'].map(r => `<div class="box" style="border-radius:var(--radius-${r})">--radius-${r}<br>${v('--radius-'+r)}</div>`).join('');
+document.getElementById('shadows').innerHTML = ['xs','sm','md','lg','button','avatar'].map(s => `<div class="box" style="box-shadow:var(--shadow-${s});border-radius:var(--radius-lg)">--shadow-${s}</div>`).join('');
+const btn = (cls, st, label='Opublikuj') => `<button class="btn ${cls} ${st}" ${st==='is-disabled'?'disabled':''}>${label}</button>`;
+const sts = [['','Domyślny'],['is-hover','Najechanie'],['is-focus','Fokus'],['is-disabled','Wyłączony'],['is-loading','Ładowanie']];
+document.getElementById('btnStates').innerHTML = `<span class="h"></span>${sts.map(s=>`<span class="h">${s[1]}</span>`).join('')}<span class="h"></span>` +
+  [['btn-primary','primary','Opublikuj'],['btn-secondary','secondary','Podgląd'],['btn-ghost','ghost','Zaloguj się'],['btn-danger','danger','Usuń konto']].map(([c,n,l]) => `<span class="h">${n}</span>${sts.map(s=>btn(c,s[0],l)).join('')}<span></span>`).join('');
+const icons = ['i-mail','i-phone','i-arrow','i-check','i-x','i-alert','i-info','i-grip','i-edit','i-trash','i-plus','i-link','i-copy','i-eye','i-qr','i-logout','i-gear','i-hide'];
+document.getElementById('iconList').innerHTML = icons.map(i => `<span title="${i}" style="width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface)"><svg class="i"><use href="#${i}"/></svg></span>`).join('');
+</script>
+</body>
+</html>

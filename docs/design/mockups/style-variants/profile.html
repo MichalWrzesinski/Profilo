@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anna Wiśniewska — Projektantka UX/UI | Profilo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  // Variant chosen by URL hash: #a, #b, #c (mockup only)
+  document.documentElement.className = 'v-' + ((location.hash || '#a').slice(1) || 'a');
+</script>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ---------- Layout "Dzielony" (Split) ---------- */
+  .page{min-height:100vh;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+  .hero{position:relative;overflow:hidden;min-height:100vh;position:sticky;top:0;height:100vh}
+  .hero-inner{position:absolute;inset:auto 0 0 0;padding:48px;color:var(--hero-text)}
+  .content{display:flex;flex-direction:column;justify-content:center;padding:64px clamp(32px,7vw,112px);max-width:820px}
+  .avatar{width:112px;height:112px;border-radius:var(--avatar-radius);display:grid;place-items:center;font:var(--avatar-font);color:var(--avatar-text);background:var(--avatar-bg);box-shadow:var(--avatar-shadow);margin-bottom:28px;letter-spacing:.02em}
+  h1{font-family:var(--font-display);font-weight:var(--h1-weight);font-size:clamp(34px,4.2vw,52px);line-height:1.08;letter-spacing:var(--h1-tracking);margin:0 0 10px;color:var(--heading)}
+  .headline{font-size:clamp(18px,1.6vw,21px);color:var(--muted-strong);margin:0 0 18px;font-weight:500}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin:0 0 28px;padding:0;list-style:none;color:var(--muted);font-size:15px}
+  .meta li{display:flex;align-items:center;gap:8px}
+  .meta svg.i{width:17px;height:17px;color:var(--meta-icon)}
+  .actions{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:32px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 22px;border-radius:var(--btn-radius);font:600 16px/1 var(--font-body);white-space:nowrap;text-decoration:none;transition:transform .15s ease, box-shadow .15s ease, background .15s ease}
+  .btn:focus-visible,.link:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+  .btn-primary{background:var(--primary);color:var(--on-primary);box-shadow:var(--btn-shadow)}
+  .btn-primary:hover{background:var(--primary-hover);transform:translateY(-1px)}
+  .btn-secondary{background:var(--secondary-bg);color:var(--secondary-text);border:var(--secondary-border)}
+  .btn-secondary:hover{background:var(--secondary-hover)}
+  .bio{font-size:17px;color:var(--text);max-width:60ch;margin:0 0 36px}
+  .section-label{font:600 13px/1 var(--font-body);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:0 0 14px}
+  .links{display:grid;gap:10px;margin:0 0 40px;padding:0;list-style:none}
+  .link{display:flex;align-items:center;gap:14px;padding:14px 18px;min-height:60px;border-radius:var(--link-radius);background:var(--surface);border:var(--link-border);text-decoration:none;box-shadow:var(--link-shadow);transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+  .link:hover{transform:translateY(-1px);border-color:var(--primary);box-shadow:var(--link-shadow-hover)}
+  .link .ico{width:38px;height:38px;border-radius:var(--ico-radius);display:grid;place-items:center;background:var(--ico-bg);color:var(--ico-text);font:700 14px/1 var(--font-body);flex:none}
+  .link .txt{display:flex;flex-direction:column;min-width:0}
+  .link strong{font-weight:600;color:var(--heading)}
+  .link small{color:var(--muted);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .link .arrow{margin-left:auto;color:var(--muted)}
+  footer{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);padding-top:20px;border-top:1px solid var(--line)}
+  footer a{text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  footer .brand{font-weight:600;color:var(--muted-strong)}
+
+  @media (max-width: 860px){
+    .page{grid-template-columns:1fr;align-content:start}
+    .hero{position:relative;height:auto;min-height:0;aspect-ratio:16/10;max-height:300px}
+    .hero-inner{display:none}
+    .content{padding:0 20px 32px;max-width:none;justify-content:flex-start}
+    .avatar{width:96px;height:96px;margin:-48px 0 20px;position:relative;z-index:1;border:4px solid var(--bg)}
+    .actions .btn{flex:1 1 140px}
+  }
+
+  /* =========================================================
+     Variant A — "Granat korporacyjny"
+     ========================================================= */
+  .v-a{
+    --font-display:'Plus Jakarta Sans',system-ui,sans-serif; --font-body:'Plus Jakarta Sans',system-ui,sans-serif;
+    --bg:#EEF2F7; --surface:#F8FAFC; --text:#24364F; --heading:#0F2747; --muted:#5B6B82; --muted-strong:#33476A; --line:#D5DDE8; --meta-icon:#2F5D9E;
+    --primary:#0F2747; --primary-hover:#1B3A66; --on-primary:#FFFFFF; --focus:#E0592A;
+    --secondary-bg:#F8FAFC; --secondary-text:#0F2747; --secondary-border:1.5px solid #B9C6D8; --secondary-hover:#E3E9F2;
+    --btn-radius:10px; --btn-shadow:0 6px 16px -6px rgba(15,39,71,.45);
+    --link-radius:12px; --link-border:1px solid #DCE3EC; --link-shadow:0 1px 2px rgba(15,39,71,.06); --link-shadow-hover:0 8px 20px -10px rgba(15,39,71,.35);
+    --ico-radius:9px; --ico-bg:#E3EAF5; --ico-text:#1F4E8C;
+    --avatar-radius:24px; --avatar-font:800 38px/1 'Plus Jakarta Sans',sans-serif; --avatar-text:#fff; --avatar-bg:linear-gradient(135deg,#1F4E8C,#0F2747); --avatar-shadow:0 12px 28px -12px rgba(15,39,71,.6);
+    --h1-weight:800; --h1-tracking:-.025em; --hero-text:#fff;
+  }
+  .v-a .hero{background:
+      radial-gradient(circle at 78% 22%, rgba(224,89,42,.85) 0 7%, transparent 7.2%),
+      radial-gradient(circle at 20% 70%, rgba(96,165,250,.35), transparent 45%),
+      linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px) 0 0/40px 40px,
+      linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px) 0 0/40px 40px,
+      linear-gradient(160deg,#1F4E8C 0%,#0F2747 55%,#0A1B33 100%);}
+  .v-a .hero::before{content:"";position:absolute;width:62%;aspect-ratio:1;right:-14%;bottom:18%;border-radius:50%;border:2px solid rgba(255,255,255,.18)}
+  .v-a .hero::after{content:"";position:absolute;width:44%;aspect-ratio:1;left:-10%;top:12%;border-radius:32px;background:rgba(255,255,255,.06);transform:rotate(18deg);border:1px solid rgba(255,255,255,.14)}
+  .v-a .hero-inner .q{font:700 28px/1.25 var(--font-display);letter-spacing:-.02em;max-width:16ch;margin:0 0 12px}
+  .v-a .hero-inner .s{opacity:.75;font-size:15px}
+  .v-a .btn-primary .i{color:#FFB396}
+
+  /* =========================================================
+     Variant B — "Błękit redakcyjny"
+     ========================================================= */
+  .v-b{
+    --font-display:'Fraunces',Georgia,serif; --font-body:'Inter',system-ui,sans-serif;
+    --bg:#F4F2ED; --surface:#FBFAF7; --text:#2B3A4E; --heading:#0E2340; --muted:#5E6878; --muted-strong:#33435A; --line:#DCD7CC; --meta-icon:#80590C;
+    --primary:#0E2340; --primary-hover:#1C3760; --on-primary:#FBFAF7; --focus:#B07A16;
+    --secondary-bg:transparent; --secondary-text:#0E2340; --secondary-border:1px solid #0E2340; --secondary-hover:#E9E5DC;
+    --btn-radius:2px; --btn-shadow:none;
+    --link-radius:0; --link-border:0; --link-shadow:none; --link-shadow-hover:none;
+    --ico-radius:50%; --ico-bg:transparent; --ico-text:#0E2340;
+    --avatar-radius:50%; --avatar-font:500 40px/1 'Fraunces',serif; --avatar-text:#0E2340; --avatar-bg:#D9C08A; --avatar-shadow:0 0 0 1px #0E2340, 0 0 0 7px #F4F2ED, 0 0 0 8px #0E2340;
+    --h1-weight:500; --h1-tracking:-.015em; --hero-text:#F4F2ED;
+  }
+  .v-b .hero{background:
+      radial-gradient(ellipse at 30% 35%, rgba(126,166,214,.55), transparent 55%),
+      radial-gradient(ellipse at 80% 85%, rgba(217,192,138,.35), transparent 50%),
+      linear-gradient(180deg,#183A66,#0E2340);}
+  .v-b .hero::before{content:"";position:absolute;inset:40px;border:1px solid rgba(244,242,237,.35)}
+  .v-b .hero::after{content:"AW";position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font:400 clamp(140px,18vw,260px)/1 'Fraunces',serif;color:transparent;-webkit-text-stroke:1px rgba(244,242,237,.4);letter-spacing:-.04em}
+  .v-b .hero-inner{padding:72px}
+  .v-b .hero-inner .q{font:italic 400 26px/1.35 'Fraunces',serif;max-width:20ch;margin:0 0 14px}
+  .v-b .hero-inner .s{font:500 12px/1 'Inter';letter-spacing:.18em;text-transform:uppercase;color:#D9C08A}
+  .v-b .headline{font-family:'Fraunces',serif;font-style:italic;font-weight:400;font-size:clamp(19px,1.7vw,23px)}
+  .v-b .links{gap:0;border-top:1px solid var(--line)}
+  .v-b .link{border-bottom:1px solid var(--line);padding:16px 4px;background:transparent}
+  .v-b .link:hover{transform:none;background:#ECE8DF}
+  .v-b .link .ico{border:1px solid #0E2340}
+  .v-b .link strong{font-family:'Fraunces',serif;font-weight:500;font-size:18px}
+  .v-b .section-label{color:#80590C}
+  .v-b .btn{text-transform:uppercase;letter-spacing:.08em;font-size:13px}
+  .v-b .btn-primary .i{color:#D9C08A}
+  @media (max-width:860px){ .v-b .hero::before{inset:16px} .v-b .avatar{border-color:#F4F2ED} }
+
+  /* =========================================================
+     Variant C — "Lazur nowoczesny"
+     ========================================================= */
+  .v-c{
+    --font-display:'Manrope',system-ui,sans-serif; --font-body:'Manrope',system-ui,sans-serif;
+    --bg:#E9F0FA; --surface:rgba(255,255,255,.72); --text:#2A3B55; --heading:#0B1F3A; --muted:#566782; --muted-strong:#2F4466; --line:#CCD9EC; --meta-icon:#1D5FD1;
+    --primary:#1D5FD1; --primary-hover:#174FB0; --on-primary:#FFFFFF; --focus:#0B8577;
+    --secondary-bg:rgba(255,255,255,.75); --secondary-text:#0B1F3A; --secondary-border:1px solid #C4D4EC; --secondary-hover:#FFFFFF;
+    --btn-radius:999px; --btn-shadow:0 10px 24px -10px rgba(29,95,209,.7);
+    --link-radius:18px; --link-border:1px solid rgba(255,255,255,.9); --link-shadow:0 2px 10px -4px rgba(11,31,58,.12); --link-shadow-hover:0 14px 28px -14px rgba(29,95,209,.5);
+    --ico-radius:12px; --ico-bg:linear-gradient(135deg,#1D5FD1,#0B8577); --ico-text:#fff;
+    --avatar-radius:50%; --avatar-font:800 36px/1 'Manrope',sans-serif; --avatar-text:#fff; --avatar-bg:linear-gradient(140deg,#5B9BFF,#1D5FD1 55%,#0B8577); --avatar-shadow:0 16px 32px -14px rgba(29,95,209,.8);
+    --h1-weight:800; --h1-tracking:-.03em; --hero-text:#fff;
+  }
+  .v-c body{background:radial-gradient(1200px 600px at 100% 0%, #DCE8FA, transparent 60%), #E9F0FA}
+  .v-c .hero{background:
+      radial-gradient(40% 35% at 25% 25%, #5EEAD4 0%, transparent 70%),
+      radial-gradient(45% 40% at 80% 30%, #7C9CFF 0%, transparent 70%),
+      radial-gradient(50% 45% at 40% 80%, #1D5FD1 0%, transparent 70%),
+      radial-gradient(35% 30% at 85% 85%, #22D3EE 0%, transparent 70%),
+      linear-gradient(135deg,#0B1F3A,#163C82);
+    margin:16px;border-radius:32px;height:calc(100vh - 32px);top:16px}
+  .v-c .hero::before{content:"";position:absolute;inset:0;background:
+      repeating-radial-gradient(circle at 70% 60%, rgba(255,255,255,.10) 0 1px, transparent 1px 28px);mix-blend-mode:overlay}
+  .v-c .hero::after{content:"";position:absolute;left:12%;top:16%;width:58%;aspect-ratio:1.6;border-radius:24px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(12px);transform:rotate(-8deg);box-shadow:0 30px 60px -20px rgba(0,0,0,.35)}
+  .v-c .hero-inner .q{font:800 30px/1.2 'Manrope';letter-spacing:-.03em;max-width:15ch;margin:0 0 14px}
+  .v-c .hero-inner .s{display:inline-flex;gap:8px;align-items:center;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);font-weight:600;font-size:14px}
+  .v-c .link{backdrop-filter:blur(8px)}
+  .v-c .headline{color:#1D5FD1;font-weight:700}
+  .v-c .meta li{background:rgba(255,255,255,.7);border:1px solid #D3DFF0;padding:6px 12px;border-radius:999px;color:var(--muted-strong)}
+  .v-c .meta{gap:8px}
+  @media (max-width:860px){ .v-c .hero{margin:12px;border-radius:24px;height:auto;top:0} .v-c .hero::after{width:64%} .v-c .avatar{border-color:#E9F0FA} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+  <symbol id="i-case" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+</svg>
+
+<div class="page">
+  <aside class="hero" aria-hidden="true">
+  </aside>
+
+  <main class="content">
+    <div class="avatar" role="img" aria-label="Anna Wiśniewska">AW</div>
+    <h1>Anna Wiśniewska</h1>
+    <p class="headline">Projektantka UX/UI i konsultantka produktowa</p>
+    <ul class="meta">
+      <li><svg class="i"><use href="#i-case"/></svg>Właścicielka, Studio Wiśniewska</li>
+      <li><svg class="i"><use href="#i-pin"/></svg>Kraków</li>
+    </ul>
+
+    <div class="actions">
+      <a class="btn btn-primary" href="mailto:anna@example.pl"><svg class="i"><use href="#i-mail"/></svg>Napisz e-mail</a>
+      <a class="btn btn-secondary" href="tel:+48601234567"><svg class="i"><use href="#i-phone"/></svg>Zadzwoń</a>
+    </div>
+
+    <p class="bio">Od 9 lat pomagam firmom projektować aplikacje, z których ludzie chętnie korzystają. Prowadzę badania z użytkownikami, warsztaty produktowe i projekty interfejsów — od pierwszego szkicu po gotowy design system. Pracowałam z bankami, sklepami internetowymi i startupami z branży zdrowia.</p>
+
+    <p class="section-label">Znajdziesz mnie tutaj</p>
+    <ul class="links">
+      <li><a class="link" href="#"><span class="ico">in</span><span class="txt"><strong>LinkedIn</strong><small>linkedin.com/in/anna-wisniewska</small></span><svg class="i arrow"><use href="#i-arrow"/></svg></a></li>
+      <li><a class="link" href="#"><span class="ico">Bē</span><span class="txt"><strong>Portfolio na Behance</strong><small>behance.net/annawisniewska</small></span><svg class="i arrow"><use href="#i-arrow"/></svg></a></li>
+      <li><a class="link" href="#"><span class="ico">Dr</span><span class="txt"><strong>Dribbble</strong><small>dribbble.com/annawisniewska</small></span><svg class="i arrow"><use href="#i-arrow"/></svg></a></li>
+      <li><a class="link" href="#"><span class="ico"><svg class="i"><use href="#i-globe"/></svg></span><span class="txt"><strong>Blog o projektowaniu</strong><small>studiowisniewska.pl/blog</small></span><svg class="i arrow"><use href="#i-arrow"/></svg></a></li>
+    </ul>
+
+    <footer>
+      <a class="brand" href="#">Utworzono w Profilo</a>
+      <a href="#">Zgłoś nadużycie</a>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

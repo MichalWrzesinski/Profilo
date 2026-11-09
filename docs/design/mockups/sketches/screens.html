@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profilo — makiety szkicowe</title>
+<style>
+  /* Wireframe only: greyscale, no brand styling. */
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0}
+  body{font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#2b2b2b;background:#f4f4f4}
+  h1,h2,h3,p{margin:0}
+  a{color:inherit}
+  .screen{display:none;min-height:100vh}
+  .screen.on{display:block}
+  .note{font-size:12px;color:#777}
+  .muted{color:#6a6a6a}
+  .img{background:linear-gradient(to top right,transparent calc(50% - .5px),#bbb calc(50% - .5px),#bbb calc(50% + .5px),transparent calc(50% + .5px)),linear-gradient(to top left,transparent calc(50% - .5px),#bbb calc(50% - .5px),#bbb calc(50% + .5px),transparent calc(50% + .5px)),#d9d9d9;color:#666;display:grid;place-items:center;font-size:12px}
+  .avatar{width:96px;height:96px;border-radius:20px;background:#bdbdbd;display:grid;place-items:center;font-weight:700;font-size:28px;color:#fff;flex:none}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:8px;border:1.5px solid #555;background:#fff;font-weight:600;font-size:14px;white-space:nowrap;text-decoration:none}
+  .btn.primary{background:#3a3a3a;border-color:#3a3a3a;color:#fff}
+  .btn.ghost{border-color:transparent;background:transparent}
+  .btn.sm{min-height:36px;padding:0 12px;font-size:13px}
+  .btn[disabled]{opacity:.45}
+  .field{display:grid;gap:6px;margin-bottom:16px}
+  .field label{font-weight:600;font-size:13px}
+  .input{min-height:44px;border:1.5px solid #aaa;border-radius:8px;background:#fff;padding:10px 12px;color:#444}
+  .input.area{min-height:96px}
+  .input.err{border-color:#222;border-width:2px}
+  .hint{font-size:12.5px;color:#666}
+  .hint.err{color:#222;font-weight:600}
+  .chip{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border:1.5px dashed #777;border-radius:999px;font-size:13px;background:#fff}
+  .card{background:#fff;border:1px solid #cfcfcf;border-radius:10px}
+  .row{display:flex;gap:12px;align-items:center}
+  .wrap{flex-wrap:wrap}
+  .grow{flex:1}
+  .lnk{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1px solid #cfcfcf;border-radius:10px}
+  .ico{width:34px;height:34px;border-radius:8px;background:#ddd;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:#555}
+  .label{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#777}
+  .stack>*+*{margin-top:12px}
+
+  /* App chrome */
+  .topbar{display:flex;align-items:center;gap:16px;height:60px;padding:0 24px;background:#fff;border-bottom:1px solid #d5d5d5}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px}
+  .logo i{width:26px;height:26px;border-radius:7px;background:#3a3a3a;display:block}
+  .steps{display:flex;gap:6px;align-items:center;font-size:13px;color:#777}
+  .steps b{color:#222}
+  .steps .bar{display:flex;gap:4px}
+  .steps .bar span{width:28px;height:4px;border-radius:2px;background:#ccc}
+  .steps .bar span.on{background:#333}
+
+  /* Public layouts */
+  .pub-content{max-width:620px}
+  .pub-actions{display:flex;gap:10px;flex-wrap:wrap}
+  .pub-actions .btn{flex:1 1 150px}
+  .pub-foot{display:flex;gap:16px;font-size:12px;color:#777;border-top:1px solid #d5d5d5;padding-top:14px}
+
+  .classic{max-width:680px;margin:0 auto;padding:0 20px 40px}
+  .classic .banner{height:200px;border-radius:0 0 14px 14px}
+  .classic .head{display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:-48px}
+  .classic .avatar{border:4px solid #f4f4f4}
+  .classic .meta{justify-content:center}
+
+  .split{display:grid;grid-template-columns:5fr 7fr;min-height:100vh}
+  .split .side{min-height:100vh}
+  .split .main{padding:56px clamp(24px,6vw,96px);display:flex;flex-direction:column;justify-content:center}
+
+  .cardl{min-height:100vh;display:grid;place-items:center;padding:40px 16px;position:relative}
+  .cardl .bgimg{position:absolute;inset:0}
+  .cardl .bc{position:relative;width:min(460px,100%);background:#fff;border-radius:16px;padding:32px;box-shadow:0 10px 30px rgba(0,0,0,.18);text-align:center}
+  .cardl .avatar{margin:0 auto}
+  .cardl .meta{justify-content:center}
+
+  /* Landing */
+  .hero-l{display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center;max-width:1120px;margin:0 auto;padding:64px 24px}
+  .hero-l h1{font-size:44px;line-height:1.1;letter-spacing:-.02em}
+  .phone{width:260px;height:520px;border:8px solid #555;border-radius:32px;margin:0 auto;background:#fff;overflow:hidden;display:flex;flex-direction:column}
+  .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1120px;margin:0 auto;padding:0 24px 40px}
+  .feats .card{padding:20px}
+  .lfoot{max-width:1120px;margin:0 auto;padding:20px 24px;border-top:1px solid #d5d5d5;display:flex;gap:20px;font-size:13px;color:#666}
+
+  /* Auth / wizard */
+  .center{max-width:480px;margin:0 auto;padding:40px 20px}
+  .center .card{padding:28px}
+  .wiz{max-width:760px;margin:0 auto;padding:32px 20px 120px}
+  .wiz h1{font-size:26px;margin-bottom:6px}
+  .wizbar{position:sticky;bottom:0;background:#fff;border-top:1px solid #d5d5d5;padding:12px 24px;display:flex;justify-content:space-between;gap:12px}
+  .url{display:flex;align-items:stretch;border:1.5px solid #aaa;border-radius:8px;background:#fff;overflow:hidden}
+  .url span{padding:10px 12px;background:#e8e8e8;color:#555;display:flex;align-items:center;font-size:14px}
+  .url b{padding:10px 12px;font-weight:500;flex:1}
+  .layouts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .lay{border:1.5px solid #bbb;border-radius:12px;padding:10px;background:#fff}
+  .lay.sel{border:3px solid #222}
+  .lay .thumb{height:150px;border-radius:8px;background:#eee;position:relative;overflow:hidden;margin-bottom:8px}
+  .swatches{display:flex;gap:10px;flex-wrap:wrap}
+  .sw{width:40px;height:40px;border-radius:50%;background:#999;border:3px solid #fff;outline:1.5px solid #aaa}
+  .sw.sel{outline:3px solid #222}
+
+  /* Editor */
+  .ed{display:grid;grid-template-columns:minmax(380px,1fr) 1.15fr;height:calc(100vh - 60px)}
+  .ed-form{overflow:auto;padding:24px;background:#fff;border-right:1px solid #d5d5d5}
+  .ed-prev{padding:24px;display:flex;flex-direction:column;gap:12px;align-items:center;overflow:hidden}
+  .sec{border:1px solid #d5d5d5;border-radius:10px;margin-bottom:12px}
+  .sec>h3{font-size:14px;padding:12px 14px;border-bottom:1px solid #e3e3e3;display:flex;justify-content:space-between}
+  .sec>.b{padding:14px}
+  .drag{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #d5d5d5;border-radius:8px;background:#fafafa;margin-bottom:8px}
+  .handle{width:14px;height:18px;background:radial-gradient(#888 1.2px,transparent 1.4px) 0 0/6px 6px}
+  .mini{width:100%;max-width:560px;height:100%;border:1px solid #cfcfcf;border-radius:10px;background:#f4f4f4;overflow:hidden}
+  .seg{display:inline-flex;border:1.5px solid #888;border-radius:8px;overflow:hidden;font-size:13px}
+  .seg span{padding:6px 12px}.seg .on{background:#3a3a3a;color:#fff}
+  .status{font-size:13px;color:#555;display:flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;background:#888}
+  .tabs-m{display:none}
+  .banner-warn{background:#e6e6e6;border-bottom:1px solid #ccc;padding:10px 24px;font-size:13.5px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+
+  /* Published */
+  .pubd{max-width:640px;margin:0 auto;padding:48px 20px;text-align:center}
+  .qr{width:180px;height:180px;margin:0 auto;background:
+     conic-gradient(#333 25%,#fff 0 50%,#333 0 75%,#fff 0) 0 0/24px 24px;border:10px solid #fff;outline:1px solid #ccc}
+
+  @media (max-width:760px){
+    .topbar{padding:0 16px;height:56px}
+    .split{grid-template-columns:1fr}
+    .split .side{min-height:0;height:220px}
+    .split .main{padding:0 20px 32px;justify-content:flex-start}
+    .split .avatar{margin-top:-48px;border:4px solid #f4f4f4}
+    .cardl{padding:24px 12px;align-items:start}
+    .cardl .bc{padding:24px 18px;margin-top:80px}
+    .hero-l{grid-template-columns:1fr;padding:32px 20px;gap:28px}
+    .hero-l h1{font-size:32px}
+    .phone{width:200px;height:380px}
+    .hero-l .url{flex-wrap:wrap}.hero-l .url .btn{width:100%}
+    .feats{grid-template-columns:1fr;padding:0 20px 32px}
+    .layouts{grid-template-columns:1fr}
+    .lay{display:flex;gap:12px;align-items:center}
+    .lay .thumb{width:96px;height:96px;flex:none;margin:0}
+    .ed{grid-template-columns:1fr;height:auto}
+    .ed-prev{display:none}
+    .ed-form{padding:16px;border:0}
+    .tabs-m{display:flex;border-bottom:1px solid #d5d5d5;background:#fff}
+    .tabs-m span{flex:1;text-align:center;padding:12px;font-weight:600;font-size:14px}
+    .tabs-m .on{border-bottom:3px solid #222}
+    .hide-m{display:none!important}
+    .wizbar{padding:12px 16px}
+    .wizbar .btn{flex:1}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== 1a. Public page — Classic ===================== -->
+<section class="screen" id="public-classic">
+  <div class="classic">
+    <div class="banner img">grafika tła (opcjonalna)</div>
+    <div class="head stack">
+      <div class="avatar">AW</div>
+      <h1 style="font-size:32px">Anna Wiśniewska</h1>
+      <p class="muted" style="font-size:17px">Projektantka UX/UI i konsultantka produktowa</p>
+      <div class="meta"><span>▣ Właścicielka, Studio Wiśniewska</span><span>◎ Kraków</span></div>
+      <div class="pub-actions" style="width:100%;max-width:420px"><a class="btn primary">✉ Napisz e-mail</a><a class="btn">☏ Zadzwoń</a></div>
+    </div>
+    <div class="stack" style="margin-top:28px">
+      <p>Od 9 lat pomagam firmom projektować aplikacje, z których ludzie chętnie korzystają. Prowadzę badania z użytkownikami, warsztaty produktowe i projekty interfejsów — od pierwszego szkicu po gotowy design system. Pracowałam z bankami, sklepami internetowymi i startupami z branży zdrowia.</p>
+      <p class="label" style="margin-top:24px">Znajdziesz mnie tutaj</p>
+      <div class="lnk"><span class="ico">in</span><span class="grow"><b>LinkedIn</b><br><small class="muted">linkedin.com/in/anna-wisniewska</small></span>↗</div>
+      <div class="lnk"><span class="ico">Bē</span><span class="grow"><b>Portfolio na Behance</b><br><small class="muted">behance.net/annawisniewska</small></span>↗</div>
+      <div class="lnk"><span class="ico">Dr</span><span class="grow"><b>Dribbble</b><br><small class="muted">dribbble.com/annawisniewska</small></span>↗</div>
+      <div class="lnk"><span class="ico">◍</span><span class="grow"><b>Blog o projektowaniu</b><br><small class="muted">studiowisniewska.pl/blog</small></span>↗</div>
+      <div class="pub-foot" style="margin-top:28px"><span>Utworzono w Profilo</span><span>Zgłoś nadużycie</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 1b. Public page — Split ===================== -->
+<section class="screen" id="public-split">
+  <div class="split">
+    <div class="side img">grafika tła albo kolor przewodni</div>
+    <div class="main"><div class="pub-content stack">
+      <div class="avatar">AW</div>
+      <h1 style="font-size:36px">Anna Wiśniewska</h1>
+      <p class="muted" style="font-size:17px">Projektantka UX/UI i konsultantka produktowa</p>
+      <div class="meta"><span>▣ Właścicielka, Studio Wiśniewska</span><span>◎ Kraków</span></div>
+      <div class="pub-actions"><a class="btn primary">✉ Napisz e-mail</a><a class="btn">☏ Zadzwoń</a></div>
+      <p>Od 9 lat pomagam firmom projektować aplikacje, z których ludzie chętnie korzystają. Prowadzę badania z użytkownikami, warsztaty produktowe i projekty interfejsów — od pierwszego szkicu po gotowy design system.</p>
+      <p class="label" style="margin-top:20px">Znajdziesz mnie tutaj</p>
+      <div class="lnk"><span class="ico">in</span><span class="grow"><b>LinkedIn</b><br><small class="muted">linkedin.com/in/anna-wisniewska</small></span>↗</div>
+      <div class="lnk"><span class="ico">Bē</span><span class="grow"><b>Portfolio na Behance</b><br><small class="muted">behance.net/annawisniewska</small></span>↗</div>
+      <div class="lnk"><span class="ico">◍</span><span class="grow"><b>Blog o projektowaniu</b><br><small class="muted">studiowisniewska.pl/blog</small></span>↗</div>
+      <div class="pub-foot"><span>Utworzono w Profilo</span><span>Zgłoś nadużycie</span></div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ===================== 1c. Public page — Card ===================== -->
+<section class="screen" id="public-card">
+  <div class="cardl">
+    <div class="bgimg img">grafika tła albo jednolity kolor przewodni</div>
+    <div class="bc stack">
+      <div class="avatar">AW</div>
+      <h1 style="font-size:28px">Anna Wiśniewska</h1>
+      <p class="muted">Projektantka UX/UI i konsultantka produktowa</p>
+      <div class="meta"><span>▣ Studio Wiśniewska</span><span>◎ Kraków</span></div>
+      <div class="pub-actions"><a class="btn primary">✉ Napisz e-mail</a><a class="btn">☏ Zadzwoń</a></div>
+      <p style="font-size:14px;text-align:left">Od 9 lat pomagam firmom projektować aplikacje, z których ludzie chętnie korzystają.</p>
+      <div class="row wrap" style="justify-content:center;gap:10px">
+        <span class="ico" title="LinkedIn">in</span><span class="ico">Bē</span><span class="ico">Dr</span><span class="ico">◍</span>
+      </div>
+      <p class="note">W Wizytówce linki są ikonami z etykietą w podpowiedzi; przy ponad 6 linkach — lista pod kartą.</p>
+      <div class="pub-foot" style="justify-content:center"><span>Utworzono w Profilo</span><span>Zgłoś nadużycie</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 2. Landing ===================== -->
+<section class="screen" id="landing">
+  <div class="topbar"><div class="logo"><i></i>Profilo</div><span class="grow"></span><a class="btn ghost sm">Zaloguj się</a><a class="btn primary sm">Załóż stronę</a></div>
+  <div class="hero-l">
+    <div class="stack">
+      <h1>Twoja wizytówka w sieci. Gotowa w 5 minut.</h1>
+      <p class="muted" style="font-size:18px">Jeden adres z opisem, kontaktem i linkami do Twoich profili. Wstawisz go do CV, stopki e-mail i na wizytówkę.</p>
+      <div class="url" style="max-width:440px"><span>profilo.pl/user/</span><b class="muted">twoje-imie</b><a class="btn primary" style="border-radius:0">Zarezerwuj adres</a></div>
+      <p class="hint">Bez opłat. Bez kodowania.</p>
+    </div>
+    <div class="phone"><div class="img" style="height:130px">grafika</div><div style="padding:16px" class="stack"><div class="avatar" style="width:64px;height:64px;margin-top:-48px;font-size:20px">AW</div><div><b>Anna Wiśniewska</b></div><div class="muted" style="font-size:13px">Projektantka UX/UI</div><div class="btn primary sm">Napisz e-mail</div><div class="lnk" style="padding:8px"><span class="ico" style="width:26px;height:26px">in</span>LinkedIn</div><div class="lnk" style="padding:8px"><span class="ico" style="width:26px;height:26px">Bē</span>Portfolio</div></div></div>
+  </div>
+  <div class="feats">
+    <div class="card"><b>Trzy gotowe układy</b><p class="muted">Klasyczny, Dzielony lub Wizytówka. Wybierasz układ i kolor, my dbamy o wygląd na telefonie i komputerze.</p></div>
+    <div class="card"><b>Kontakt jednym dotknięciem</b><p class="muted">Przyciski „Napisz e-mail” i „Zadzwoń”. Ty decydujesz, co pokazać.</p></div>
+    <div class="card"><b>Stały adres i kod QR</b><p class="muted">Adres się nie zmienia, więc linki w CV i na wizytówkach zawsze działają.</p></div>
+  </div>
+  <div class="feats" style="grid-template-columns:1fr"><div class="card" style="text-align:center"><p class="label">Przykładowe strony</p><div class="row wrap" style="justify-content:center;margin-top:10px"><span class="chip">Klasyczny</span><span class="chip">Dzielony</span><span class="chip">Wizytówka</span></div></div></div>
+  <div class="lfoot"><span>© Profilo</span><span>Regulamin</span><span>Polityka prywatności</span></div>
+</section>
+
+<!-- ===================== 3. Register ===================== -->
+<section class="screen" id="register">
+  <div class="topbar"><div class="logo"><i></i>Profilo</div><span class="grow"></span><span class="muted hide-m" style="font-size:13px">Masz konto?</span><a class="btn ghost sm">Zaloguj się</a></div>
+  <div class="center">
+    <div class="card">
+      <h1 style="font-size:24px">Załóż swoją stronę</h1>
+      <p class="muted" style="margin:4px 0 20px">To zajmie około 5 minut.</p>
+      <div class="field"><label>Imię i nazwisko lub pseudonim</label><div class="input">Anna Wiśniewska</div><span class="hint">Tak podpiszesz swoją stronę. Zmienisz to w każdej chwili.</span></div>
+      <div class="field"><label>E-mail do logowania</label><div class="input">anna@example.pl</div><span class="hint">Nie pokażemy go na stronie.</span></div>
+      <div class="field"><label>Hasło</label><div class="row"><div class="input grow">••••••••••••</div><span class="btn sm">Pokaż</span></div><span class="hint">Co najmniej 10 znaków.</span></div>
+      <div class="row" style="align-items:flex-start;margin-bottom:18px"><span style="width:20px;height:20px;border:1.5px solid #555;border-radius:4px;flex:none;margin-top:2px"></span><span style="font-size:13.5px">Akceptuję <u>Regulamin</u> i zapoznałem(-am) się z <u>Polityką prywatności</u>.</span></div>
+      <a class="btn primary" style="width:100%">Załóż konto</a>
+    </div>
+    <p class="note" style="margin-top:16px">Po wysłaniu: od razu kreator (krok 1/4) + baner „Potwierdź e-mail — wysłaliśmy link na anna@example.pl”.</p>
+  </div>
+</section>
+
+<!-- ===================== 4. Wizard 1/4 — name & nick ===================== -->
+<section class="screen" id="wizard-nick">
+  <div class="topbar"><div class="logo"><i></i><span class="hide-m">Profilo</span></div><div class="steps"><span class="bar"><span class="on"></span><span></span><span></span><span></span></span><b>Krok 1 z 4</b><span class="hide-m">· Nazwa i adres</span></div><span class="grow"></span><span class="btn ghost sm">Wyjdź</span></div>
+  <div class="banner-warn">✉ Potwierdź e-mail, żeby opublikować stronę. Wysłaliśmy link na anna@example.pl. <u>Wyślij ponownie</u></div>
+  <div class="wiz">
+    <h1>Jak masz się przedstawiać?</h1>
+    <p class="muted" style="margin-bottom:24px">Nazwa jest widoczna na stronie. Adres możesz zmienić tylko przed pierwszą publikacją.</p>
+    <div class="field"><label>Imię i nazwisko lub pseudonim</label><div class="input">Anna Wiśniewska</div></div>
+    <div class="field"><label>Adres Twojej strony</label>
+      <div class="url"><span>profilo.pl/user/</span><b>anna-wisniewska</b></div>
+      <span class="hint err">✕ Ten adres jest już zajęty. Może któryś z tych?</span>
+      <div class="row wrap"><span class="chip">anna-wisniewska-2</span><span class="chip">anna-wisniewska-krakow</span><span class="chip">anna-wisniewska-3</span></div>
+      <span class="hint">3–40 znaków: małe litery, cyfry i myślniki. Polskie znaki zamienimy automatycznie.</span>
+    </div>
+    <p class="note">Stany pola adresu: sprawdzanie… / ✓ Adres wolny / ✕ zajęty + propozycje / ✕ niepoprawny format (z opisem reguły).</p>
+  </div>
+  <div class="wizbar"><span></span><a class="btn primary">Dalej: układ →</a></div>
+</section>
+
+<!-- ===================== 5. Wizard 2/4 — layout & colour ===================== -->
+<section class="screen" id="wizard-layout">
+  <div class="topbar"><div class="logo"><i></i><span class="hide-m">Profilo</span></div><div class="steps"><span class="bar"><span class="on"></span><span class="on"></span><span></span><span></span></span><b>Krok 2 z 4</b><span class="hide-m">· Wygląd</span></div><span class="grow"></span><span class="btn ghost sm">Wyjdź</span></div>
+  <div class="wiz">
+    <h1>Wybierz układ</h1>
+    <p class="muted" style="margin-bottom:20px">Zmienisz go w każdej chwili. Treść przeniesie się sama.</p>
+    <div class="layouts">
+      <div class="lay"><div class="thumb"><div class="img" style="height:40%"></div><div style="width:28px;height:28px;border-radius:7px;background:#aaa;margin:-14px auto 6px"></div><div style="height:6px;background:#bbb;margin:0 30%"></div><div style="height:16px;background:#ccc;margin:8px 20%;border-radius:4px"></div></div><div><b>Klasyczny</b><br><span class="hint">Zdjęcie, opis i linki w jednej kolumnie.</span></div></div>
+      <div class="lay sel"><div class="thumb" style="display:grid;grid-template-columns:2fr 3fr"><div class="img"></div><div style="padding:14px 8px"><div style="width:22px;height:22px;border-radius:6px;background:#aaa"></div><div style="height:6px;background:#bbb;margin:8px 0;width:70%"></div><div style="height:14px;background:#ccc;border-radius:4px"></div><div style="height:12px;background:#e0e0e0;border-radius:4px;margin-top:6px"></div></div></div><div><b>Dzielony ✓</b><br><span class="hint">Grafika z jednej strony, treść z drugiej.</span></div></div>
+      <div class="lay"><div class="thumb img" style="display:grid;place-items:center"><div style="width:58%;height:70%;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.2)"></div></div><div><b>Wizytówka</b><br><span class="hint">Zwarta karta na grafice lub kolorze.</span></div></div>
+    </div>
+    <h2 style="font-size:18px;margin:28px 0 10px">Kolor przewodni</h2>
+    <div class="swatches"><span class="sw sel" style="background:#222"></span><span class="sw" style="background:#555"></span><span class="sw" style="background:#666"></span><span class="sw" style="background:#777"></span><span class="sw" style="background:#4a4a4a"></span><span class="sw" style="background:#5c5c5c"></span><span class="sw" style="background:#6e6e6e"></span><span class="sw" style="background:#3c3c3c"></span></div>
+    <p class="hint" style="margin-top:8px">Granat · 8 kolorów sprawdzonych pod kątem czytelności.</p>
+  </div>
+  <div class="wizbar"><a class="btn">← Wstecz</a><a class="btn primary">Dalej: treść →</a></div>
+</section>
+
+<!-- ===================== 6. Editor (also wizard 3/4) ===================== -->
+<section class="screen" id="editor">
+  <div class="topbar"><div class="logo"><i></i><span class="hide-m">Profilo</span></div><div class="status"><span class="dot"></span>Zapisano</div><span class="grow"></span><span class="chip hide-m">Masz nieopublikowane zmiany</span><a class="btn sm hide-m">Podgląd</a><a class="btn primary sm">Opublikuj zmiany</a><span class="btn ghost sm" title="Menu">☰</span></div>
+  <div class="tabs-m"><span class="on">Edycja</span><span>Podgląd</span></div>
+  <div class="ed">
+    <div class="ed-form">
+      <div class="sec"><h3>Wygląd <span class="muted">Dzielony · Granat ▾</span></h3></div>
+      <div class="sec"><h3>O mnie <span>▴</span></h3><div class="b">
+        <div class="row" style="margin-bottom:14px"><div class="avatar" style="width:64px;height:64px;font-size:20px">AW</div><div class="grow"><span class="btn sm">Dodaj zdjęcie</span><div class="hint" style="margin-top:6px">JPG, PNG lub WebP, do 10 MB. Przytniesz je do kwadratu.</div></div></div>
+        <div class="row" style="margin-bottom:14px"><div class="img" style="width:96px;height:56px;border-radius:6px"></div><span class="btn sm">Dodaj grafikę tła</span></div>
+        <div class="field"><label>Imię i nazwisko lub pseudonim</label><div class="input">Anna Wiśniewska</div></div>
+        <div class="field"><label>Nagłówek <span class="muted">(opcjonalnie)</span></label><div class="input">Projektantka UX/UI i konsultantka produktowa</div></div>
+        <div class="field"><label>Krótki opis <span class="muted">(opcjonalnie)</span></label><div class="input area">Od 9 lat pomagam firmom projektować aplikacje, z których ludzie chętnie korzystają…</div><span class="hint" style="text-align:right">212 / 500</span></div>
+        <div class="row wrap"><div class="field grow"><label>Stanowisko</label><div class="input">Właścicielka</div></div><div class="field grow"><label>Firma</label><div class="input">Studio Wiśniewska</div></div><div class="field grow"><label>Miejscowość</label><div class="input">Kraków</div></div></div>
+      </div></div>
+      <div class="sec"><h3>Kontakt <span>▴</span></h3><div class="b">
+        <div class="field"><label>Publiczny e-mail</label><div class="input">anna@example.pl</div><span class="hint">Może być inny niż e-mail do logowania.</span></div>
+        <div class="field"><label>Telefon</label><div class="row"><div class="input" style="width:86px">🇵🇱 +48</div><div class="input grow">601 234 567</div></div></div>
+      </div></div>
+      <div class="sec"><h3>Linki <span class="muted">4 / 20</span></h3><div class="b">
+        <div class="drag"><span class="handle"></span><span class="ico">in</span><span class="grow"><b>LinkedIn</b><br><small class="muted">linkedin.com/in/anna-wisniewska</small></span><span class="muted">✎ ✕</span></div>
+        <div class="drag"><span class="handle"></span><span class="ico">Bē</span><span class="grow"><b>Portfolio na Behance</b><br><small class="muted">behance.net/annawisniewska</small></span><span class="muted">✎ ✕</span></div>
+        <div class="drag"><span class="handle"></span><span class="ico">Dr</span><span class="grow"><b>Dribbble</b><br><small class="muted">dribbble.com/annawisniewska</small></span><span class="muted">✎ ✕</span></div>
+        <div class="drag"><span class="handle"></span><span class="ico">◍</span><span class="grow"><b>Blog o projektowaniu</b><br><small class="muted">studiowisniewska.pl/blog</small></span><span class="muted">✎ ✕</span></div>
+        <span class="btn sm" style="width:100%">+ Dodaj link</span>
+        <p class="hint" style="margin-top:6px">Przeciągnij, aby zmienić kolejność (na telefonie: przyciski ↑ ↓).</p>
+      </div></div>
+      <p class="note">W kreatorze ten ekran to „Krok 3 z 4” z paskiem „← Wstecz / Dalej: podgląd →” zamiast przycisku publikacji.</p>
+    </div>
+    <div class="ed-prev">
+      <div class="row" style="width:100%;max-width:560px"><span class="label grow">Podgląd wersji roboczej</span><span class="seg"><span class="on">Komputer</span><span>Telefon</span></span></div>
+      <div class="mini"><div style="display:grid;grid-template-columns:2fr 3fr;height:100%"><div class="img">grafika</div><div style="padding:22px" class="stack"><div class="avatar" style="width:52px;height:52px;font-size:16px;border-radius:12px">AW</div><div><b style="font-size:20px">Anna Wiśniewska</b></div><div class="muted" style="font-size:13px">Projektantka UX/UI i konsultantka produktowa</div><div class="row"><span class="btn primary sm">Napisz e-mail</span><span class="btn sm">Zadzwoń</span></div><div style="font-size:12px" class="muted">Od 9 lat pomagam firmom projektować aplikacje…</div><div class="lnk" style="padding:8px"><span class="ico" style="width:24px;height:24px">in</span><small>LinkedIn</small></div><div class="lnk" style="padding:8px"><span class="ico" style="width:24px;height:24px">Bē</span><small>Portfolio na Behance</small></div></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 7. Published ===================== -->
+<section class="screen" id="published">
+  <div class="topbar"><div class="logo"><i></i><span class="hide-m">Profilo</span></div><span class="grow"></span><a class="btn sm">Przejdź do edytora</a></div>
+  <div class="pubd stack">
+    <div style="width:56px;height:56px;border-radius:50%;background:#ccc;margin:0 auto;display:grid;place-items:center;font-size:26px">✓</div>
+    <h1 style="font-size:28px">Gotowe! Twoja strona jest online</h1>
+    <p class="muted">Wstaw ten adres do CV, stopki e-mail albo na wizytówkę.</p>
+    <div class="url" style="text-align:left"><b>profilo.pl/user/anna-wisniewska</b><a class="btn primary" style="border-radius:0">Kopiuj link</a></div>
+    <div class="row wrap" style="justify-content:center"><a class="btn">Otwórz stronę ↗</a></div>
+    <div class="card" style="padding:20px;margin-top:20px">
+      <p class="label" style="margin-bottom:12px">Kod QR</p>
+      <div class="qr"></div>
+      <div class="row wrap" style="justify-content:center;margin-top:14px"><a class="btn sm">Pobierz PNG</a><a class="btn sm">Pobierz SVG</a></div>
+    </div>
+    <p class="note">Ten sam blok (adres, kopiuj, QR) jest dostępny później w edytorze w menu „Udostępnij”.</p>
+  </div>
+</section>
+
+<script>
+  function show(){var id=(location.hash||'#public-split').slice(1);
+    document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('on',s.id===id)});}
+  addEventListener('hashchange',show);show();
+</script>
+</body>
+</html>

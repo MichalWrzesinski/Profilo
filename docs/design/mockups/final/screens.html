@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profilo — makiety docelowe</title>
+<link rel="icon" href="../../brand/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../tokens.css">
+<link rel="stylesheet" href="../../components.css">
+<style>
+  /* Screen-specific layout (mockup only) */
+  .screen { display: none; min-height: 100vh; }
+  .screen.on { display: block; }
+  .wiz { max-width: 760px; margin: 0 auto; padding: var(--space-10) var(--space-5) 140px; }
+  .wiz h1 { font-size: var(--text-xl); margin-bottom: var(--space-2); }
+  .wiz .lead { color: var(--color-text-muted); margin-bottom: var(--space-8); }
+  .wizbar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-6); background: rgba(248,250,252,.95); border-top: 1px solid var(--color-border); backdrop-filter: blur(8px); }
+  .auth { max-width: 480px; margin: 0 auto; padding: var(--space-10) var(--space-5); }
+  .auth h1 { font-size: var(--text-xl); }
+  .ed { display: grid; grid-template-columns: minmax(400px, 1fr) 1.15fr; height: calc(100vh - var(--topbar-height)); }
+  .ed-form { overflow: auto; padding: var(--space-6); border-right: 1px solid var(--color-border); }
+  .ed-prev { padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-3); align-items: center; overflow: hidden; background: var(--color-blue-50); }
+  .ed-prev .bar { width: 100%; max-width: 620px; display: flex; align-items: center; gap: var(--space-3); }
+  .ed-prev .frame { width: 100%; max-width: 620px; flex: 1; border-radius: var(--radius-xl); border: 1px solid var(--color-border); overflow: hidden; box-shadow: var(--shadow-md); background: var(--color-bg); position: relative; }
+  .ed-prev iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 1700px; border: 0; transform: scale(.484); transform-origin: 0 0; }
+  .upload { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-5); }
+  .bg-thumb { width: 112px; height: 64px; border-radius: var(--radius-md); flex: none; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+  .phone-row { display: grid; grid-template-columns: 110px 1fr; gap: var(--space-2); }
+  .tabs-m { display: none; }
+  .landing-hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: var(--space-12); align-items: center; max-width: var(--container-max); margin: 0 auto; padding: var(--space-16) var(--space-6) var(--space-12); }
+  .landing-hero h1 { font-size: var(--text-3xl); font-weight: 800; line-height: var(--leading-tight); margin-bottom: var(--space-5); }
+  .landing-hero h1 em { font-style: normal; color: var(--color-blue-700); }
+  .landing-hero .lead { font-size: 19px; color: var(--color-text-strong-muted); margin-bottom: var(--space-8); max-width: 34ch; }
+  .claim { display: flex; max-width: 480px; }
+  .claim .input-group { flex: 1; border-radius: var(--radius-md) 0 0 var(--radius-md); }
+  .claim .btn { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+  .device { width: 290px; height: 590px; border-radius: 42px; border: 10px solid var(--color-navy-950); overflow: hidden; margin: 0 auto; box-shadow: var(--shadow-lg); position: relative; background: var(--color-bg); }
+  .device iframe { width: 390px; height: 800px; border: 0; transform: scale(.693); transform-origin: 0 0; }
+  .feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); max-width: var(--container-max); margin: 0 auto; padding: 0 var(--space-6) var(--space-12); }
+  .feats .ic { width: 44px; height: 44px; border-radius: 12px; background: var(--color-blue-100); color: var(--color-blue-700); display: grid; place-items: center; margin-bottom: var(--space-4); }
+  .feats h3 { font-size: var(--text-lg); margin-bottom: var(--space-2); }
+  .lfoot { max-width: var(--container-max); margin: 0 auto; padding: var(--space-6); border-top: 1px solid var(--color-border); display: flex; flex-wrap: wrap; gap: var(--space-5); font-size: var(--text-sm); color: var(--color-text-muted); }
+  .lfoot a { color: inherit; }
+  .done { max-width: 620px; margin: 0 auto; padding: var(--space-12) var(--space-5); text-align: center; }
+  .done .ok { width: 64px; height: 64px; border-radius: 50%; background: var(--color-success-bg); color: var(--color-success); display: grid; place-items: center; margin: 0 auto var(--space-5); }
+  .done h1 { font-size: var(--text-xl); margin-bottom: var(--space-2); }
+  .qr { width: 168px; height: 168px; margin: 0 auto; padding: 10px; background: #fff; border-radius: var(--radius-md); border: 1px solid var(--color-border); }
+  .center-404 { min-height: 100vh; display: grid; place-items: center; text-align: center; padding: var(--space-6); }
+  .center-404 .code { font-size: 96px; font-weight: 800; color: var(--color-blue-100); line-height: 1; -webkit-text-stroke: 2px var(--color-navy-900); }
+  @media (max-width: 860px) {
+    .ed { grid-template-columns: 1fr; height: auto; }
+    .ed-prev { display: none; }
+    .ed-form { padding: var(--space-4); border: 0; }
+    .tabs-m { display: flex; }
+    .grid3 { grid-template-columns: 1fr; }
+    .wizbar { padding: var(--space-3) var(--space-4); }
+    .wizbar .btn { flex: 1; }
+    .wiz { padding-top: var(--space-6); }
+    .landing-hero { grid-template-columns: 1fr; padding: var(--space-8) var(--space-5); gap: var(--space-8); }
+    .landing-hero h1 { font-size: 34px; }
+    .claim { flex-direction: column; gap: var(--space-2); }
+    .claim .input-group, .claim .btn { border-radius: var(--radius-md); }
+    .device { width: 230px; height: 470px; border-width: 8px; border-radius: 34px; }
+    .device iframe { transform: scale(.548); }
+    .feats { grid-template-columns: 1fr; padding: 0 var(--space-5) var(--space-8); }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="0 0 44 44"><rect width="44" height="44" rx="11" fill="#0F2747"/><path d="M15 32V12h8.5a6.5 6.5 0 0 1 0 13H15" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="31" cy="31" r="3.4" fill="#E0592A"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+  <symbol id="i-case" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.5v.01"/></symbol>
+  <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke-width="3"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 4v16"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
+  <symbol id="i-dn" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+</svg>
+
+<div id="app"></div>
+
+<script>
+/* ---------- Mockup data (real content from docs/product) ---------- */
+const P = {
+  name: 'Anna Wiśniewska', initials: 'AW', headline: 'Projektantka UX/UI i konsultantka produktowa',
+  position: 'Właścicielka', company: 'Studio Wiśniewska', city: 'Kraków',
+  email: 'anna@example.pl', phone: '+48 601 234 567', nick: 'anna-wisniewska',
+  bio: 'Od 9 lat pomagam firmom projektować aplikacje, z których ludzie chętnie korzystają. Prowadzę badania z użytkownikami, warsztaty produktowe i projekty interfejsów — od pierwszego szkicu po gotowy design system. Pracowałam z bankami, sklepami internetowymi i startupami z branży zdrowia.',
+  links: [['in','LinkedIn','linkedin.com/in/anna-wisniewska'],['Bē','Portfolio na Behance','behance.net/annawisniewska'],['Dr','Dribbble','dribbble.com/annawisniewska'],['globe','Blog o projektowaniu','studiowisniewska.pl/blog']]
+};
+const ACCENTS = [['granat','Granat'],['niebieski','Niebieski'],['blekit','Błękit'],['morski','Morski'],['zielen','Zieleń'],['bordo','Bordo'],['miedz','Miedź'],['fiolet','Fiolet']];
+const ic = (id, cls='') => `<svg class="i ${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
+const brand = (txt=true) => `<a class="brand" href="#landing"><svg viewBox="0 0 44 44"><use href="#logo"/></svg>${txt?'<span>Profilo</span>':''}</a>`;
+const linkIco = l => l[0]==='globe' ? ic('i-globe') : l[0];
+
+/* ---------- Public page ---------- */
+function pub({layout='split', accent='granat', p=P, minimal=false}) {
+  const meta = [];
+  if (p.position || p.company) meta.push(`<li>${ic('i-case')}${[p.position,p.company].filter(Boolean).join(', ')}</li>`);
+  if (p.city) meta.push(`<li>${ic('i-pin')}${p.city}</li>`);
+  const contact = `<div class="contact">
+      ${p.email?`<a class="btn btn-primary" href="mailto:${p.email}">${ic('i-mail')}Napisz e-mail</a>`:''}
+      ${p.phone?`<a class="btn btn-secondary" href="tel:+48601234567">${ic('i-phone')}Zadzwoń</a>`:''}</div>`;
+  const links = p.links.length ? `<p class="label-caps">Znajdziesz mnie tutaj</p><ul class="links">${p.links.map(l=>`<li><a class="link-card" href="#"><span class="link-ico">${linkIco(l)}</span><span class="txt"><strong>${l[1]}</strong><small>${l[2]}</small></span>${ic('i-arrow','arrow')}</a></li>`).join('')}</ul>` : '';
+  const foot = `<footer><a class="made" href="#landing"><svg width="16" height="16" viewBox="0 0 44 44"><use href="#logo"/></svg>Utworzono w Profilo</a><a href="#">Zgłoś nadużycie</a></footer>`;
+  const ident = `<div class="avatar" role="img" aria-label="${p.name}">${p.initials}</div><h1>${p.name}</h1>${p.headline?`<p class="headline">${p.headline}</p>`:''}${meta.length?`<ul class="meta">${meta.join('')}</ul>`:''}`;
+  const bio = p.bio ? `<p class="bio">${p.bio}</p>` : '';
+  const st = `style="--page-accent:var(--page-accent-${accent})"`;
+  if (layout==='split') return `<div class="pp pp-split" ${st}><div class="side hero-art" aria-hidden="true"></div><main class="main">${ident}${contact}${bio}${links}${foot}</main></div>`;
+  if (layout==='classic') return `<div class="pp pp-classic" ${st}>${minimal?'':'<div class="banner hero-art" aria-hidden="true"></div>'}<main class="main ${minimal?'no-banner':''}"><div class="head">${ident}${contact}</div>${bio}${links}${foot}</main></div>`;
+  const icons = p.links.length ? `<ul class="icon-links">${p.links.map(l=>`<li><a href="#" title="${l[1]}" aria-label="${l[1]}">${linkIco(l)}</a></li>`).join('')}</ul>` : '';
+  return `<div class="pp pp-card" ${st}><div class="bgfill hero-art" aria-hidden="true"></div><main class="vcard">${ident}${contact}${bio}${icons}${foot}</main></div>`;
+}
+
+/* ---------- App screens ---------- */
+const stepper = (n, label) => `<div class="stepper"><span class="bars">${[1,2,3,4].map(i=>`<i class="${i<n?'done':i===n?'now':''}"></i>`).join('')}</span><b>Krok ${n} z 4</b><span class="hide-m">· ${label}</span></div>`;
+const wizTop = (n,label) => `<header class="topbar">${brand(false)}${stepper(n,label)}<span class="spacer"></span><a class="btn btn-ghost btn-sm" href="#editor"><span class="hide-m">Dokończę&nbsp;</span>później</a></header>`;
+const confirmBanner = `<div class="alert alert-warning banner">${ic('i-mail')}<span class="grow"><b>Potwierdź e-mail, żeby opublikować stronę.</b> Wysłaliśmy link na ${P.email}.</span><a class="btn btn-ghost btn-sm" href="#">Wyślij ponownie</a></div>`;
+
+function landing(){ return `
+<header class="topbar">${brand()}<span class="spacer"></span><a class="btn btn-ghost btn-sm" href="#login">Zaloguj się</a><a class="btn btn-primary btn-sm" href="#register">Załóż stronę</a></header>
+<section class="landing-hero">
+  <div>
+    <span class="badge badge-neutral" style="margin-bottom:var(--space-5)">Bezpłatnie · bez kodowania</span>
+    <h1>Twoja wizytówka w sieci. <em>Gotowa w 5 minut.</em></h1>
+    <p class="lead">Jeden stały adres z opisem, kontaktem i linkami do Twoich profili. Wstaw go do CV, stopki e-mail albo na wizytówkę.</p>
+    <form class="claim" onsubmit="return false">
+      <label class="input-group"><span class="prefix">profilo.pl/user/</span><input class="input" placeholder="twoje-imie" aria-label="Wybrany adres"></label>
+      <a class="btn btn-primary" href="#register">Zarezerwuj adres</a>
+    </form>
+    <p class="hint" style="margin-top:var(--space-3)">${ic('i-check','sm')}Adres możesz zmienić aż do pierwszej publikacji.</p>
+  </div>
+  <div class="device" aria-label="Przykładowa strona"><iframe src="screens.html#public-split" tabindex="-1" title="Przykład"></iframe></div>
+</section>
+<section class="feats">
+  <div class="card card-pad"><div class="ic">${ic('i-layout')}</div><h3>Trzy gotowe układy</h3><p class="muted">Klasyczny, Dzielony albo Wizytówka. Wybierasz układ i kolor, a strona sama dopasuje się do telefonu i komputera.</p></div>
+  <div class="card card-pad"><div class="ic">${ic('i-mail')}</div><h3>Kontakt jednym dotknięciem</h3><p class="muted">Przyciski „Napisz e-mail” i „Zadzwoń”. Sam decydujesz, co pokazać. E-mail do logowania pozostaje prywatny.</p></div>
+  <div class="card card-pad"><div class="ic">${ic('i-qr')}</div><h3>Stały adres i kod QR</h3><p class="muted">Adres się nie zmienia, więc linki w CV i na wydrukowanych wizytówkach zawsze działają.</p></div>
+</section>
+<footer class="lfoot"><span>© 2026 Profilo</span><a href="#">Regulamin</a><a href="#">Polityka prywatności</a></footer>`; }
+
+function register(err){ return `
+<header class="topbar">${brand()}<span class="spacer"></span><span class="muted hide-m" style="font-size:var(--text-sm)">Masz już konto?</span><a class="btn btn-ghost btn-sm" href="#login">Zaloguj się</a></header>
+<main class="auth"><div class="card card-pad">
+  <h1>Załóż swoją stronę</h1>
+  <p class="muted" style="margin:var(--space-1) 0 var(--space-6)">Zajmie to około 5 minut.</p>
+  ${err?`<div class="alert alert-danger" role="alert" style="margin-bottom:var(--space-5)">${ic('i-alert')}<span>Popraw 2 pola zaznaczone poniżej.</span></div>`:''}
+  <div class="field"><label class="field-label" for="r1">Imię i nazwisko lub pseudonim</label><input id="r1" class="input" value="Anna Wiśniewska"><span class="hint">Tak podpiszesz swoją stronę. Zmienisz to w każdej chwili.</span></div>
+  <div class="field"><label class="field-label" for="r2">E-mail do logowania</label><input id="r2" class="input ${err?'is-error':''}" value="${err?'anna@example':P.email}" aria-invalid="${err}">${err?`<span class="hint is-error">${ic('i-alert','sm')}Wpisz pełny adres e-mail, np. anna@example.pl.</span>`:`<span class="hint">Nie pokażemy go na Twojej stronie.</span>`}</div>
+  <div class="field"><label class="field-label" for="r3">Hasło</label><div class="input-group ${err?'is-error':''}"><input id="r3" class="input" type="password" value="${err?'krakow1':'••••••••••••'}"><span class="state"><button class="btn btn-ghost btn-sm" type="button">${ic('i-eye','sm')}Pokaż</button></span></div>${err?`<span class="hint is-error">${ic('i-alert','sm')}Hasło jest za krótkie. Użyj co najmniej 10 znaków.</span>`:`<span class="hint">Co najmniej 10 znaków.</span>`}</div>
+  <label class="checkbox" style="margin-bottom:var(--space-6)"><span class="box is-checked">${ic('i-check','sm')}</span><span>Akceptuję <a href="#">Regulamin</a> i zapoznałem(-am) się z <a href="#">Polityką prywatności</a>.</span></label>
+  <a class="btn btn-primary btn-block ${err?'':''}" href="#wizard-nick">Załóż konto</a>
+</div></main>`; }
+
+function wizNick(taken){ return `${wizTop(1,'Nazwa i adres')}${confirmBanner}
+<main class="wiz">
+  <h1>Jak masz się przedstawiać?</h1>
+  <p class="lead">Nazwa jest widoczna na stronie. Adres możesz zmienić tylko przed pierwszą publikacją.</p>
+  <div class="field"><label class="field-label" for="n1">Imię i nazwisko lub pseudonim</label><input id="n1" class="input" value="${P.name}"></div>
+  <div class="field"><label class="field-label" for="n2">Adres Twojej strony</label>
+    <div class="input-group ${taken?'is-error':'is-success'}"><span class="prefix">profilo.pl/user/</span><input id="n2" class="input" value="${taken?P.nick:'anna-wisniewska-krakow'}" aria-describedby="n2h"><span class="state" style="color:var(--color-${taken?'danger':'success'})">${ic(taken?'i-x':'i-check')}</span></div>
+    ${taken?`<span id="n2h" class="hint is-error">${ic('i-alert','sm')}Ten adres jest już zajęty. Może któryś z tych?</span>
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-2)"><button class="chip">anna-wisniewska-2</button><button class="chip">anna-wisniewska-krakow</button><button class="chip">anna-wisniewska-3</button></div>`
+    :`<span id="n2h" class="hint is-success">${ic('i-check','sm')}Adres wolny. Rezerwujemy go dla Ciebie po przejściu dalej.</span>`}
+    <span class="hint">3–40 znaków: małe litery, cyfry i myślniki. Polskie znaki zamienimy automatycznie.</span>
+  </div>
+</main>
+<div class="wizbar"><span class="hide-m"></span><a class="btn btn-primary ${taken?'is-disabled':''}" href="#wizard-layout">Dalej: wygląd →</a></div>`; }
+
+function thumb(kind){
+  if(kind==='classic') return `<div class="hero-art" style="height:42%"></div><div style="width:30px;height:30px;border-radius:8px;background:var(--color-navy-900);margin:-15px auto 6px;border:2px solid var(--color-bg)"></div><div style="height:6px;border-radius:3px;background:var(--color-navy-900);margin:0 32%"></div><div style="height:14px;border-radius:4px;background:var(--color-border-strong);margin:8px 22%"></div><div style="height:12px;border-radius:4px;background:var(--color-surface);border:1px solid var(--color-border);margin:0 14%"></div>`;
+  if(kind==='split') return `<div style="display:grid;grid-template-columns:2fr 3fr;height:100%"><div class="hero-art"></div><div style="padding:16px 10px"><div style="width:24px;height:24px;border-radius:7px;background:var(--color-navy-900)"></div><div style="height:6px;border-radius:3px;background:var(--color-navy-900);margin:8px 0;width:70%"></div><div style="height:14px;border-radius:4px;background:var(--color-navy-900);width:55%"></div><div style="height:12px;border-radius:4px;background:var(--color-surface);border:1px solid var(--color-border);margin-top:8px"></div><div style="height:12px;border-radius:4px;background:var(--color-surface);border:1px solid var(--color-border);margin-top:4px"></div></div></div>`;
+  return `<div class="hero-art" style="position:absolute;inset:0"></div><div style="position:absolute;inset:18% 22%;background:var(--color-surface);border-radius:8px;box-shadow:var(--shadow-md);display:grid;justify-items:center;align-content:center;gap:5px"><div style="width:22px;height:22px;border-radius:6px;background:var(--color-navy-900)"></div><div style="height:5px;width:50%;border-radius:3px;background:var(--color-navy-900)"></div><div style="height:10px;width:60%;border-radius:3px;background:var(--color-navy-900)"></div></div>`;
+}
+function wizLayout(){ return `${wizTop(2,'Wygląd')}
+<main class="wiz">
+  <h1>Wybierz układ</h1>
+  <p class="lead">Zmienisz go w każdej chwili. Treść przeniesie się sama.</p>
+  <div class="layout-opts" role="radiogroup" aria-label="Układ strony">
+    ${[['classic','Klasyczny','Zdjęcie, opis i linki w jednej kolumnie.'],['split','Dzielony','Grafika z jednej strony, treść z drugiej.'],['card','Wizytówka','Zwarta karta na grafice lub kolorze.']].map(([k,t,d])=>`<button class="layout-opt" role="radio" aria-checked="${k==='split'}"><div class="thumb">${thumb(k)}</div><div><b>${t}</b><p class="hint">${d}</p></div><span class="tick">${ic('i-check','sm')}</span></button>`).join('')}
+  </div>
+  <h2 style="font-size:var(--text-lg);margin:var(--space-10) 0 var(--space-2)">Kolor przewodni</h2>
+  <p class="hint" style="margin-bottom:var(--space-4)">Każdy kolor jest sprawdzony pod kątem czytelności.</p>
+  <div class="swatches" role="radiogroup" aria-label="Kolor przewodni">${ACCENTS.map(([k,n],i)=>`<button class="swatch" role="radio" aria-checked="${i===0}" title="${n}" aria-label="${n}" style="background:var(--page-accent-${k})">${i===0?ic('i-check','sm'):''}</button>`).join('')}</div>
+  <p style="margin-top:var(--space-3);font-size:var(--text-sm)"><b>Granat</b> <span class="muted">· domyślny</span></p>
+</main>
+<div class="wizbar"><a class="btn btn-secondary" href="#wizard-nick">← Wstecz</a><a class="btn btn-primary" href="#editor">Dalej: treść →</a></div>`; }
+
+function linkRows(){ return P.links.map((l,i)=>`<div class="link-row ${i===1?'':''}"><span class="handle hide-m" aria-label="Przeciągnij">${ic('i-grip')}</span><span class="link-ico">${linkIco(l)}</span><span class="txt"><b>${l[1]}</b><small>${l[2]}</small></span><span style="display:flex;gap:2px"><button class="btn btn-ghost btn-icon" aria-label="W górę" style="display:none">${ic('i-up','sm')}</button><button class="btn btn-ghost btn-icon" aria-label="Edytuj ${l[1]}">${ic('i-edit','sm')}</button><button class="btn btn-ghost btn-icon" aria-label="Usuń ${l[1]}">${ic('i-trash','sm')}</button></span></div>`).join(''); }
+
+function editor(state){ // state: 'ok' | 'empty' | 'error' | 'loading'
+  const empty = state==='empty', err = state==='error', load = state==='loading';
+  const v = (x) => empty ? '' : x;
+  const sk = (h,w='100%') => `<div class="skel" style="height:${h}px;width:${w};margin-bottom:12px"></div>`;
+  const top = `<header class="topbar">${brand(false)}
+    ${load?'<span class="save-state"><span class="spinner"></span>Wczytywanie…</span>': err?`<span class="save-state is-error"><span class="dot"></span>Nie zapisano</span>`:`<span class="save-state"><span class="dot"></span>Zapisano</span>`}
+    <span class="spacer"></span>
+    ${empty?'<span class="badge badge-neutral hide-m">Nieopublikowana</span>':load?'':'<span class="badge badge-warning hide-m">Masz nieopublikowane zmiany</span>'}
+    <a class="btn btn-secondary btn-sm hide-m" href="#public-split">${ic('i-eye','sm')}Podgląd</a>
+    <a class="btn btn-primary btn-sm ${err||load?'is-disabled':''}" href="#published">${empty?'Opublikuj':'Opublikuj zmiany'}</a>
+    <button class="btn btn-ghost btn-icon" aria-label="Menu">${ic('i-menu')}</button></header>`;
+  const tabs = `<div class="tabs tabs-m" role="tablist"><button role="tab" aria-selected="true">Edycja</button><button role="tab" aria-selected="false">Podgląd</button></div>`;
+  if (load) return `${top}${tabs}<div class="ed"><div class="ed-form">${[0,1,2].map(()=>`<div class="panel-sec"><header>${sk(16,'30%')}</header><div class="body">${sk(64,'64px')}${sk(44)}${sk(44)}${sk(96)}</div></div>`).join('')}</div><div class="ed-prev"><div class="frame" style="padding:40px">${sk(240)}${sk(28,'60%')}${sk(18,'40%')}${sk(48,'50%')}</div></div></div>`;
+  const errBanner = err ? `<div class="alert alert-danger banner" role="alert">${ic('i-alert')}<span class="grow"><b>Nie udało się zapisać zmian.</b> Sprawdź połączenie z internetem — Twoje zmiany są bezpieczne w tej karcie.</span><button class="btn btn-secondary btn-sm">Spróbuj ponownie</button></div>` : '';
+  const linksBlock = empty
+    ? `<div class="empty"><div class="ill">${ic('i-link')}</div><b>Nie masz jeszcze linków</b><p>Dodaj LinkedIn, portfolio albo stronę firmy, żeby łatwiej było Cię znaleźć.</p><button class="btn btn-primary btn-sm">${ic('i-plus','sm')}Dodaj pierwszy link</button></div>`
+    : `${linkRows()}${err?`<div class="card" style="padding:var(--space-4);margin-bottom:var(--space-2);border-color:var(--color-danger)"><div class="field" style="margin-bottom:var(--space-3)"><label class="field-label" for="l1">Adres strony</label><input id="l1" class="input is-error" value="mój portfolio.pl"><span class="hint is-error">${ic('i-alert','sm')}To nie wygląda na adres strony. Sprawdź, czy nie ma w nim spacji.</span></div><div class="field" style="margin-bottom:var(--space-3)"><label class="field-label" for="l2">Etykieta</label><input id="l2" class="input" value="Portfolio"></div><div style="display:flex;gap:var(--space-2);justify-content:flex-end"><button class="btn btn-ghost btn-sm">Anuluj</button><button class="btn btn-primary btn-sm is-disabled">Zapisz link</button></div></div>`:`<button class="btn btn-secondary btn-block">${ic('i-plus','sm')}Dodaj link</button>`}<p class="hint" style="margin-top:var(--space-2)">Przeciągnij, aby zmienić kolejność. Na telefonie użyj strzałek.</p>`;
+  return `${top}${tabs}${errBanner}${empty?confirmBanner:''}
+<div class="ed">
+  <div class="ed-form">
+    <section class="panel-sec is-collapsed"><header><h3>Wygląd</h3><span class="muted" style="font-size:var(--text-sm);display:flex;gap:8px;align-items:center"><span style="width:14px;height:14px;border-radius:50%;background:var(--page-accent-granat)"></span>Dzielony · Granat ${ic('i-dn','sm')}</span></header></section>
+    <section class="panel-sec"><header><h3>O mnie</h3>${ic('i-up','sm')}</header><div class="body">
+      <div class="upload"><div class="avatar avatar-sm">${empty?'AW':'AW'}</div><div><button class="btn btn-secondary btn-sm">${ic('i-image','sm')}${empty?'Dodaj zdjęcie':'Zmień zdjęcie'}</button><p class="hint" style="margin-top:6px">JPG, PNG lub WebP, do 10 MB.</p></div></div>
+      <div class="upload"><div class="bg-thumb hero-art"></div><div><button class="btn btn-secondary btn-sm">${ic('i-image','sm')}Dodaj grafikę tła</button><p class="hint" style="margin-top:6px">Bez grafiki użyjemy wzoru w kolorze przewodnim.</p></div></div>
+      <div class="field"><label class="field-label" for="e1">Imię i nazwisko lub pseudonim</label><input id="e1" class="input" value="${P.name}"></div>
+      <div class="field"><label class="field-label" for="e2">Nagłówek <span class="opt">(opcjonalnie)</span></label><input id="e2" class="input" value="${v(P.headline)}" placeholder="np. Projektantka UX/UI"></div>
+      <div class="field"><label class="field-label" for="e3">Krótki opis <span class="opt">(opcjonalnie)</span></label><textarea id="e3" class="input" placeholder="Kim jesteś i w czym możesz pomóc? 2–3 zdania wystarczą.">${v(P.bio)}</textarea><span class="counter">${empty?0:P.bio.length} / 500</span></div>
+      <div class="grid3"><div class="field"><label class="field-label" for="e4">Stanowisko</label><input id="e4" class="input" value="${v(P.position)}"></div><div class="field"><label class="field-label" for="e5">Firma</label><input id="e5" class="input" value="${v(P.company)}"></div><div class="field"><label class="field-label" for="e6">Miejscowość</label><input id="e6" class="input" value="${v(P.city)}"></div></div>
+    </div></section>
+    <section class="panel-sec"><header><h3>Kontakt</h3>${ic('i-up','sm')}</header><div class="body">
+      <div class="field"><label class="field-label" for="c1">Publiczny e-mail <span class="opt">(opcjonalnie)</span></label><input id="c1" class="input" value="${v(P.email)}" placeholder="np. kontakt@twojafirma.pl"><span class="hint">Może być inny niż e-mail do logowania.</span></div>
+      <div class="field"><label class="field-label" for="c2">Telefon <span class="opt">(opcjonalnie)</span></label><div class="phone-row"><select class="input" aria-label="Kraj"><option>🇵🇱 +48</option></select><input id="c2" class="input" value="${v('601 234 567')}"></div></div>
+    </div></section>
+    <section class="panel-sec"><header><h3>Linki</h3><span class="muted" style="font-size:var(--text-sm)">${empty?0:4} / 20</span></header><div class="body">${linksBlock}</div></section>
+  </div>
+  <div class="ed-prev">
+    <div class="bar"><span class="label-caps" style="flex:1">Podgląd wersji roboczej</span><div class="seg" role="group" aria-label="Rozmiar podglądu"><button aria-pressed="true">Komputer</button><button aria-pressed="false">Telefon</button></div></div>
+    <div class="frame"><iframe src="screens.html#${empty?'public-minimal-split':'public-split'}" tabindex="-1" title="Podgląd"></iframe></div>
+  </div>
+</div>
+${err?'':''}`; }
+
+function preview(){ return `${wizTop(4,'Podgląd')}${confirmBanner}
+<main class="wiz" style="max-width:1100px">
+  <h1>Tak zobaczą Cię odwiedzający</h1>
+  <p class="lead">Sprawdź stronę na komputerze i telefonie. Możesz wrócić i coś poprawić.</p>
+  <div style="display:flex;justify-content:center;margin-bottom:var(--space-4)"><div class="seg" role="group"><button aria-pressed="true">Komputer</button><button aria-pressed="false">Telefon</button></div></div>
+  <div class="card" style="height:520px;overflow:hidden;position:relative;box-shadow:var(--shadow-md)"><iframe src="screens.html#public-split" tabindex="-1" title="Podgląd" style="position:absolute;top:0;left:0;width:1280px;height:1080px;border:0;transform:scale(.8);transform-origin:0 0"></iframe></div>
+</main>
+<div class="wizbar"><a class="btn btn-secondary" href="#editor">← Popraw treść</a><span style="display:flex;gap:var(--space-3);align-items:center"><span class="hint hide-m">${ic('i-info','sm')}Najpierw potwierdź e-mail</span><button class="btn btn-primary is-disabled" disabled>Opublikuj stronę</button></span></div>`; }
+
+function published(){ return `
+<header class="topbar">${brand()}<span class="spacer"></span><a class="btn btn-secondary btn-sm" href="#editor">Przejdź do edytora</a></header>
+<main class="done">
+  <div class="ok">${ic('i-check')}</div>
+  <h1>Gotowe! Twoja strona jest online</h1>
+  <p class="muted" style="margin-bottom:var(--space-8)">Wstaw ten adres do CV, stopki e-mail albo na wizytówkę.</p>
+  <div class="input-group stack-m" style="margin-bottom:var(--space-3)"><input class="input" readonly value="profilo.pl/user/${P.nick}" aria-label="Adres strony" style="font-weight:600"><button class="btn btn-primary" style="border-radius:0">${ic('i-copy','sm')}Kopiuj link</button></div>
+  <div class="toast is-static" role="status" style="margin-bottom:var(--space-6)">${ic('i-check','sm')}Skopiowano link</div>
+  <div><a class="btn btn-secondary" href="#public-split">Otwórz stronę ${ic('i-arrow','sm')}</a></div>
+  <div class="card card-pad" style="margin-top:var(--space-10)">
+    <p class="label-caps" style="margin-bottom:var(--space-4)">Kod QR do druku</p>
+    <img class="qr" src="qr-sample.svg" alt="Kod QR z adresem profilo.pl/user/${P.nick}">
+    <div style="display:flex;gap:var(--space-3);justify-content:center;margin-top:var(--space-5);flex-wrap:wrap"><button class="btn btn-secondary btn-sm">${ic('i-down','sm')}Pobierz PNG</button><button class="btn btn-secondary btn-sm">${ic('i-down','sm')}Pobierz SVG</button></div>
+  </div>
+</main>`; }
+
+function notFound(){ return `<div class="center-404"><div><div class="code">404</div><h1 style="font-size:var(--text-xl);margin:var(--space-4) 0 var(--space-2)">Nie znaleźliśmy tej strony</h1><p class="muted" style="margin-bottom:var(--space-6);max-width:40ch">Adres może zawierać literówkę albo strona nie jest już publiczna.</p><a class="btn btn-primary" href="#landing">Załóż własną stronę</a><div style="margin-top:var(--space-10)">${brand()}</div></div></div>`; }
+
+const MIN = {...P, headline:'', position:'', company:'', city:'', phone:'', bio:'', links:[]};
+const views = {
+  'public-split': () => pub({layout:'split'}),
+  'public-classic': () => pub({layout:'classic', accent:'morski'}),
+  'public-card': () => pub({layout:'card', accent:'bordo'}),
+  'public-minimal': () => pub({layout:'classic', p:MIN, minimal:true}),
+  'public-minimal-split': () => pub({layout:'split', p:MIN}),
+  'public-404': notFound,
+  'landing': landing,
+  'register': () => register(false),
+  'register-error': () => register(true),
+  'wizard-nick': () => wizNick(true),
+  'wizard-nick-ok': () => wizNick(false),
+  'wizard-layout': wizLayout,
+  'editor': () => editor('ok'),
+  'editor-empty': () => editor('empty'),
+  'editor-error': () => editor('error'),
+  'editor-loading': () => editor('loading'),
+  'wizard-preview': preview,
+  'published': published,
+};
+function show(){ const id=(location.hash||'#public-split').slice(1); document.getElementById('app').innerHTML = `<section class="screen on">${(views[id]||views['public-split'])()}</section>`; document.title = 'Profilo — ' + id; }
+addEventListener('hashchange', show); show();
+</script>
+</body>
+</html>

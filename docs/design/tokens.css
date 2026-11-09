@@ -1,0 +1,146 @@
+/* =====================================================================
+   Profilo — design tokens
+   Style direction: Variant A "Granat korporacyjny" (docs/design/style.md)
+   Light mode only. Frontend imports this file directly.
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* ---------- Typography ---------- */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  --text-xs: 0.75rem;     /* 12 — captions, counters */
+  --text-sm: 0.875rem;    /* 14 — hints, secondary */
+  --text-base: 1rem;      /* 16 — body, inputs, buttons */
+  --text-md: 1.0625rem;   /* 17 — public bio */
+  --text-lg: 1.25rem;     /* 20 — public headline, section titles */
+  --text-xl: 1.625rem;    /* 26 — screen titles (panel) */
+  --text-2xl: 2.125rem;   /* 34 — public name (mobile) */
+  --text-3xl: 2.75rem;    /* 44 — landing hero */
+  --text-4xl: 3.25rem;    /* 52 — public name (desktop) */
+
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-normal: 1.6;
+
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-caps: 0.12em;
+
+  /* ---------- Brand colours ---------- */
+  --color-navy-900: #0F2747;
+  --color-navy-800: #1B3A66;
+  --color-navy-950: #0A1B33;
+  --color-blue-700: #1F4E8C;
+  --color-blue-600: #2F5D9E;
+  --color-blue-400: #60A5FA;
+  --color-blue-100: #E3EAF5;
+  --color-blue-50:  #F1F5FB;
+  --color-accent:   #E0592A;   /* decorative only: logo dot, focus ring, highlights */
+  --color-accent-soft: #FFB396;
+
+  /* ---------- Neutral / surfaces ---------- */
+  --color-bg: #EEF2F7;             /* page background — light, not white */
+  --color-surface: #F8FAFC;        /* cards */
+  --color-surface-input: #FFFFFF;  /* form fields only */
+  --color-border: #D5DDE8;
+  --color-border-strong: #B9C6D8;  /* secondary button outline */
+  --color-border-input: #7C8DA5;   /* ≥ 3:1 against surfaces (WCAG 1.4.11) */
+
+  /* ---------- Text ---------- */
+  --color-heading: #0F2747;
+  --color-text: #24364F;
+  --color-text-muted: #5B6B82;     /* ≥ 4.5:1 on bg and surface */
+  --color-text-strong-muted: #33476A;
+  --color-text-on-dark: #FFFFFF;
+
+  /* ---------- Feedback ---------- */
+  --color-success: #1E6E45;
+  --color-success-bg: #E3F2EA;
+  --color-danger: #B42318;
+  --color-danger-bg: #FBE9E7;
+  --color-warning: #7A4E00;
+  --color-warning-bg: #FDF1DC;
+  --color-info: #1F4E8C;
+  --color-info-bg: #E3EAF5;
+
+  /* ---------- Interaction ---------- */
+  --color-focus: #E0592A;
+  --focus-ring: 0 0 0 3px var(--color-focus);
+  --focus-offset: 3px;
+  --opacity-disabled: 0.5;
+
+  /* ---------- Owner accent palette (PUB-BR-3) ---------- */
+  --page-accent-granat:   #0F2747;  /* default */
+  --page-accent-niebieski:#1F4E8C;
+  --page-accent-blekit:   #1D63C4;
+  --page-accent-morski:   #0F6B6B;
+  --page-accent-zielen:   #2D6A3E;
+  --page-accent-bordo:    #8E2442;
+  --page-accent-miedz:    #B3461C;
+  --page-accent-fiolet:   #5B3FA6;
+  --page-accent: var(--page-accent-granat);  /* set per public page */
+
+  /* ---------- Spacing (4 px base) ---------- */
+  --space-1: 0.25rem;  /* 4 */
+  --space-2: 0.5rem;   /* 8 */
+  --space-3: 0.75rem;  /* 12 */
+  --space-4: 1rem;     /* 16 */
+  --space-5: 1.25rem;  /* 20 */
+  --space-6: 1.5rem;   /* 24 */
+  --space-8: 2rem;     /* 32 */
+  --space-10: 2.5rem;  /* 40 */
+  --space-12: 3rem;    /* 48 */
+  --space-16: 4rem;    /* 64 */
+  --space-24: 6rem;    /* 96 */
+
+  /* ---------- Radii ---------- */
+  --radius-sm: 6px;
+  --radius-md: 10px;   /* buttons, inputs */
+  --radius-lg: 12px;   /* cards, link cards */
+  --radius-xl: 16px;   /* panels, modals */
+  --radius-2xl: 24px;  /* avatar */
+  --radius-full: 999px;
+
+  /* ---------- Borders ---------- */
+  --border-width: 1px;
+  --border-width-strong: 1.5px;
+
+  /* ---------- Shadows ---------- */
+  --shadow-xs: 0 1px 2px rgba(15, 39, 71, 0.06);
+  --shadow-sm: 0 2px 6px -2px rgba(15, 39, 71, 0.12);
+  --shadow-md: 0 8px 20px -10px rgba(15, 39, 71, 0.35);
+  --shadow-lg: 0 20px 48px -20px rgba(15, 39, 71, 0.45);
+  --shadow-button: 0 6px 16px -6px rgba(15, 39, 71, 0.45);
+  --shadow-avatar: 0 12px 28px -12px rgba(15, 39, 71, 0.6);
+
+  /* ---------- Motion ---------- */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ---------- Layout ---------- */
+  --container-max: 1120px;
+  --content-max: 680px;
+  --tap-target-min: 44px;
+  --control-height: 48px;
+  --control-height-sm: 36px;
+  --topbar-height: 64px;
+  --breakpoint-md: 860px;  /* reference only; use in media queries as a literal */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}
