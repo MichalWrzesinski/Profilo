@@ -32,11 +32,15 @@ The user deploys a tested image to production with one manual workflow that veri
 ### Scenario 2: Automatic rollback (negative)
 - When the smoke tests fail after deployment, then the previous image is restored automatically and the workflow fails.
 
-### Scenario 3: Wrong actor or branch (negative)
+### Scenario 3: Later rollback
+- When the agent starts `rollback-production` with an image deployed to production before, then that image serves traffic after a passing readiness check and the user is informed.
+- When an image that was never deployed to production is given, then the rollback workflow rejects it.
+
+### Scenario 4: Wrong actor or branch (negative)
 - When the workflow is started by another account or from a branch other than `main`, then it stops before using any secret.
 
 ## Technical notes
-Needs from the user: production server (CX33), domain and DNS, repository secrets `PROD_*`. Only the user starts these workflows.
+Needs from the user: production server (CX33), domain and DNS, repository secrets `PROD_*`. Only the user starts `deploy-production`; the agent may start `rollback-production` per AGENTS.md and informs the user immediately.
 
 ## Report
 Filled in by development after the task.
