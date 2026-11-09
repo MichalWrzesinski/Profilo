@@ -1,7 +1,8 @@
 #!/bin/sh
-# Pre-commit checks run in Docker, so only Docker and make are needed (devops standard).
-#  1. gitleaks: blocks commits containing secrets (compensates for missing GitHub secret scanning).
-#  2. Ruff (api) and Prettier (client) in check mode, only when such files are staged.
+# Pre-commit checks in Docker (only Docker and make are needed — see AGENTS.md):
+#  1. gitleaks on staged changes (compensates for missing GitHub secret scanning);
+#  2. Ruff (api) and Prettier (client) on the *staged* content of changed files.
+# Ruff/Prettier use the dev images built by `make up`; without them the hook says so and stops.
 set -e
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
@@ -11,15 +12,31 @@ docker run --rm -v "$root":/repo -w /repo \
   zricethezav/gitleaks:v8.28.0 git --pre-commit --staged --redact --no-banner /repo
 
 staged() { git diff --cached --name-only --diff-filter=ACMR -- "$@"; }
+py_files="$(staged 'api/*.py' 'api/**/*.py')"
+client_files="$(staged 'client/*' | grep -E '\.(ts|tsx|js|mjs|json|css|md)$' | grep -v 'package-lock.json' || true)"
+[ -z "$py_files$client_files" ] && exit 0
 
-py_files="$(staged 'api/*.py' 'api/**/*.py' | sed 's#^api/##')"
+need_image() {
+  docker image inspect "$1" >/dev/null 2>&1 || { echo "pre-commit: image $1 missing — run 'make up' first." >&2; exit 1; }
+}
+
+# Export the staged versions (plus tool configs) to a temporary directory.
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+# shellcheck disable=SC2086
+git checkout-index --prefix="$tmp/" -- $py_files $client_files
+git checkout-index --prefix="$tmp/" -- api/pyproject.toml client/.prettierrc.json client/.prettierignore
+
 if [ -n "$py_files" ]; then
-  # shellcheck disable=SC2086
-  docker compose run --rm --no-deps -T api sh -c "ruff format --check $(echo $py_files) && ruff check $(echo $py_files)"
+  need_image profilo-api:dev
+  rel="$(echo "$py_files" | sed 's#^api/##' | tr '\n' ' ')"
+  docker run --rm -v "$tmp/api":/check -w /check -e RUFF_CACHE_DIR=/tmp/ruff profilo-api:dev \
+    sh -c "ruff format --check $rel && ruff check $rel"
 fi
 
-client_files="$(staged 'client/*' | grep -E '\.(ts|tsx|js|mjs|json|css|md)$' | grep -v 'package-lock.json' | sed 's#^client/##' || true)"
 if [ -n "$client_files" ]; then
-  # shellcheck disable=SC2086
-  docker compose run --rm --no-deps -T client npx prettier --check $(echo $client_files)
+  need_image profilo-client:dev
+  rel="$(echo "$client_files" | sed 's#^client/##' | tr '\n' ' ')"
+  docker run --rm -v "$tmp/client":/check -w /check profilo-client:dev \
+    /repo/client/node_modules/.bin/prettier --check $rel
 fi
