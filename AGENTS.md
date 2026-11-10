@@ -19,13 +19,13 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 - Forms and API client: React Hook Form + Zod; `openapi-typescript` + `openapi-fetch` generated from the contract; `@dnd-kit/sortable` for link order
 - Code style frontend: ESLint + Prettier
 - Tests: pytest + httpx (backend), Vitest + Testing Library (frontend), Playwright (E2E main flow and smoke tests); coverage threshold 95 % per app (quality-checks standard)
-- Contract check: `scripts/check_contract.py` compares the FastAPI spec with `docs/api/openapi.yaml` (implemented paths, methods, 2xx statuses, request/response property names)
-- Dependency audits: `pip-audit` (runtime deps, hashes) and `npm audit --omit=dev` fail on any advisory; dev-only npm advisories are reported, not failing
+- Contract check: `api/scripts/check_contract.py` compares the FastAPI spec with `docs/api/openapi.yaml` (implemented paths, methods, 2xx statuses, request/response property names recursively; an object with fields on one side only is a difference)
+- Dependency audits: `pip-audit` (runtime deps, hashes) and `npm audit --omit=dev` fail on any advisory; dev-only npm advisories fail at high/critical, moderate/low are reported only
 - Images: base images pinned to patch version + digest; Dependabot weekly for uv, npm, Docker, Compose, GitHub Actions
 - UI language: Polish only; product docs and code in English
 - Runtime: Docker Compose (caddy, client, api, worker, beat, db, valkey); same Compose for staging and production
 - Hosting: Hetzner Cloud — production CX33, staging CX23, off-site backups to Storage Box (ADR 0004)
-- CI/CD: GitHub Actions `ci.yml` (job `check` runs `make check audit secrets images`; `publish` pushes `ghcr.io/michalwrzesinski/profilo-{api,client}:<sha>` on main); actions pinned to commit SHAs; images in GHCR; staging auto-deploy on main; production by `deploy-production` workflow started manually by the user (no GitHub environments — see overrides)
+- CI/CD: GitHub Actions `ci.yml` (job `check` runs `make check audit secrets` and the prod builds, with a GHA layer cache; `publish` pushes `ghcr.io/michalwrzesinski/profilo-{api,client}:<sha>` on main); actions pinned to commit SHAs; images in GHCR; staging auto-deploy on main; production by `deploy-production` workflow started manually by the user (no GitHub environments — see overrides)
 - Monitoring: Sentry (EU region), Better Stack Uptime on `/ready`
 
 ## Project overrides of standards

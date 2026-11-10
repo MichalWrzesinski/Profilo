@@ -49,18 +49,19 @@ From the TASK-001 review, to handle here:
 
 ## Report
 
-**Done.** `.github/workflows/ci.yml`: job `check` runs `make check` (lint, types, tests with coverage, API contract), `make audit`, `make secrets` (gitleaks, full history) and `make images` (prod builds); job `publish` pushes `ghcr.io/michalwrzesinski/profilo-api:<sha>` and `profilo-client:<sha>` on main. `.github/dependabot.yml`: weekly uv, npm, Docker, Compose, GitHub Actions.
+**Done.** `.github/workflows/ci.yml`: job `check` runs `make check` (lint, types, tests with coverage, API contract), `make audit`, `make secrets` (gitleaks, full history) and the production builds, with dev and prod images built through buildx with a GitHub Actions layer cache; job `publish` pushes `ghcr.io/michalwrzesinski/profilo-api:<sha>` and `profilo-client:<sha>` on main. `.github/dependabot.yml`: weekly uv, npm, Docker, Compose, GitHub Actions.
 
 Acceptance criteria:
-- Green pull request — verified on the PR run of this task (see PR).
+- Green pull request — met: PR run 42785861486 passed every step on Linux (uid 1001); re-verified on the final commit (see PR).
 - Images published — verified after merge (see PR comment / GHCR).
-- Contract drift — met: `scripts/check_contract.py` exits 1 listing differences; unit tests cover extra field, missing field, undocumented path, method and status; run against a contract without `/ready` printed `/ready: path not in contract`.
+- Contract drift — met: `api/scripts/check_contract.py` exits 1 listing differences; it compares property names recursively (nested objects, array items, nullable unions) and flags objects with fields on one side only; unit tests cover extra and missing fields at top level, in nested objects and array items, untyped responses, undocumented path, method and status; run against a contract without `/ready` printed `/ready: path not in contract`. `/health` now returns a typed model.
 - Leaked secret — met by the same gitleaks command that the pre-commit hook uses (TASK-001 verified it rejects a fake AWS key); in CI it scans the whole history.
 
 Decisions:
 - Coverage threshold raised from 80 % to 95 % (api and client), as the quality-checks standard requires; TASK-001 had set 80 % without basis. Added tests for DB/Valkey clients, lifespan and the request-context middleware (api 99.2 %).
-- Audit policy: runtime dependencies fail on any advisory; dev-only npm advisories are printed but do not fail (they do not ship). Recorded in AGENTS.md.
+- Audit policy: runtime dependencies fail on any advisory; dev-only npm advisories fail at high/critical, moderate/low are reported (today 7 moderate). Recorded in AGENTS.md.
+- Review fixes: per-commit concurrency group on main (every merged commit gets its own run and images); gitleaks image moved to a Compose `tools` profile so Dependabot updates it (Makefile and hook use it); Dockerfile `syntax` image pinned by digest; `.env` optional in Compose.
 - Checks run as the host uid (Makefile `AS_HOST`) to avoid EACCES on Linux runners; Vite cache moved to `/tmp/vite` and `node_modules/.vite-temp` made world-writable in the dev image.
 - Base images pinned by digest; GitHub actions pinned by commit SHA; workflow linted with actionlint.
 
-Limitations: CI rebuilds dev images without a layer cache (≈ a few minutes); the publish job uses the GitHub Actions cache.
+Limitations: real GHCR push and Dependabot runs are confirmed only after merge.
