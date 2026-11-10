@@ -191,13 +191,18 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
           className="btn btn-ghost btn-sm"
           href="/panel"
           onClick={async (event) => {
+            // Opening the panel in a new tab (Cmd/Ctrl/Shift or middle click) leaves this one as is.
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
             if (!draft.unsaved) return;
             // Save the change typed a moment ago before the panel reads the draft.
             event.preventDefault();
             const saved = await draft.settle();
-            if (saved || window.confirm('Część zmian nie jest zapisana. Wyjść bez nich?')) {
-              router.push('/panel');
-            }
+            const leave =
+              saved ||
+              window.confirm(
+                'Część zmian nie jest zapisana. Zostaną w tej przeglądarce do następnej edycji. Wyjść?',
+              );
+            if (leave) router.push('/panel');
           }}
         >
           Panel
@@ -345,14 +350,10 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
                   autoComplete="off"
                   placeholder="np. kontakt@twojafirma.pl"
                 />
-                {errors.publicEmail ? (
-                  errorOf('publicEmail')
-                ) : (
-                  <>
-                    <span className="hint">Może być inny niż e-mail do logowania.</span>
-                    {errorOf('publicEmail')}
-                  </>
+                {!errors.publicEmail && (
+                  <span className="hint">Może być inny niż e-mail do logowania.</span>
                 )}
+                {errorOf('publicEmail')}
               </div>
               <div className="field">
                 <label className="field-label" htmlFor="ed-phoneNational">

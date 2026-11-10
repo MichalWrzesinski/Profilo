@@ -52,6 +52,8 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlight = useRef<Promise<void> | null>(null);
   const stopped = useRef(false);
+  // The last save failed (network, server or an error we cannot show at a field).
+  const failed = useRef(false);
   // `flush` sends follow-up saves through this ref (a callback cannot name itself).
   const again = useRef<() => Promise<void>>(async () => {});
 
@@ -75,8 +77,10 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
         result = await request();
       } catch {
         inFlight.current = null;
+        failed.current = true;
         return setStatus('error');
       }
+      failed.current = false;
       // This request is over; follow-up saves below may start the next one.
       inFlight.current = null;
       const { data, error, response } = result;
@@ -103,8 +107,14 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
         .filter((item): item is { key: DraftKey; message: string } => item.key !== null);
       if (response.status === 422 && rejected.length > 0) {
         const next: Errors = { ...live.current.errors };
+        const sent = rejected.filter((item) => keys.includes(item.key));
+        // An error for a field not in this request would make us resend the same body.
+        if (sent.length === 0) {
+          failed.current = true;
+          return setStatus('error');
+        }
         // A field edited while the request was in flight gets checked again with its new value.
-        for (const item of rejected) if (unchanged(item.key)) next[item.key] = item.message;
+        for (const item of sent) if (unchanged(item.key)) next[item.key] = item.message;
         live.current.errors = next;
         setErrors(next);
         setStatus('saved');
@@ -112,6 +122,7 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
         return again.current();
       }
       // Other errors (also a 422 we cannot attach to a field): stop and offer a retry.
+      failed.current = true;
       setStatus('error');
     },
     [remember],
@@ -155,6 +166,7 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
       if (inFlight.current) await inFlight.current;
       if (!savable()) break;
       await flush();
+      if (failed.current) break; // offline: one attempt, then let the owner decide
     }
     return dirty.current.size === 0 && !stopped.current;
   }, [flush]);

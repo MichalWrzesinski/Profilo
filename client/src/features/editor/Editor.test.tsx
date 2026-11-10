@@ -126,6 +126,7 @@ describe('Editor', () => {
   });
 
   it('saves a change typed just before leaving to the panel', async () => {
+    const confirm = vi.spyOn(window, 'confirm');
     const { bodies, user } = setup();
     await user.type(await input('Nagłówek'), 'UX');
 
@@ -133,6 +134,8 @@ describe('Editor', () => {
 
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/panel'));
     expect(bodies).toEqual([{ version: 5, headline: 'UX' }]);
+    expect(confirm).not.toHaveBeenCalled();
+    confirm.mockRestore();
   });
 
   it('asks before leaving when a change cannot be saved', async () => {
@@ -142,7 +145,9 @@ describe('Editor', () => {
 
     await user.click(screen.getByRole('link', { name: 'Panel' }));
 
-    expect(confirm).toHaveBeenCalledWith('Część zmian nie jest zapisana. Wyjść bez nich?');
+    expect(confirm).toHaveBeenCalledWith(
+      'Część zmian nie jest zapisana. Zostaną w tej przeglądarce do następnej edycji. Wyjść?',
+    );
     expect(router.push).not.toHaveBeenCalled();
     confirm.mockRestore();
   });
@@ -184,6 +189,52 @@ describe('Editor', () => {
     await waitFor(() => expect(bodies).toHaveLength(2));
     expect(bodies[1]).toEqual({ version: 5, publicPhone: '+48 601234567' });
     expect(screen.queryByText('Zły numer.')).toBeNull();
+  });
+
+  it('tries once when leaving offline, then asks', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { bodies, user } = setup({
+      patch: () => {
+        throw new TypeError('Failed to fetch');
+      },
+    });
+    await user.type(await input('Firma'), 'X');
+
+    await user.click(screen.getByRole('link', { name: 'Panel' }));
+
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/panel'));
+    expect(bodies).toHaveLength(1);
+    expect(confirm).toHaveBeenCalled();
+    confirm.mockRestore();
+  });
+
+  it('leaves a modified click to the browser', async () => {
+    const { bodies, user } = setup();
+    await user.type(await input('Firma'), 'X');
+
+    await user.keyboard('{Meta>}');
+    await user.click(screen.getByRole('link', { name: 'Panel' }));
+    await user.keyboard('{/Meta}');
+
+    expect(router.push).not.toHaveBeenCalled();
+    expect(bodies).toHaveLength(0);
+  });
+
+  it('stops on an error for a field that was not sent', async () => {
+    const { bodies, user } = setup({
+      patch: () =>
+        json(422, {
+          status: 422,
+          code: 'validation_error',
+          errors: [{ field: 'bio', code: 'too_long', message: 'Za długi.' }],
+        }),
+    });
+    await user.type(await input('Firma'), 'X');
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+
+    expect(await screen.findByText('Nie udało się zapisać zmian.')).toBeVisible();
+    await act(() => vi.advanceTimersByTimeAsync(2000));
+    expect(bodies).toHaveLength(1);
   });
 
   it('stops on a validation error it cannot attach to a field', async () => {
