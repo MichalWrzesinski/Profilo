@@ -7,7 +7,6 @@ API_RUN := $(COMPOSE) run --rm $(AS_HOST) api
 API_RUN_NODEPS := $(COMPOSE) run --rm --no-deps $(AS_HOST) api
 API_TEST_RUN := $(COMPOSE) run --rm $(AS_HOST) -e ENVIRONMENT=test api
 CLIENT_RUN := $(COMPOSE) run --rm --no-deps $(AS_HOST) client
-GITLEAKS := zricethezav/gitleaks:v8.28.0@sha256:cdbb7c955abce02001a9f6c9f602fb195b7fadc1e812065883f695d1eeaba854
 
 .DEFAULT_GOAL := help
 .PHONY: help env up down logs migrate seed test test-api test-client lint lint-api lint-client \
@@ -62,15 +61,13 @@ contract: env ## Check the API against docs/api/openapi.yaml
 
 check: lint test contract ## Formatters, linters, type checks, tests with coverage, API contract
 
-audit: env ## Known vulnerabilities: fails on runtime dependencies, reports dev-only ones
+audit: env ## Known vulnerabilities: fails on runtime deps and on high/critical dev deps
 	$(API_RUN_NODEPS) sh -c 'uv export --frozen --no-dev --no-emit-project --quiet -o /tmp/requirements.txt && pip-audit --strict --disable-pip --require-hashes -r /tmp/requirements.txt'
 	$(CLIENT_RUN) npm audit --omit=dev --audit-level=low
-	-$(CLIENT_RUN) npm audit --audit-level=high
+	$(CLIENT_RUN) npm audit --audit-level=high
 
 secrets: ## Scan the whole git history for secrets (gitleaks)
-	docker run --rm -v "$(CURDIR)":/repo -w /repo \
-	  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/repo \
-	  $(GITLEAKS) git --redact --no-banner /repo
+	$(COMPOSE) run --rm --no-deps gitleaks git --redact --no-banner /repo
 
 images: ## Build production images (api, client)
 	docker build --target prod -t profilo-api:prod api

@@ -5,7 +5,9 @@ x-api: &api
     context: ./api
     target: dev
   image: profilo-api:dev
-  env_file: .env
+  env_file:
+    - path: .env
+      required: false
   volumes:
     - ./api:/app
     - ./docs/api/openapi.yaml:/contract/openapi.yaml:ro
@@ -68,7 +70,9 @@ services:
 
   db:
     image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
-    env_file: .env
+    env_file:
+    - path: .env
+      required: false
     volumes:
       - pgdata:/var/lib/postgresql
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -95,6 +99,18 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+  # Tool, not a service: `docker compose run --rm gitleaks …` (Makefile `secrets`, pre-commit hook).
+  gitleaks:
+    image: zricethezav/gitleaks:v8.28.0@sha256:cdbb7c955abce02001a9f6c9f602fb195b7fadc1e812065883f695d1eeaba854
+    profiles: [tools]
+    working_dir: /repo
+    volumes:
+      - .:/repo
+    environment:
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: /repo
 
 volumes:
   pgdata:

@@ -9,12 +9,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # PRs: one run per branch (newer push cancels older). main: one group per commit, so
+  # every merged commit gets its own check and published images.
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Required check (AGENTS.md): lint, types, tests with coverage, API contract,
-  # dependency audit, gitleaks, production image build — the same `make ci` as locally.
+  # dependency audit, gitleaks, production image build — `make check audit secrets` plus
+  # the same production builds as `make images`, with a layer cache.
   check:
     name: check
     runs-on: ubuntu-24.04
@@ -25,13 +28,34 @@ jobs:
           fetch-depth: 0 # gitleaks scans the whole history
           persist-credentials: false
 
-      - name: Build development images
-        run: |
-          cp .env.example .env
-          docker compose build api client
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Dev images used by `make check` (Compose reuses the loaded tags), cached in GHA.
+      - name: Build api dev image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: api
+          target: dev
+          load: true
+          tags: profilo-api:dev
+          cache-from: type=gha,scope=api-dev
+          cache-to: type=gha,mode=max,scope=api-dev
+
+      - name: Build client dev image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: client/Dockerfile
+          target: dev
+          load: true
+          tags: profilo-client:dev
+          cache-from: type=gha,scope=client-dev
+          cache-to: type=gha,mode=max,scope=client-dev
 
       - name: Lint, type checks, tests, contract
-        run: make check
+        run: |
+          cp .env.example .env
+          make check
 
       - name: Dependency audit
         run: make audit
@@ -39,8 +63,24 @@ jobs:
       - name: Secret scan (gitleaks)
         run: make secrets
 
-      - name: Build production images
-        run: make images
+      - name: Build api production image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: api
+          target: prod
+          push: false
+          cache-from: type=gha,scope=profilo-api
+          cache-to: type=gha,mode=max,scope=profilo-api
+
+      - name: Build client production image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: client/Dockerfile
+          target: prod
+          push: false
+          cache-from: type=gha,scope=profilo-client
+          cache-to: type=gha,mode=max,scope=profilo-client
 
       - name: Stop containers
         if: always()
