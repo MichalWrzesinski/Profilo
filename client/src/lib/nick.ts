@@ -34,10 +34,14 @@ function asciiLower(text: string): string {
     .toLowerCase();
 }
 
-/** What the owner types: lower case, Polish letters, spaces → hyphens, other characters dropped. */
+/**
+ * What the owner types: as PRF-BR-2 (separators → hyphen, other characters dropped), but typed
+ * hyphens stay as they are so the owner sees the rule. Only leading whitespace is trimmed: a
+ * trailing space becomes the hyphen before the next word.
+ */
 export function normaliseNickInput(text: string): string {
   return asciiLower(text.trimStart())
-    .replace(/\s+/g, '-')
+    .replace(/[\s_./\\,;:+&|]+/g, '-')
     .replace(/[^a-z0-9-]/g, '');
 }
 

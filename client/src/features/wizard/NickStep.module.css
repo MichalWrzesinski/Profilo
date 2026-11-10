@@ -46,3 +46,11 @@
     flex: 1;
   }
 }
+
+.danger {
+  color: var(--color-danger);
+}
+
+.success {
+  color: var(--color-success);
+}

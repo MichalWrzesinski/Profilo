@@ -1,28 +1,15 @@
-import { nickFormatError, normaliseNickInput } from './nick';
+import cases from '../../../docs/api/nick-cases.json';
+import { type NickFormatError, nickFormatError, normaliseNickInput } from './nick';
 
-describe('normaliseNickInput (same cases as the API)', () => {
-  it.each([
-    ['Anna Wiśniewska', 'anna-wisniewska'],
-    ['-anna', '-anna'],
-    ['anna--maria', 'anna--maria'],
-    ['Anna_W!', 'annaw'],
-    ['  Łódź', 'lodz'],
-    ['José Müller', 'jose-muller'],
-  ])('%s → %s', (typed, expected) => {
+// Shared with api/tests/test_nicks.py so both sides apply the same rules.
+describe('normaliseNickInput (shared cases)', () => {
+  it.each(cases.input as [string, string][])('%s → %s', (typed, expected) => {
     expect(normaliseNickInput(typed)).toBe(expected);
   });
 });
 
-describe('nickFormatError (PRF-BR-1)', () => {
-  it.each([
-    ['ab', 'too_short'],
-    ['a'.repeat(41), 'too_long'],
-    ['-anna', 'invalid_format'],
-    ['anna-', 'invalid_format'],
-    ['anna--wisniewska', 'invalid_format'],
-    ['anna-wisniewska', null],
-    ['a'.repeat(40), null],
-  ])('%s → %s', (nick, error) => {
+describe('nickFormatError (PRF-BR-1, shared cases)', () => {
+  it.each(cases.format as [string, NickFormatError | null][])('%s → %s', (nick, error) => {
     expect(nickFormatError(nick)).toBe(error);
   });
 });

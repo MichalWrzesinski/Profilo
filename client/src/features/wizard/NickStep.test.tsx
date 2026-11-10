@@ -43,8 +43,9 @@ type Api = {
   suggestion?: string | null;
   taken?: string[];
   put?: () => Response;
-  availability?: (nick: string) => Response;
+  availability?: (nick: string) => Response | Promise<Response>;
   patch?: () => Response;
+  load?: () => Response;
 };
 
 function setup(options: Api = {}) {
@@ -52,7 +53,7 @@ function setup(options: Api = {}) {
   const fetch = mockFetch(async (request) => {
     const url = new URL(request.url);
     if (url.pathname === '/api/v1/me/profile' && request.method === 'GET')
-      return json(200, current);
+      return options.load?.() ?? json(200, current);
     if (url.pathname === '/api/v1/me/profile' && request.method === 'PATCH') {
       return options.patch?.() ?? json(200, { ...current, version: current.version + 1 });
     }
@@ -245,15 +246,89 @@ describe('NickStep', () => {
     expect(next()).toBeDisabled();
   });
 
-  it('does not allow continuing when the check fails', async () => {
+  it('lets the owner continue when the live check fails', async () => {
     const { user } = setup({ availability: () => json(500, { status: 500 }) });
     await screen.findByDisplayValue('anna-wisniewska');
 
     await user.type(nickInput(), 'x');
-    await new Promise((resolve) => setTimeout(resolve, 400));
 
-    await waitFor(() => expect(screen.queryByText(/Sprawdzamy/)).toBeNull());
+    expect(await screen.findByText(/Nie udało się teraz sprawdzić adresu/)).toBeInTheDocument();
+    expect(next()).toBeEnabled();
+  });
+
+  it('treats a network error in the live check like a failed check', async () => {
+    const { user } = setup({
+      availability: () => {
+        throw new TypeError('Failed to fetch');
+      },
+    });
+    await screen.findByDisplayValue('anna-wisniewska');
+
+    await user.type(nickInput(), 'x');
+
+    expect(await screen.findByText(/Nie udało się teraz sprawdzić adresu/)).toBeInTheDocument();
+  });
+
+  it('ignores a late answer for an older value', async () => {
+    let releaseOld: (response: Response) => void = () => {};
+    const { user } = setup({
+      availability: (nick) =>
+        nick === 'anna-wisniewskax'
+          ? new Promise<Response>((resolve) => (releaseOld = resolve))
+          : json(200, { nick, available: false, reason: 'taken', suggestions: [] }),
+    });
+    await screen.findByDisplayValue('anna-wisniewska');
+
+    await user.type(nickInput(), 'x');
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await user.type(nickInput(), 'y');
+    expect(await screen.findByText('Ten adres jest już zajęty.')).toBeInTheDocument();
+
+    releaseOld(json(200, { nick: 'anna-wisniewskax', available: true, suggestions: [] }));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(screen.queryByText(/Adres wolny/)).toBeNull();
     expect(next()).toBeDisabled();
+  });
+
+  it('offers a retry when the profile cannot be loaded', async () => {
+    let fail = true;
+    const { user } = setup({
+      load: () => (fail ? json(500, { status: 500 }) : json(200, profile())),
+    });
+
+    expect(await screen.findByText('Nie udało się wczytać Twojej strony.')).toBeInTheDocument();
+    fail = false;
+    await user.click(screen.getByRole('button', { name: 'Spróbuj ponownie' }));
+
+    expect(await screen.findByDisplayValue('Anna Wiśniewska')).toBeInTheDocument();
+  });
+
+  it('reports a network error while saving the nick', async () => {
+    const { user } = setup({
+      put: () => {
+        throw new TypeError('Failed to fetch');
+      },
+    });
+    await screen.findByText(/Adres wolny/);
+
+    await user.click(next());
+
+    expect(await screen.findByText(/Sprawdź połączenie/)).toBeInTheDocument();
+  });
+
+  it('reports a network error while saving the name', async () => {
+    const { user } = setup({
+      patch: () => {
+        throw new TypeError('Failed to fetch');
+      },
+    });
+    await screen.findByText(/Adres wolny/);
+    await user.type(screen.getByLabelText('Imię i nazwisko lub pseudonim'), '!');
+
+    await user.click(next());
+
+    expect(await screen.findByText('Nie udało się zapisać nazwy.')).toBeInTheDocument();
   });
 
   it('reports a failed name save without details', async () => {
