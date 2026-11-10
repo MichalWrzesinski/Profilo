@@ -132,7 +132,7 @@ erDiagram
     }
     RESERVED_NICK {
         citext nick PK
-        text reason "system | quarantine"
+        text reason "system | offensive | quarantine"
         timestamptz expires_at "null = permanent"
     }
 ```

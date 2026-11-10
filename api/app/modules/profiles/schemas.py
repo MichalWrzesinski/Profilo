@@ -93,3 +93,14 @@ class NickAvailabilityOut(ApiModel):
 
 class NickSuggestionOut(ApiModel):
     nick: str | None
+
+
+class PublishRequest(ApiModel):
+    version: int = Field(ge=1)
+
+
+class PublicProfileOut(ApiModel):
+    nick: str
+    canonical_url: str
+    published_at: datetime
+    content: ProfileContentOut
