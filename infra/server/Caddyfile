@@ -1,0 +1,47 @@
+# Staging and production reverse proxy. Domain and TLS mode come from the environment:
+#   DOMAIN      e.g. staging.profilo.pl
+#   TLS_MODE    acme (default, Let's Encrypt) | internal (local test VM)
+#   ROBOTS_TAG  "noindex, nofollow" on staging, "all" on production
+#   ACME_EMAIL  contact for Let's Encrypt expiry notices
+{
+	email {$ACME_EMAIL}
+}
+
+(tls_acme) {
+}
+
+(tls_internal) {
+	tls internal
+}
+
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		X-Robots-Tag "{$ROBOTS_TAG:noindex, nofollow}"
+		-Server
+	}
+}
+
+{$DOMAIN} {
+	import tls_{$TLS_MODE:acme}
+	import security_headers
+	encode zstd gzip
+
+	@api path /api/* /media/* /health /ready
+	handle @api {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy client:3000
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

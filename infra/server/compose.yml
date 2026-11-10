@@ -1,0 +1,131 @@
+# Staging and production stack (one server per environment, ADR 0004).
+# Started by deploy.sh from /srv/profilo/releases/<sha>/ with IMAGE_TAG=<sha> and the
+# variables of /srv/profilo/.env exported (bootstrap.sh; server-only, never committed).
+# Only the application containers read the whole .env; Caddy and PostgreSQL get the
+# few variables they need (least privilege).
+name: profilo
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "14" }
+
+x-api: &api
+  image: ghcr.io/michalwrzesinski/profilo-api:${IMAGE_TAG:?IMAGE_TAG is required}
+  env_file: ${APP_DIR:?APP_DIR is required}/.env
+  environment:
+    # Trust X-Forwarded-* only from Caddy (fixed address below; AGENTS.md pitfalls).
+    FORWARDED_ALLOW_IPS: 172.28.0.10
+  restart: unless-stopped
+  logging: *logging
+  networks: [internal]
+  depends_on:
+    db: { condition: service_healthy }
+    valkey: { condition: service_healthy }
+
+services:
+  caddy:
+    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?}
+      TLS_MODE: ${TLS_MODE:-acme}
+      ROBOTS_TAG: ${ROBOTS_TAG:?}
+      ACME_EMAIL: ${ACME_EMAIL:?}
+    volumes:
+      # The whole release directory: a replaced Caddyfile (new inode) is still seen on reload.
+      - ./:/etc/caddy:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging: *logging
+    networks:
+      internal:
+        ipv4_address: 172.28.0.10
+    depends_on:
+      api: { condition: service_healthy }
+      client: { condition: service_healthy }
+
+  api:
+    <<: *api
+
+  worker:
+    <<: *api
+    command: ["celery", "-A", "app.worker", "worker", "--loglevel", "INFO", "--concurrency", "2"]
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.worker", "inspect", "ping", "--timeout", "5"]
+      interval: 30s
+      timeout: 15s
+      start_period: 20s
+      retries: 3
+
+  beat:
+    <<: *api
+    command: ["celery", "-A", "app.worker", "beat", "--loglevel", "INFO", "--schedule", "/tmp/celerybeat-schedule"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,sys; sys.exit(0 if os.path.exists('/tmp/celerybeat-schedule') else 1)"]
+      interval: 15s
+      timeout: 3s
+      start_period: 10s
+      retries: 5
+
+  migrate:
+    <<: *api
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    profiles: [tools]
+    healthcheck:
+      disable: true
+
+  client:
+    image: ghcr.io/michalwrzesinski/profilo-client:${IMAGE_TAG:?IMAGE_TAG is required}
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:8000
+    logging: *logging
+    networks: [internal]
+
+  db:
+    image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    logging: *logging
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  valkey:
+    image: valkey/valkey:9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
+    restart: unless-stopped
+    command: ["valkey-server", "--save", "60", "1", "--appendonly", "no"]
+    volumes:
+      - valkeydata:/data
+    logging: *logging
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+networks:
+  internal:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+
+volumes:
+  pgdata:
+  valkeydata:
+  caddy_data:
+  caddy_config:

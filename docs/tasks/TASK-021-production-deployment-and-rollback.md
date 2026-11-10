@@ -40,6 +40,8 @@ The user deploys a tested image to production with one manual workflow that veri
 - When the workflow is started by another account or from a branch other than `main`, then it stops before using any secret.
 
 ## Technical notes
+From TASK-003: `deploy.sh` recreates Caddy on every release (its config directory is the release directory) and restarts the app containers in place — production needs a zero-downtime variant (e.g. a long-lived Caddy with `caddy reload` and app containers started side by side).
+
 Needs from the user: production server (CX33), domain and DNS, repository secrets `PROD_*`. Only the user starts `deploy-production`; the agent may start `rollback-production` per AGENTS.md and informs the user immediately.
 
 ## Report

@@ -1,0 +1,117 @@
+name: Deploy staging
+
+# Runs after CI succeeds on main (images are published by the CI `publish` job),
+# or manually for a given commit. Secrets: STAGING_SSH_HOST, STAGING_SSH_KEY,
+# STAGING_SSH_KNOWN_HOSTS; variable: STAGING_DOMAIN (docs/runbook.md).
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full commit SHA on main to deploy (also used to roll back to an older release)
+        required: true
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy staging
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || inputs.sha }}
+      DOMAIN: ${{ vars.STAGING_DOMAIN }}
+      SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+    steps:
+      - name: Validate inputs
+        run: |
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::invalid commit SHA"; exit 1; }
+          [[ -n "$DOMAIN" && -n "$SSH_HOST" ]] || { echo "::error::STAGING_DOMAIN or STAGING_SSH_HOST missing (docs/runbook.md)"; exit 1; }
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Only commits on main are deployed (deployment standard). After CI on main, a commit
+      # that is no longer the head of main is skipped: the newer commit's run deploys it.
+      - name: Check the commit is on main
+        id: guard
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "::error::$SHA is not on main"; exit 1; }
+          if [[ "$EVENT" == workflow_run && "$(git rev-parse origin/main)" != "$SHA" ]]; then
+            echo "::notice::main has moved on; skipping $SHA"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+          git checkout --quiet "$SHA"
+
+      - name: Configure SSH (pinned host key)
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+          printf 'Host staging\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking yes\n' "$SSH_HOST" > ~/.ssh/config
+
+      - name: Upload stack files
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          # shellcheck disable=SC2029  # SHA is validated above (40 hex characters)
+          ssh staging "mkdir -p /srv/profilo/releases/$SHA"
+          scp -q infra/server/compose.yml infra/server/Caddyfile infra/server/deploy.sh "staging:/srv/profilo/releases/$SHA/"
+
+      - name: Log in to GHCR on the server
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        # Client-side expansion is intended: GHCR_USER is a GitHub login, the token goes via stdin.
+        run: |
+          # shellcheck disable=SC2029
+          printf '%s' "$GHCR_TOKEN" | ssh staging "docker login ghcr.io -u '$GHCR_USER' --password-stdin" >/dev/null
+
+      - name: Deploy, migrate, verify (rollback on failure)
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          # shellcheck disable=SC2029  # SHA is validated above (40 hex characters)
+          ssh staging "/srv/profilo/releases/$SHA/deploy.sh $SHA"
+
+      - name: Log out of GHCR on the server
+        if: always() && steps.guard.outputs.skip != 'true'
+        run: ssh staging "docker logout ghcr.io" >/dev/null || true
+
+      - name: External smoke tests
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          for path in /ready /; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "https://$DOMAIN$path")
+            [[ "$code" == 200 ]] || { echo "::error::$path returned $code"; exit 1; }
+          done
+          headers=$(curl -sS -D - -o /dev/null --max-time 15 "http://$DOMAIN/")
+          grep -qiE '^HTTP/[0-9.]+ 30[18]' <<<"$headers" || { echo "::error::HTTP does not redirect"; exit 1; }
+          grep -qi '^location: https://' <<<"$headers" || { echo "::error::redirect is not to HTTPS"; exit 1; }
+          secure=$(curl -sS -D - -o /dev/null --max-time 15 "https://$DOMAIN/")
+          for h in strict-transport-security content-security-policy x-content-type-options referrer-policy; do
+            grep -qi "^$h:" <<<"$secure" || { echo "::error::missing header $h"; exit 1; }
+          done
+          echo "Staging serves $SHA at https://$DOMAIN"

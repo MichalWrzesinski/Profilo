@@ -197,3 +197,5 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | `api/tests/` | pytest; integration tests use the `profilo_test` database | TASK-001 |
 | `client/src/app/` | Next.js App Router: `layout.tsx` (font, metadata, tokens), `page.tsx` placeholder | TASK-001 |
 | `infra/` | Local Caddy config, PostgreSQL init (test database) | TASK-001 |
+| `infra/server/` | Server bootstrap, staging/production Compose stack, Caddyfile with TLS and security headers, `deploy.sh` with rollback | TASK-003 |
+| `.github/workflows/` | `ci.yml` (check, publish), `deploy-staging.yml` | TASK-002, TASK-003 |
