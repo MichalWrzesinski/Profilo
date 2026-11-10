@@ -1,7 +1,7 @@
 ---
 id: TASK-004
 title: Registration, login, logout and session refresh
-status: IN_PROGRESS
+status: DONE
 priority: highest
 iteration: ITER-01
 depends_on: [TASK-001]
@@ -62,7 +62,7 @@ High-risk change: security review per code-review standard.
 
 ## Report
 
-**Done (pending review).** Registration, login, session refresh with rotation and reuse detection, logout and `GET /me` (backend), and registration/login pages, guarded panel shell with logout, legal placeholders (client).
+**Done.** Approved after 2 review rounds (security pass included); CI green on 65e6ca4. Registration, login, session refresh with rotation and reuse detection, logout and `GET /me` (backend), and registration/login pages, guarded panel shell with logout, legal placeholders (client).
 
 Acceptance criteria:
 - S1 registration — met: API test (account + profile `classic`/`granat`, cookie `HttpOnly; SameSite=Strict; Path=/api/v1/auth; Max-Age=30 d`), browser: form → panel.
@@ -83,4 +83,4 @@ Decisions:
 - Design-system classes are used directly (`docs/design/components.css` imported globally).
 - Small product decisions (check on staging): login page subtitle „Wróć do edycji swojej strony.”; panel placeholder text; menu is a single „Menu” button with „Wyloguj się”.
 
-Limitations: no E2E test yet (TASK-011); ALTCHA not in this task (TASK-018).
+Limitations: no E2E test yet (TASK-011); ALTCHA not in this task (TASK-018). Review suggestions not done (low impact, for a later auth task, e.g. TASK-015): log reuse within the grace window (`refresh_token_grace_reuse`) and cap sibling tokens per used token.
