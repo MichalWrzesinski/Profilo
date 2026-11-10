@@ -149,8 +149,8 @@ Public read path: `GET /api/v1/public/profiles/{nick}` → `profiles` by nick wh
 
 ## Authentication
 
-- Access token: JWT (PyJWT, HS256 with a 256-bit secret, `iss`/`aud`/`exp` checked), 15 min, in memory in the browser.
-- Refresh token: random 256-bit, stored as SHA-256 hash, 30 days sliding (ACC-BR-8), rotated on every use with reuse detection by family; HttpOnly, Secure, `SameSite=Strict`, path `/api/v1/auth`. Refresh and logout additionally require header `X-Requested-With: profilo` (CSRF defence in depth).
+- Access token: JWT (PyJWT, HS256 with a 256-bit secret, `iss`/`aud`/`exp` checked), 15 min, in memory in the browser; the client refreshes it 60 s before expiry.
+- Refresh token: random 256-bit, stored as SHA-256 hash, 30 days sliding (ACC-BR-8), rotated on every use with reuse detection by family (a reuse within 30 s — parallel tabs, a lost response — gets a sibling token; later reuse revokes the family); HttpOnly, Secure, `SameSite=Strict`, path `/api/v1/auth`. Refresh and logout additionally require header `X-Requested-With: profilo` (CSRF defence in depth).
 - Passwords: Argon2id via `pwdlib`; common password check against the ~30 000 most common passwords bundled with `zxcvbn` (no external call).
 - E-mail confirmation and password reset tokens: random, hashed, single-use, 48 h / 1 h.
 

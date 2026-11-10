@@ -72,7 +72,9 @@ Acceptance criteria:
 - S5 invalid input — met: too short / too long / common password → 422 with the field message shown under the password field; `email_taken` shows the login link.
 - S6 wrong credentials — met: identical 401 for unknown e-mail and wrong password (timing equalised with a dummy Argon2 verify); 6th failed login in 15 min → 429 with `Retry-After`.
 
-Checks: api 57 tests, 99.1 %; client 43 tests, 100 % lines / 97 % branches; contract 7 paths; audits, gitleaks clean.
+Review round 1 fixes: a refresh token reused within 30 s (parallel tabs, response lost on reload) gets a sibling token instead of revoking the family — verified live (two parallel refreshes with one cookie → 200/200, both new tokens valid) and by tests; later reuse still revokes the family. Passwords are no longer whitespace-trimmed; Argon2 runs in a worker thread; the client refreshes the access token 60 s before expiry for any request; rate-limit outages are logged at error level; login password limited to 128 characters as in the contract.
+
+Checks: api 60 tests, 99.5 %; client 44 tests, 100 % lines / 96 % branches; contract 7 paths; audits, gitleaks clean.
 
 Decisions:
 - Common-password list: the ~30 000 passwords bundled with `zxcvbn` instead of a separate 100 k file (no download, maintained package); architecture.md updated.
