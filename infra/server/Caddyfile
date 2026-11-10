@@ -2,8 +2,9 @@
 #   DOMAIN      e.g. staging.profilo.pl
 #   TLS_MODE    acme (default, Let's Encrypt) | internal (local test VM)
 #   ROBOTS_TAG  "noindex, nofollow" on staging, "all" on production
+#   ACME_EMAIL  contact for Let's Encrypt expiry notices
 {
-	email {$ACME_EMAIL:admin@profilo.pl}
+	email {$ACME_EMAIL}
 }
 
 (tls_acme) {

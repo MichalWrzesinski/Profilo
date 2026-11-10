@@ -1,32 +1,46 @@
 #!/usr/bin/env bash
 # Prepares a fresh Ubuntu 24.04 server for Profilo (staging or production). Idempotent.
-# Run as root:  bash bootstrap.sh <environment> <domain> "<deploy user's SSH public key>" [tls_mode]
+# Run as root:
+#   bash bootstrap.sh <environment> <domain> "<deploy SSH public key>" <acme_email> [tls_mode]
 #   environment: staging | production     tls_mode: acme (default) | internal (local test VM)
 set -euo pipefail
 
 ENVIRONMENT="${1:?environment (staging|production) required}"
 DOMAIN="${2:?domain required}"
 DEPLOY_PUBKEY="${3:?deploy SSH public key required}"
-TLS_MODE="${4:-acme}"
+ACME_EMAIL="${4:?e-mail for Lets Encrypt expiry notices required}"
+TLS_MODE="${5:-acme}"
 APP_DIR=/srv/profilo
 DEPLOY_USER=deploy
 
 [[ "$ENVIRONMENT" =~ ^(staging|production)$ ]] || { echo "invalid environment" >&2; exit 1; }
 [[ "$TLS_MODE" =~ ^(acme|internal)$ ]] || { echo "invalid tls_mode" >&2; exit 1; }
 [[ "$DOMAIN" =~ ^[a-z0-9.-]+$ ]] || { echo "invalid domain" >&2; exit 1; }
+[[ "$ACME_EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+$ ]] || { echo "invalid acme_email" >&2; exit 1; }
 [[ "$(id -u)" == 0 ]] || { echo "run as root" >&2; exit 1; }
+# Validate the key before SSH is locked down to it (a bad key would lock the operator out).
+key_file="$(mktemp)"
+printf '%s\n' "$DEPLOY_PUBKEY" > "$key_file"
+ssh-keygen -lf "$key_file" >/dev/null || { echo "deploy key is not a valid SSH public key" >&2; exit 1; }
+rm -f "$key_file"
 
 export DEBIAN_FRONTEND=noninteractive
 echo "==> Packages and security updates"
 apt-get update -q
-apt-get upgrade -yq
-apt-get install -yq ca-certificates curl gnupg ufw unattended-upgrades openssl openssh-server
+apt_opts=(-yq -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
+apt-get upgrade "${apt_opts[@]}"
+apt-get install "${apt_opts[@]}" ca-certificates curl gnupg ufw unattended-upgrades openssl openssh-server
 
 echo "==> Automatic security updates"
 cat > /etc/apt/apt.conf.d/20auto-upgrades <<'CONF'
 APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "1";
 APT::Periodic::AutocleanInterval "7";
+CONF
+# Kernel and libc updates need a reboot; containers restart automatically (restart: unless-stopped).
+cat > /etc/apt/apt.conf.d/52profilo-reboot <<'CONF'
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "04:00";
 CONF
 
 echo "==> Docker Engine (official repository)"
@@ -39,7 +53,7 @@ if ! command -v docker >/dev/null; then
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" \
     > /etc/apt/sources.list.d/docker.list
   apt-get update -q
-  apt-get install -yq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  apt-get install "${apt_opts[@]}" docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 fi
 systemctl enable --now docker
 
@@ -59,7 +73,12 @@ KbdInteractiveAuthentication no
 PermitRootLogin no
 AllowUsers deploy
 CONF
-if sshd -t; then systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true; fi
+if ! sshd -t; then
+  rm -f /etc/ssh/sshd_config.d/10-profilo.conf
+  echo "sshd configuration invalid — hardening not applied, nothing changed" >&2
+  exit 1
+fi
+systemctl reload ssh 2>/dev/null || systemctl reload sshd || { echo "could not reload sshd" >&2; exit 1; }
 
 echo "==> Firewall: 22, 80, 443 only"
 ufw --force default deny incoming
@@ -72,8 +91,12 @@ ufw --force enable
 # Note: ports published by Docker bypass ufw; the stack publishes only 80/443 (compose.yml).
 
 echo "==> Application directory and environment"
-install -d -m 750 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$APP_DIR"
-if [[ ! -f "$APP_DIR/.env" ]]; then
+install -d -m 750 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$APP_DIR" "$APP_DIR/releases"
+if [[ -f "$APP_DIR/.env" ]]; then
+  for pair in "DOMAIN=$DOMAIN" "TLS_MODE=$TLS_MODE" "ENVIRONMENT=$ENVIRONMENT" "ACME_EMAIL=$ACME_EMAIL"; do
+    grep -qxF "$pair" "$APP_DIR/.env" || echo "WARNING: $APP_DIR/.env exists and differs ($pair); edit it by hand if intended" >&2
+  done
+else
   db_password="$(openssl rand -hex 24)"
   if [[ "$ENVIRONMENT" == production ]]; then robots="all"; else robots="noindex, nofollow"; fi
   cat > "$APP_DIR/.env" <<ENV
@@ -82,6 +105,7 @@ ENVIRONMENT=$ENVIRONMENT
 LOG_LEVEL=INFO
 DOMAIN=$DOMAIN
 TLS_MODE=$TLS_MODE
+ACME_EMAIL=$ACME_EMAIL
 ROBOTS_TAG="$robots"
 PUBLIC_BASE_URL=https://$DOMAIN
 POSTGRES_USER=profilo
