@@ -1,7 +1,7 @@
 ---
 id: TASK-006
 title: Wizard step 1: display name and nick
-status: IN_PROGRESS
+status: DONE
 priority: highest
 iteration: ITER-01
 depends_on: [TASK-004]
@@ -43,7 +43,7 @@ The owner gets a nick proposed from the display name, sees availability live and
 
 ## Report
 
-**Implemented, review round 1 fixed, waiting for re-review.** Nick rules (PRF-BR-2) in `profiles/nicks.py` and `client/src/lib/nick.ts` with identical test cases (Polish letters, spaces, hyphens, 40-character cut at a word boundary); `reserved_nicks` table (migration `0004`, system list and offensive words, optional expiry); `GET /nicks/suggestion`, `GET /nicks/{nick}/availability` (120/min per account), `PUT /me/profile/nick` (409 `nick_taken` / `nick_reserved` / `nick_locked` with up to 3 suggestions, 422 with the rule text); wizard shell `/kreator` with stepper and „Dokończę później”, step 1 with live check (300 ms debounce) and suggestion chips; registration now lands on `/kreator`, „Dalej” leads to the panel until later steps exist.
+**Done.** Approved after 3 review rounds. Nick rules (PRF-BR-2) in `profiles/nicks.py` and `client/src/lib/nick.ts` with identical test cases (Polish letters, spaces, hyphens, 40-character cut at a word boundary); `reserved_nicks` table (migration `0004`, system list and offensive words, optional expiry); `GET /nicks/suggestion`, `GET /nicks/{nick}/availability` (120/min per account), `PUT /me/profile/nick` (409 `nick_taken` / `nick_reserved` / `nick_locked` with up to 3 suggestions, 422 with the rule text); wizard shell `/kreator` with stepper and „Dokończę później”, step 1 with live check (300 ms debounce) and suggestion chips; registration now lands on `/kreator`, „Dalej” leads to the panel until later steps exist.
 
 Acceptance criteria (verified in the browser and by tests):
 - S1 proposal — met: „Anna Wiśniewska” → `anna-wisniewska` (unit tests on both sides); in the browser, with that nick taken by another account, the proposal was `anna-wisniewska-2`; names with fewer than 3 valid characters give no proposal (tests).
