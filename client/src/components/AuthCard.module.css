@@ -12,3 +12,7 @@
   color: var(--color-text-muted);
   margin: var(--space-1) 0 var(--space-6);
 }
+
+.main :global(.alert) {
+  margin-bottom: var(--space-5);
+}
