@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import CurrentAccount
@@ -12,6 +12,8 @@ from app.modules.profiles.schemas import (
     NickRequest,
     NickSuggestionOut,
     OwnerProfileOut,
+    PublicProfileOut,
+    PublishRequest,
 )
 
 router = APIRouter(prefix="/api/v1")
@@ -21,21 +23,23 @@ DbSession = Annotated[AsyncSession, Depends(get_session)]
 
 @router.get("/me/profile", tags=["profile"])
 async def get_profile(account: CurrentAccount, session: DbSession) -> OwnerProfileOut:
-    return service.to_owner_out(await service.get_own_profile(session, account.id))
+    return await service.owner_out(session, await service.get_own_profile(session, account.id))
 
 
 @router.patch("/me/profile", tags=["profile"])
 async def update_draft(
     payload: DraftPatch, account: CurrentAccount, session: DbSession
 ) -> OwnerProfileOut:
-    return service.to_owner_out(await service.update_draft(session, account.id, payload))
+    profile = await service.update_draft(session, account.id, payload)
+    return await service.owner_out(session, profile)
 
 
 @router.put("/me/profile/nick", tags=["profile"])
 async def set_nick(
     payload: NickRequest, account: CurrentAccount, session: DbSession
 ) -> OwnerProfileOut:
-    return service.to_owner_out(await service.set_nick(session, account.id, payload.nick))
+    profile = await service.set_nick(session, account.id, payload.nick)
+    return await service.owner_out(session, profile)
 
 
 @router.get("/nicks/suggestion", tags=["profile"])
@@ -50,3 +54,24 @@ async def suggest_nick(
 @router.get("/nicks/{nick}/availability", tags=["profile"])
 async def check_nick(nick: str, account: CurrentAccount, session: DbSession) -> NickAvailabilityOut:
     return await service.check_availability(session, account.id, nick[:60])
+
+
+@router.post("/me/profile/publish", tags=["profile"])
+async def publish(
+    payload: PublishRequest, account: CurrentAccount, session: DbSession
+) -> OwnerProfileOut:
+    confirmed = account.email_confirmed_at is not None
+    profile = await service.publish(session, account.id, confirmed, payload.version)
+    return await service.owner_out(session, profile)
+
+
+@router.post("/me/profile/unpublish", tags=["profile"])
+async def unpublish(account: CurrentAccount, session: DbSession) -> OwnerProfileOut:
+    return await service.owner_out(session, await service.unpublish(session, account.id))
+
+
+@router.get("/public/profiles/{nick}", tags=["public"])
+async def get_public_profile(nick: str, session: DbSession, response: Response) -> PublicProfileOut:
+    # PUB-BR-6/PRF-BR-17: unpublishing must take effect on the next request.
+    response.headers["Cache-Control"] = "no-store"
+    return await service.get_public_profile(session, nick[:60])

@@ -1,8 +1,18 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, func
-from sqlalchemy.dialects.postgresql import CITEXT
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    SmallInteger,
+    String,
+    func,
+)
+from sqlalchemy.dialects.postgresql import CITEXT, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -17,8 +27,8 @@ def _in(column: str, values: tuple[str, ...]) -> str:
 
 
 class Profile(Base):
-    """The owner's page draft (docs/product/areas/profile.md). Published snapshots,
-    links and images are added by later tasks."""
+    """The owner's page draft (docs/product/areas/profile.md). Links and images are added
+    by later tasks; the published version is `PublishedProfile`."""
 
     __tablename__ = "profiles"
     __table_args__ = (
@@ -62,6 +72,22 @@ class Profile(Base):
     draft_updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class PublishedProfile(Base):
+    """The last published version: an immutable snapshot of the draft (ADR 0002)."""
+
+    __tablename__ = "published_profiles"
+
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("profiles.id", ondelete="CASCADE"), primary_key=True
+    )
+    content: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    schema_version: Mapped[int] = mapped_column(SmallInteger)
+    # Draft version the snapshot was made from: decides "unpublished changes" without
+    # comparing clocks (the draft version only grows, under the profile row lock).
+    draft_version: Mapped[int] = mapped_column(Integer)
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class ReservedNick(Base):

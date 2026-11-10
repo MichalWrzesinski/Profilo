@@ -132,7 +132,7 @@ erDiagram
     }
     RESERVED_NICK {
         citext nick PK
-        text reason "system | quarantine"
+        text reason "system | offensive | quarantine"
         timestamptz expires_at "null = permanent"
     }
 ```
@@ -206,6 +206,9 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | `client/src/lib/api/` | `schema.d.ts` generated from the contract (`npm run api:types`, checked by `api:check`), `client.ts` (openapi-fetch, in-memory access token, silent refresh) | TASK-004 |
 | `client/src/lib/session.tsx`, `client/src/features/auth/` | Session context; registration and login forms (React Hook Form + Zod) | TASK-004 |
 | `client/src/app/kreator/`, `client/src/features/wizard/`, `client/src/lib/useRequireSession.ts` | Wizard shell (stepper, „Dokończę później”), step 1 with live nick check and suggestion chips; session guard shared with `/panel` | TASK-006 |
+| `api/app/modules/profiles/` (publishing) | `published_profiles` snapshot (`0005`, `PublishedProfileV1` = `ProfileContentOut`), `POST /me/profile/publish` and `/unpublish`, `GET /public/profiles/{nick}` (`Cache-Control: no-store`, one 404 for every hidden page) | TASK-007 |
+| `client/src/app/user/[nick]/`, `client/src/features/public/`, `client/src/lib/publicProfile.ts` | Public page rendered on the server from `API_INTERNAL_URL` (no data cache, canonical-nick redirect), Classic layout; `app/not-found.tsx` + `components/NotFoundPage.tsx` shared 404 | TASK-007 |
+| `client/src/features/panel/PublishPanel.tsx` | Panel: page status badge, „Opublikuj” / „Opublikuj zmiany” / „Ukryj stronę”, reasons why publishing is disabled | TASK-007 |
 | `infra/` | Local Caddy config, PostgreSQL init (test database) | TASK-001 |
 | `infra/server/` | Server bootstrap, staging/production Compose stack, Caddyfile with TLS and security headers, `deploy.sh` with rollback | TASK-003 |
 | `.github/workflows/` | `ci.yml` (check, publish), `deploy-staging.yml` | TASK-002, TASK-003 |

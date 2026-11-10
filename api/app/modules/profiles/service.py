@@ -1,5 +1,5 @@
-"""Profiles: the owner's draft, nick assignment (PRF-BR-1…7). Public interface for other
-modules: `create_profile_for`."""
+"""Profiles: the owner's draft, nick assignment (PRF-BR-1…7), publishing (PRF-BR-8, 15-17)
+and the public read path (PUB-BR-6). Public interface for other modules: `create_profile_for`."""
 
 import uuid
 from datetime import UTC, datetime
@@ -16,12 +16,13 @@ from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
 from app.modules.profiles import nicks
-from app.modules.profiles.models import Profile, ReservedNick
+from app.modules.profiles.models import Profile, PublishedProfile, ReservedNick
 from app.modules.profiles.schemas import (
     DraftPatch,
     NickAvailabilityOut,
     OwnerProfileOut,
     ProfileContentOut,
+    PublicProfileOut,
 )
 
 # Shared by availability, suggestion and save: all of them tell whether a nick is free.
@@ -49,33 +50,49 @@ async def get_own_profile(
     return profile
 
 
-def to_owner_out(profile: Profile) -> OwnerProfileOut:
-    published = profile.status == "published"
+def _content(profile: Profile) -> ProfileContentOut:
+    return ProfileContentOut(
+        display_name=profile.display_name,
+        headline=profile.headline,
+        bio=profile.bio,
+        city=profile.city,
+        company=profile.company,
+        position=profile.position,
+        public_email=profile.public_email,
+        public_phone=profile.public_phone,
+        layout=profile.layout,
+        accent=profile.accent,
+    )
+
+
+def _public_url(nick: str) -> str:
+    return f"{get_settings().public_base_url}/user/{nick}"
+
+
+async def owner_out(session: AsyncSession, profile: Profile) -> OwnerProfileOut:
+    snapshot = await session.get(PublishedProfile, profile.id)
+    published = profile.status == "published" and profile.blocked_at is None
     return OwnerProfileOut(
         nick=profile.nick,
         nick_locked=profile.nick_locked,
         status="blocked" if profile.blocked_at else profile.status,
-        has_unpublished_changes=False,  # published snapshots: TASK-007
-        published_at=None,
+        has_unpublished_changes=snapshot is not None and snapshot.draft_version != profile.version,
+        published_at=snapshot.published_at if snapshot else None,
         version=profile.version,
         draft_updated_at=profile.draft_updated_at,
-        public_url=f"{get_settings().public_base_url}/user/{profile.nick}" if published else None,
-        draft=ProfileContentOut(
-            display_name=profile.display_name,
-            headline=profile.headline,
-            bio=profile.bio,
-            city=profile.city,
-            company=profile.company,
-            position=profile.position,
-            public_email=profile.public_email,
-            public_phone=profile.public_phone,
-            layout=profile.layout,
-            accent=profile.accent,
-        ),
+        public_url=_public_url(profile.nick) if published and profile.nick else None,
+        draft=_content(profile),
     )
 
 
 # --- draft ---------------------------------------------------------------------------
+
+
+async def _draft_conflict(session: AsyncSession, profile: Profile) -> ProblemError:
+    current = (await owner_out(session, profile)).model_dump(mode="json", by_alias=True)
+    return ProblemError(
+        409, "draft_conflict", "Szkic zmienił się w innym oknie — odśwież.", current=current
+    )
 
 
 def _normalise_phone(value: str) -> str:
@@ -119,13 +136,7 @@ async def update_draft(session: AsyncSession, account_id: uuid.UUID, patch: Draf
     """Apply a partial draft update with optimistic locking (PRF-BR-14)."""
     profile = await get_own_profile(session, account_id, lock=True)
     if patch.version != profile.version:
-        current = to_owner_out(profile).model_dump(mode="json", by_alias=True)
-        raise ProblemError(
-            409,
-            "draft_conflict",
-            "Szkic zmienił się w innym oknie — odśwież.",
-            current=current,
-        )
+        raise await _draft_conflict(session, profile)
     changes: dict[str, Any] = patch.model_dump(exclude_unset=True, exclude={"version"})
     if "display_name" in changes and not changes["display_name"]:
         raise ProblemError(
@@ -289,3 +300,86 @@ async def set_nick(session: AsyncSession, account_id: uuid.UUID, raw: str) -> Pr
     await session.refresh(profile)
     log.info("nick_assigned", account_id=str(account_id))
     return profile
+
+
+# --- publishing (ADR 0002) -----------------------------------------------------------
+
+SNAPSHOT_SCHEMA_VERSION = 1  # PublishedProfileV1 = ProfileContentOut
+
+
+async def publish(
+    session: AsyncSession, account_id: uuid.UUID, email_confirmed: bool, version: int
+) -> Profile:
+    """Copy the whole draft to the published snapshot in one transaction (PRF-BR-15).
+    Idempotent: an unchanged, already published draft keeps its `published_at`."""
+    profile = await get_own_profile(session, account_id, lock=True)
+    if profile.blocked_at:
+        raise ProblemError(403, "profile_blocked", "Strona jest zablokowana — napisz do nas.")
+    if not email_confirmed:
+        raise ProblemError(
+            403, "email_not_confirmed", "Potwierdź adres e-mail, żeby opublikować stronę."
+        )
+    if version != profile.version:
+        raise await _draft_conflict(session, profile)
+    if not profile.nick:
+        raise ProblemError(
+            422,
+            "profile_incomplete",
+            errors=[{"field": "nick", "code": "required", "message": "Wybierz adres strony."}],
+        )
+    snapshot = await session.get(PublishedProfile, profile.id, with_for_update=True)
+    unchanged = (
+        snapshot is not None
+        and profile.status == "published"
+        and snapshot.draft_version == profile.version
+    )
+    if not unchanged:
+        content = _content(profile).model_dump(mode="json", by_alias=True)
+        now = datetime.now(UTC)
+        if snapshot is None:
+            snapshot = PublishedProfile(profile_id=profile.id)
+            session.add(snapshot)
+        snapshot.content = content
+        snapshot.schema_version = SNAPSHOT_SCHEMA_VERSION
+        snapshot.draft_version = profile.version
+        snapshot.published_at = now
+        profile.status = "published"
+        profile.nick_locked = True  # PRF-BR-7: permanent after the first publication
+        log.info("profile_published", account_id=str(account_id))
+    await session.commit()
+    return profile
+
+
+async def unpublish(session: AsyncSession, account_id: uuid.UUID) -> Profile:
+    """Hide the public page at once; the snapshot is kept (PRF-BR-17). Idempotent."""
+    profile = await get_own_profile(session, account_id, lock=True)
+    if profile.status == "published":
+        profile.status = "unpublished"
+        log.info("profile_unpublished", account_id=str(account_id))
+    await session.commit()
+    return profile
+
+
+async def get_public_profile(session: AsyncSession, nick: str) -> PublicProfileOut:
+    """The published snapshot, or the same 404 for unknown, unpublished and blocked nicks
+    (PUB-BR-6). Never reads the draft or the account."""
+    row = (
+        await session.execute(
+            select(Profile.nick, PublishedProfile)
+            .join(PublishedProfile, PublishedProfile.profile_id == Profile.id)
+            .where(
+                Profile.nick == nick,
+                Profile.status == "published",
+                Profile.blocked_at.is_(None),
+            )
+        )
+    ).one_or_none()
+    if row is None:
+        raise ProblemError(404, "not_found", headers={"Cache-Control": "no-store"})
+    public_nick, snapshot = str(row[0]), row[1]  # nick is set: the query matched it
+    return PublicProfileOut(
+        nick=public_nick,
+        canonical_url=_public_url(public_nick),
+        published_at=snapshot.published_at,
+        content=ProfileContentOut.model_validate(snapshot.content),
+    )
