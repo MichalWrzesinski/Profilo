@@ -17,6 +17,74 @@ def test_confirmation_template_renders_html_and_text_with_escaping() -> None:
     assert "48 godzin" in email.text
 
 
+@pytest.mark.parametrize(
+    ("exc", "kind", "reason"),
+    [
+        (ConnectionRefusedError(), tasks.TransientEmailError, "ConnectionRefusedError"),
+        (
+            smtplib.SMTPServerDisconnected("bye"),
+            tasks.TransientEmailError,
+            "SMTPServerDisconnected",
+        ),
+        (smtplib.SMTPResponseException(421, b"try later"), tasks.TransientEmailError, "smtp 421"),
+        (smtplib.SMTPDataError(554, b"rejected a@b.pl"), tasks.PermanentEmailError, "smtp 554"),
+        (
+            smtplib.SMTPAuthenticationError(535, b"bad creds"),
+            tasks.PermanentEmailError,
+            "smtp 535 (authentication)",
+        ),
+        (
+            smtplib.SMTPRecipientsRefused({"x@y.pl": (450, b"mailbox busy")}),
+            tasks.TransientEmailError,
+            "smtp 450",
+        ),
+        (
+            smtplib.SMTPRecipientsRefused({"x@y.pl": (550, b"no such user x@y.pl")}),
+            tasks.PermanentEmailError,
+            "smtp 550",
+        ),
+        (smtplib.SMTPException("other"), tasks.PermanentEmailError, "SMTPException"),
+    ],
+)
+def test_smtp_errors_are_classified_without_provider_text(
+    exc: Exception, kind: type[Exception], reason: str
+) -> None:
+    classified = tasks._classify(exc)
+
+    assert type(classified) is kind
+    assert str(classified) == reason
+
+
+def test_refused_recipient_fails_at_once_without_address_in_logs(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    attempts: list[int] = []
+
+    class Refusing(FakeSMTP):
+        def send_message(self, message: EmailMessage) -> None:
+            attempts.append(1)
+            raise smtplib.SMTPRecipientsRefused({"secret.person@example.pl": (550, b"unknown")})
+
+    monkeypatch.setattr(smtplib, "SMTP", Refusing)
+    celery_app.conf.task_always_eager = True
+    try:
+        result = tasks.send_email.apply(
+            kwargs={
+                "template": "email_confirmation",
+                "to": "secret.person@example.pl",
+                "params": {"link": "L"},
+            }
+        )
+    finally:
+        celery_app.conf.task_always_eager = False
+
+    assert result.failed()
+    assert len(attempts) == 1  # permanent: no retries
+    output = capsys.readouterr()
+    assert "secret.person" not in output.out + output.err
+    assert '"reason": "smtp 550"' in output.out
+
+
 def test_message_has_text_and_html_parts() -> None:
     message = mailer.build_message(
         "anna@example.pl", templates.render("email_confirmation", {"link": "L"})
@@ -24,6 +92,8 @@ def test_message_has_text_and_html_parts() -> None:
 
     assert message["To"] == "anna@example.pl"
     assert message["From"] == "Profilo <no-reply@profilo.pl>"
+    assert message["Date"]
+    assert message["Message-ID"].endswith("@profilo.pl>")
     assert [part.get_content_type() for part in message.iter_parts()] == ["text/plain", "text/html"]
 
 
@@ -86,11 +156,10 @@ def test_send_with_starttls_and_credentials(monkeypatch: pytest.MonkeyPatch) -> 
     assert FakeSMTP.instances[0].login_args == ("user", "secret")
 
 
-def test_task_retries_transient_smtp_errors_with_backoff() -> None:
+def test_task_retries_only_transient_errors_with_backoff() -> None:
     task = tasks.send_email
 
-    assert OSError in task.autoretry_for
-    assert smtplib.SMTPException in task.autoretry_for
+    assert task.autoretry_for == (tasks.TransientEmailError,)
     assert task.max_retries == tasks.MAX_RETRIES
     assert task.retry_backoff is True
     assert task.retry_jitter is True
@@ -116,7 +185,7 @@ def test_provider_down_retries_then_logs_error(
         celery_app.conf.task_always_eager = False
 
     assert result.failed()
-    assert isinstance(result.result, ConnectionRefusedError)
+    assert isinstance(result.result, tasks.TransientEmailError)
     out = capsys.readouterr().out
     assert '"event": "email_failed"' in out
     assert "a@b.pl" not in out  # no personal data in logs

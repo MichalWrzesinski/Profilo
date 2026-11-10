@@ -3,7 +3,7 @@
 import smtplib
 import ssl
 from email.message import EmailMessage
-from email.utils import make_msgid
+from email.utils import formatdate, make_msgid, parseaddr
 
 from app.core.settings import get_settings
 from app.modules.notifications.templates import RenderedEmail
@@ -15,7 +15,9 @@ def build_message(to: str, email: RenderedEmail) -> EmailMessage:
     message["From"] = settings.mail_from
     message["To"] = to
     message["Subject"] = email.subject
-    message["Message-ID"] = make_msgid(domain="profilo.pl")
+    message["Date"] = formatdate(usegmt=True)
+    sender_domain = parseaddr(settings.mail_from)[1].rpartition("@")[2] or "profilo.pl"
+    message["Message-ID"] = make_msgid(domain=sender_domain)
     message.set_content(email.text)
     message.add_alternative(email.html, subtype="html")
     return message

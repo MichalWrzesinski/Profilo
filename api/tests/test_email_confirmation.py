@@ -135,6 +135,29 @@ async def test_second_resend_within_a_minute_is_refused(client: AsyncClient) -> 
     assert int(second.headers["retry-after"]) > 0
 
 
+async def test_resend_is_capped_per_hour(client: AsyncClient) -> None:
+    from app.core.valkey import get_valkey
+
+    session = await register(client)
+    statuses = []
+    for _ in range(6):
+        await get_valkey().delete(f"rl:confirm_resend:{session['account']['id']}")  # skip 1/min
+        response = await client.post("/api/v1/auth/email-confirmations", headers=auth(session))
+        statuses.append(response.status_code)
+
+    assert statuses == [202] * 5 + [429]
+
+
+async def test_confirm_is_rate_limited_per_ip(client: AsyncClient) -> None:
+    from app.modules.accounts import confirmation
+
+    await register(client)
+    for _ in range(confirmation.CONFIRM_PER_IP.max_hits):
+        await confirm(client, "y" * 43)
+
+    assert await confirm(client, "y" * 43) == 429
+
+
 async def test_resend_requires_login_and_unconfirmed_email(
     client: AsyncClient, sent_emails: list[dict[str, Any]]
 ) -> None:

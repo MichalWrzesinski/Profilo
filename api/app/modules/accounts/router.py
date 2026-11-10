@@ -124,14 +124,16 @@ async def logout(
 
 
 @router.post("/auth/email-confirmations", status_code=202, tags=["auth"])
-async def resend_email_confirmation(account: CurrentAccount, session: DbSession) -> Response:
-    await confirmation.resend(session, account)
+async def resend_email_confirmation(
+    account: CurrentAccount, request: Request, session: DbSession
+) -> Response:
+    await confirmation.resend(session, account, _client_ip(request))
     return Response(status_code=202)
 
 
 @router.post("/auth/email-confirmations/confirm", status_code=204, tags=["auth"])
-async def confirm_email(payload: TokenRequest, session: DbSession) -> Response:
-    await confirmation.confirm(session, payload.token)
+async def confirm_email(payload: TokenRequest, request: Request, session: DbSession) -> Response:
+    await confirmation.confirm(session, payload.token, _client_ip(request))
     return Response(status_code=204)
 
 
