@@ -1,7 +1,7 @@
 ---
 id: TASK-002
 title: CI pipeline with the required `check` job
-status: READY
+status: DONE
 priority: highest
 iteration: ITER-00
 depends_on: [TASK-001]
@@ -48,4 +48,19 @@ From the TASK-001 review, to handle here:
 - Beat healthcheck only checks that the schedule file exists — acceptable until beat has schedules (TASK-017).
 
 ## Report
-Filled in by development after the task.
+
+**Done.** `.github/workflows/ci.yml`: job `check` runs `make check` (lint, types, tests with coverage, API contract), `make audit`, `make secrets` (gitleaks, full history) and `make images` (prod builds); job `publish` pushes `ghcr.io/michalwrzesinski/profilo-api:<sha>` and `profilo-client:<sha>` on main. `.github/dependabot.yml`: weekly uv, npm, Docker, Compose, GitHub Actions.
+
+Acceptance criteria:
+- Green pull request — verified on the PR run of this task (see PR).
+- Images published — verified after merge (see PR comment / GHCR).
+- Contract drift — met: `scripts/check_contract.py` exits 1 listing differences; unit tests cover extra field, missing field, undocumented path, method and status; run against a contract without `/ready` printed `/ready: path not in contract`.
+- Leaked secret — met by the same gitleaks command that the pre-commit hook uses (TASK-001 verified it rejects a fake AWS key); in CI it scans the whole history.
+
+Decisions:
+- Coverage threshold raised from 80 % to 95 % (api and client), as the quality-checks standard requires; TASK-001 had set 80 % without basis. Added tests for DB/Valkey clients, lifespan and the request-context middleware (api 99.2 %).
+- Audit policy: runtime dependencies fail on any advisory; dev-only npm advisories are printed but do not fail (they do not ship). Recorded in AGENTS.md.
+- Checks run as the host uid (Makefile `AS_HOST`) to avoid EACCES on Linux runners; Vite cache moved to `/tmp/vite` and `node_modules/.vite-temp` made world-writable in the dev image.
+- Base images pinned by digest; GitHub actions pinned by commit SHA; workflow linted with actionlint.
+
+Limitations: CI rebuilds dev images without a layer cache (≈ a few minutes); the publish job uses the GitHub Actions cache.
