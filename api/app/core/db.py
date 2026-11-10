@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from functools import lru_cache
 
 from sqlalchemy.ext.asyncio import (
@@ -31,7 +31,7 @@ def get_sessionmaker() -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(get_engine(), expire_on_commit=False)
 
 
-async def get_session() -> AsyncIterator[AsyncSession]:
+async def get_session() -> AsyncGenerator[AsyncSession]:
     """FastAPI dependency: one session per request."""
     async with get_sessionmaker()() as session:
         yield session
