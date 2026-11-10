@@ -16,6 +16,7 @@ import {
   type Account,
   type Session,
 } from './api/client';
+import { clearDrafts } from './draftStorage';
 
 type Status = 'unknown' | 'authenticated' | 'anonymous';
 
@@ -65,6 +66,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     try {
       await logoutSession();
     } finally {
+      clearDrafts();
       setAccount(null);
       setStatus('anonymous');
     }

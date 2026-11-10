@@ -471,3 +471,72 @@ async def test_saving_unchanged_values_keeps_the_version(client: AsyncClient) ->
     )
 
     assert response.json()["version"] == 1
+
+
+# --- editor (TASK-008) ---------------------------------------------------------------
+
+
+async def test_invalid_value_keeps_the_last_valid_draft(client: AsyncClient) -> None:
+    auth = await owner(client)
+    await client.patch(
+        "/api/v1/me/profile",
+        json={"version": 1, "bio": "Dobry opis", "city": "Kraków"},
+        headers=auth,
+    )
+
+    rejected = await client.patch(
+        "/api/v1/me/profile",
+        json={"version": 2, "bio": "x" * 501, "city": "Gdańsk"},
+        headers=auth,
+    )
+    draft = (await client.get("/api/v1/me/profile", headers=auth)).json()
+
+    assert rejected.status_code == 422
+    assert (draft["version"], draft["draft"]["bio"], draft["draft"]["city"]) == (
+        2,
+        "Dobry opis",
+        "Kraków",
+    )
+
+
+async def test_conflict_never_overwrites_the_newer_draft(client: AsyncClient) -> None:
+    auth = await owner(client)
+    await client.patch(
+        "/api/v1/me/profile", json={"version": 1, "headline": "Okno A"}, headers=auth
+    )
+
+    stale = await client.patch(
+        "/api/v1/me/profile", json={"version": 1, "headline": "Okno B"}, headers=auth
+    )
+
+    assert stale.status_code == 409
+    assert stale.json()["detail"] == "Szkic zmienił się w innym oknie — odśwież."
+    assert stale.json()["current"]["draft"]["headline"] == "Okno A"
+
+
+@pytest.mark.parametrize(
+    ("typed", "stored"),
+    [
+        ("601234567", "+48601234567"),
+        ("601 234 567", "+48601234567"),
+        ("+49 30 901820", "+4930901820"),
+    ],
+)
+async def test_phone_is_stored_in_e164_with_default_poland(
+    client: AsyncClient, typed: str, stored: str
+) -> None:
+    auth = await owner(client)
+
+    response = await client.patch(
+        "/api/v1/me/profile", json={"version": 1, "publicPhone": typed}, headers=auth
+    )
+
+    assert response.json()["draft"]["publicPhone"] == stored
+
+
+async def test_new_owner_has_no_public_email(client: AsyncClient) -> None:
+    auth = await owner(client)
+
+    draft = (await client.get("/api/v1/me/profile", headers=auth)).json()["draft"]
+
+    assert draft["publicEmail"] is None
