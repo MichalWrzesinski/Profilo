@@ -24,6 +24,9 @@ Operations for staging (and production from TASK-021). Files: `infra/server/` (`
    | Secret | `STAGING_SSH_KEY` | content of `profilo-staging-deploy` (private key) |
    | Secret | `STAGING_SSH_KNOWN_HOSTS` | output of `ssh-keyscan -t ed25519 SERVER` (verify the fingerprint in the Hetzner console) |
    | Variable | `STAGING_DOMAIN` | `staging.profilo.pl` |
+   | Secret | `STAGING_SMTP_USERNAME` | Brevo SMTP login (Brevo → SMTP & API → SMTP) |
+   | Secret | `STAGING_SMTP_PASSWORD` | Brevo SMTP key for staging |
+   | Variable | `STAGING_MAIL_FROM` | e.g. `Profilo <no-reply@staging.profilo.pl>` — a sender/domain verified in Brevo (SPF, DKIM) |
 
    Then delete the private key file from your computer.
 6. **First deployment** — Actions → *Deploy staging* → *Run workflow* with the latest `main` commit SHA, or merge any PR.
@@ -33,7 +36,7 @@ Operations for staging (and production from TASK-021). Files: `infra/server/` (`
 After the CI workflow succeeds on `main` (its `publish` job pushed `ghcr.io/michalwrzesinski/profilo-{api,client}:<sha>`), *Deploy staging* runs:
 
 1. checks that the commit is on `main`; after CI it skips commits that are no longer the head of `main` (the newer commit deploys);
-2. uploads `compose.yml`, `Caddyfile`, `deploy.sh` to `/srv/profilo/releases/<sha>/`;
+2. uploads `compose.yml`, `Caddyfile`, `deploy.sh` to `/srv/profilo/releases/<sha>/` and writes runtime secrets (SMTP) to `/srv/profilo/.env.secrets` (mode 600);
 3. logs the server in to GHCR with the workflow's short-lived token (logged out at the end);
 4. `releases/<sha>/deploy.sh <sha>` (one at a time, lock file): pull images → migrations (`migrate` service) → `docker compose up --wait` (health checks) → Caddy reload → smoke tests `/ready` and `/` through Caddy (retried up to 90 s) → `current` symlink to the release; old releases beyond the last 5 are removed with their images;
 5. if start or smoke tests fail, the previous release (its images and its stack files) is restored and the workflow fails; a failed pull or migration leaves the running release untouched;
