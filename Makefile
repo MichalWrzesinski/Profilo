@@ -50,7 +50,7 @@ lint-api: env
 	$(API_RUN_NODEPS) sh -c 'ruff format --check . && ruff check . && mypy .'
 
 lint-client: env
-	$(CLIENT_RUN) sh -c 'npm run format:check && npm run lint && npm run typecheck'
+	$(CLIENT_RUN) sh -c 'npm run format:check && npm run lint && npm run typecheck && npm run api:check'
 
 format: env ## Format code (api: ruff, client: prettier)
 	$(API_RUN_NODEPS) sh -c 'ruff format . && ruff check --fix .'
