@@ -10,14 +10,20 @@ updates:
     directory: /client
     schedule: { interval: weekly, day: monday }
     groups:
+      # Packages that must move together (peer dependencies).
+      vitest: { patterns: [vitest, "@vitest/*"] }
       npm-minor-patch: { update-types: [minor, patch] }
+    ignore:
+      # eslint-plugin-import (via eslint-config-next) supports ESLint <= 9; revisit when it adds 10.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: docker
     directories: [/api, /client]
     schedule: { interval: weekly, day: monday }
 
   - package-ecosystem: docker-compose
-    directory: /
+    directories: [/, /infra/server]
     schedule: { interval: weekly, day: monday }
 
   - package-ecosystem: github-actions
