@@ -1,7 +1,7 @@
 ---
 id: TASK-004
 title: Registration, login, logout and session refresh
-status: READY
+status: IN_PROGRESS
 priority: highest
 iteration: ITER-01
 depends_on: [TASK-001]
@@ -61,4 +61,24 @@ A visitor creates an account with display name, e-mail and password, is logged i
 High-risk change: security review per code-review standard.
 
 ## Report
-Filled in by development after the task.
+
+**Done (pending review).** Registration, login, session refresh with rotation and reuse detection, logout and `GET /me` (backend), and registration/login pages, guarded panel shell with logout, legal placeholders (client).
+
+Acceptance criteria:
+- S1 registration — met: API test (account + profile `classic`/`granat`, cookie `HttpOnly; SameSite=Strict; Path=/api/v1/auth; Max-Age=30 d`), browser: form → panel.
+- S2 e-mail case — met: `Anna@Example.pl` after `anna@example.pl` → 409 `email_taken`; login with mixed case works (API test and browser).
+- S3 login/logout — met: browser login → panel; after logout `/panel` redirects to login; API test: refresh after logout → 401; logout ends only the current session.
+- S4 refresh — met: browser reload restores the session from the cookie; client retries a GET once after 401; API test: replayed refresh token revokes the family (also the newer token). Sessions slide: each refresh issues a new 30-day token.
+- S5 invalid input — met: too short / too long / common password → 422 with the field message shown under the password field; `email_taken` shows the login link.
+- S6 wrong credentials — met: identical 401 for unknown e-mail and wrong password (timing equalised with a dummy Argon2 verify); 6th failed login in 15 min → 429 with `Retry-After`.
+
+Checks: api 57 tests, 99.1 %; client 43 tests, 100 % lines / 97 % branches; contract 7 paths; audits, gitleaks clean.
+
+Decisions:
+- Common-password list: the ~30 000 passwords bundled with `zxcvbn` instead of a separate 100 k file (no download, maintained package); architecture.md updated.
+- Rate limits fail open when Valkey is down (logged) so a cache outage does not block login; limits: registration 10/h per IP and 5/h per e-mail, login 30/15 min per IP, 5 failed logins per account per 15 min. "Progressive delay" is implemented as this lockout.
+- Missing/invalid `X-Requested-With` on refresh/logout returns 401 (contract lists no 403 there).
+- Design-system classes are used directly (`docs/design/components.css` imported globally).
+- Small product decisions (check on staging): login page subtitle „Wróć do edycji swojej strony.”; panel placeholder text; menu is a single „Menu” button with „Wyloguj się”.
+
+Limitations: no E2E test yet (TASK-011); ALTCHA not in this task (TASK-018).
