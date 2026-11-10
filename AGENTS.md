@@ -15,7 +15,7 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 - Files: user images on a persistent volume via fsspec; Pillow processing, EXIF stripped, WebP variants; served via `/media/**` through the API
 - E-mail: SMTP adapter in `notifications`; Brevo (staging and production, separate keys); Mailpit locally
 - Frontend: Next.js 16 App Router, React 19, TypeScript strict, Node.js 26 LTS; one app for landing, `/user/{nick}` (SSR, no data cache) and panel
-- Styling: CSS Modules + `docs/design/tokens.css`; components per `docs/design/design-system.html`; icons Lucide
+- Styling: `docs/design/tokens.css` and `docs/design/components.css` imported globally (design-system class names), CSS Modules for page layout; icons Lucide
 - Forms and API client: React Hook Form + Zod; `openapi-typescript` + `openapi-fetch` generated from the contract; `@dnd-kit/sortable` for link order
 - Code style frontend: ESLint + Prettier
 - Tests: pytest + httpx (backend), Vitest + Testing Library (frontend), Playwright (E2E main flow and smoke tests); coverage threshold 95 % per app (quality-checks standard)
@@ -68,6 +68,9 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 - Baseline (TASK-002): backend 27 tests, coverage 99.2 %; client 1 test, coverage 100 % (threshold 95 % both); Ruff, mypy strict, ESLint, Prettier, `tsc` clean; pip-audit and npm prod audit clean; npm dev audit: 7 moderate (typescript-eslint/minimatch).
 
 ## Pitfalls
+
+- After changing `docs/api/openapi.yaml`, regenerate client types with `docker compose run --rm client npm run api:types`; `make lint` fails when they are out of date.
+- API tests use Valkey database 1 and truncate tables per test (`clean_state` fixture); never point them at a shared database.
 
 - ESLint stays on 9 (marked unsupported upstream) because `eslint-config-next` 16 depends on `eslint-plugin-import`, `eslint-plugin-react` and `eslint-plugin-jsx-a11y`, which all cap ESLint at 9; Dependabot ignores ESLint majors. Migration: TASK-025.
 - `vitest` and `@vitest/*` must be updated together (Dependabot group `vitest`).

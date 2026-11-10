@@ -10,14 +10,19 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./vitest.setup.ts'],
+    setupFiles: ['./vitest.setup.ts', './src/test/navigation.ts'],
     // node_modules is read-only for the host uid that runs checks (Makefile AS_HOST).
     fsModuleCachePath: '/tmp/vitest-cache',
     css: false,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.test.{ts,tsx}', 'src/app/layout.tsx'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/app/layout.tsx',
+        'src/test/**',
+        'src/lib/api/schema.d.ts',
+      ],
       thresholds: { lines: 95, functions: 95, branches: 95, statements: 95 },
     },
   },

@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import PostgresDsn, RedisDsn
+from pydantic import Field, PostgresDsn, RedisDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     valkey_url: RedisDsn
     dependency_timeout_seconds: float = 2.0
     public_base_url: str = "http://localhost:8080"
+
+    # Authentication (docs/architecture.md#authentication)
+    jwt_secret: SecretStr = Field(min_length=32)
+    access_token_ttl_seconds: int = 15 * 60
+    refresh_token_ttl_days: int = 30
+    cookie_secure: bool = True
 
 
 @lru_cache

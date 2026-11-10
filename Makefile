@@ -5,7 +5,7 @@ COMPOSE := docker compose
 AS_HOST := --user $(shell id -u):$(shell id -g) -e HOME=/tmp
 API_RUN := $(COMPOSE) run --rm $(AS_HOST) api
 API_RUN_NODEPS := $(COMPOSE) run --rm --no-deps $(AS_HOST) api
-API_TEST_RUN := $(COMPOSE) run --rm $(AS_HOST) -e ENVIRONMENT=test api
+API_TEST_RUN := $(COMPOSE) run --rm $(AS_HOST) -e ENVIRONMENT=test -e VALKEY_URL=redis://valkey:6379/1 api
 CLIENT_RUN := $(COMPOSE) run --rm --no-deps $(AS_HOST) client
 
 .DEFAULT_GOAL := help
@@ -50,7 +50,7 @@ lint-api: env
 	$(API_RUN_NODEPS) sh -c 'ruff format --check . && ruff check . && mypy .'
 
 lint-client: env
-	$(CLIENT_RUN) sh -c 'npm run format:check && npm run lint && npm run typecheck'
+	$(CLIENT_RUN) sh -c 'npm run format:check && npm run lint && npm run typecheck && npm run api:check'
 
 format: env ## Format code (api: ruff, client: prettier)
 	$(API_RUN_NODEPS) sh -c 'ruff format . && ruff check --fix .'

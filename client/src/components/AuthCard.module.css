@@ -1,0 +1,14 @@
+.main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-10) var(--space-5);
+}
+
+.title {
+  font-size: var(--text-xl);
+}
+
+.lead {
+  color: var(--color-text-muted);
+  margin: var(--space-1) 0 var(--space-6);
+}

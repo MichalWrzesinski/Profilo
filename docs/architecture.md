@@ -149,9 +149,9 @@ Public read path: `GET /api/v1/public/profiles/{nick}` → `profiles` by nick wh
 
 ## Authentication
 
-- Access token: JWT (PyJWT, HS256 with a 256-bit secret, `iss`/`aud`/`exp` checked), 15 min, in memory in the browser.
-- Refresh token: random 256-bit, stored as SHA-256 hash, 30 days sliding (ACC-BR-8), rotated on every use with reuse detection by family; HttpOnly, Secure, `SameSite=Strict`, path `/api/v1/auth`. Refresh and logout additionally require header `X-Requested-With: profilo` (CSRF defence in depth).
-- Passwords: Argon2id via `pwdlib`; breached/common password check against a bundled list of the 100 000 most common passwords (no external call).
+- Access token: JWT (PyJWT, HS256 with a 256-bit secret, `iss`/`aud`/`exp` checked), 15 min, in memory in the browser; the client refreshes it 60 s before expiry.
+- Refresh token: random 256-bit, stored as SHA-256 hash, 30 days sliding (ACC-BR-8), rotated on every use with reuse detection by family (a reuse within 30 s — parallel tabs, a lost response — gets a sibling token; later reuse revokes the family); HttpOnly, Secure, `SameSite=Strict`, path `/api/v1/auth`. Refresh and logout additionally require header `X-Requested-With: profilo` (CSRF defence in depth).
+- Passwords: Argon2id via `pwdlib`; common password check against the ~30 000 most common passwords bundled with `zxcvbn` (no external call).
 - E-mail confirmation and password reset tokens: random, hashed, single-use, 48 h / 1 h.
 
 ## Personal and sensitive data
@@ -195,7 +195,12 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | `api/app/modules/<module>/` | Product modules (empty packages until their tasks) | — |
 | `api/alembic/` | Migrations (`0001`: citext extension) | TASK-001 |
 | `api/tests/` | pytest; integration tests use the `profilo_test` database | TASK-001 |
-| `client/src/app/` | Next.js App Router: `layout.tsx` (font, metadata, tokens), `page.tsx` placeholder | TASK-001 |
+| `api/app/core/auth.py`, `core/rate_limit.py`, `core/schemas.py` | Bearer-token dependency, Valkey fixed-window limits (fail open), camelCase API base model | TASK-004 |
+| `api/app/modules/accounts/` | Accounts and refresh tokens: models, Argon2id + common-password policy, JWT and rotating refresh tokens with reuse detection, service, router (`/accounts`, `/auth/*`, `/me`) | TASK-004 |
+| `api/app/modules/profiles/` | Profile model (draft), `create_profile_for` | TASK-004 |
+| `client/src/app/` | Next.js App Router: `layout.tsx` (font, metadata, tokens, session provider), home, `/rejestracja`, `/logowanie`, `/panel` (guarded shell), `/regulamin`, `/prywatnosc` | TASK-001, TASK-004 |
+| `client/src/lib/api/` | `schema.d.ts` generated from the contract (`npm run api:types`, checked by `api:check`), `client.ts` (openapi-fetch, in-memory access token, silent refresh) | TASK-004 |
+| `client/src/lib/session.tsx`, `client/src/features/auth/` | Session context; registration and login forms (React Hook Form + Zod) | TASK-004 |
 | `infra/` | Local Caddy config, PostgreSQL init (test database) | TASK-001 |
 | `infra/server/` | Server bootstrap, staging/production Compose stack, Caddyfile with TLS and security headers, `deploy.sh` with rollback | TASK-003 |
 | `.github/workflows/` | `ci.yml` (check, publish), `deploy-staging.yml` | TASK-002, TASK-003 |

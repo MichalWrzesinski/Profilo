@@ -27,3 +27,10 @@
   max-width: 34ch;
   margin: 0 auto;
 }
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  margin-top: var(--space-8);
+}

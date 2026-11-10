@@ -6,7 +6,7 @@ const config = [
   ...nextVitals,
   ...nextTs,
   prettier,
-  { ignores: ['.next/**', 'coverage/**', 'next-env.d.ts'] },
+  { ignores: ['.next/**', 'coverage/**', 'next-env.d.ts', 'src/lib/api/schema.d.ts'] },
 ];
 
 export default config;
