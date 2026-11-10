@@ -13,7 +13,7 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 - Auth: JWT access token 15 min (PyJWT, HS256) in memory; rotating refresh token in HttpOnly `SameSite=Strict` cookie, 30 days; Argon2id via pwdlib
 - Bot protection: ALTCHA (self-hosted proof-of-work) on registration after threshold
 - Files: user images on a persistent volume via fsspec; Pillow processing, EXIF stripped, WebP variants; served via `/media/**` through the API
-- E-mail: SMTP adapter in `notifications` (Jinja2 templates, Celery task with exponential backoff, up to ~8 min of retries, `email_failed` logged at error level); Brevo on servers via `.env.secrets` written by the deploy workflow; Mailpit locally
+- E-mail: SMTP adapter in `notifications` (Jinja2 templates; Celery task retries only transient errors — 4xx, connection — with exponential backoff and full jitter, at most ~8 min; 5xx/authentication fail at once; `email_failed` logged at error level with the SMTP code only, never provider text with addresses); Brevo on servers via `.env.secrets` written by the deploy workflow; Mailpit locally
 - Frontend: Next.js 16 App Router, React 19, TypeScript strict, Node.js 26 LTS; one app for landing, `/user/{nick}` (SSR, no data cache) and panel
 - Styling: `docs/design/tokens.css` and `docs/design/components.css` imported globally (design-system class names), CSS Modules for page layout; icons Lucide
 - Forms and API client: React Hook Form + Zod; `openapi-typescript` + `openapi-fetch` generated from the contract; `@dnd-kit/sortable` for link order
@@ -71,6 +71,7 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 
 - Celery workers do not reload code: after changing tasks run `docker compose restart worker beat`; after `docker compose build api` recreate the containers (`docker compose up -d api worker beat`), otherwise they keep the old image. The Next.js dev server can keep stale module state after switching branches: `docker compose restart client`.
 
+- `client/src/lib/api/client.ts`: only the exact token endpoints (`/auth/login`, `/auth/refresh`, `/auth/logout`, `/accounts`) are sent without the access token; any other endpoint, also under `/auth/`, gets it.
 - After changing `docs/api/openapi.yaml`, regenerate client types with `docker compose run --rm client npm run api:types`; `make lint` fails when they are out of date.
 - API tests use Valkey database 1 and truncate tables per test (`clean_state` fixture); never point them at a shared database.
 

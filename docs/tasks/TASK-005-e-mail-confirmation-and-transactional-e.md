@@ -54,7 +54,9 @@ Acceptance criteria (verified live with Mailpit and in the browser, and by tests
 - S4 expired/used — met: unknown or expired token → „Link wygasł albo został już użyty.” with „Wyślij nowy link” (asks to log in first when logged out).
 - S5 provider down — met: with Mailpit stopped, registration returned 201, the task retried with growing delays and delivered the e-mail ~15 s after Mailpit came back; after the last retry `email_failed` is logged at error level (test).
 
-Checks: api 75 tests, 99.5 %; client 58 tests, 100 % lines; contract 9 paths.
+Review round 1 fixes: the client sent no access token to `/api/v1/auth/email-confirmations` (all `/auth/*` were exempt) — only the four token endpoints are exempt now, verified in the browser (resend 202, second click „Nowy link możesz wysłać za minutę.”, two e-mails in Mailpit); SMTP errors are classified (4xx/connection retried, 5xx/authentication fail at once) and logged with the SMTP code only — no recipient address in Celery logs; resend limited per account (1/min, 5/h) and per IP (20/h), confirm per IP (30/15 min); `/potwierdz-email` handles 409/429 after „Wyślij nowy link” and reads the session's own account from `/me`; `Date` header and sender-domain `Message-ID`; failed-job handling recorded in ADR 0003.
+
+Checks: api 86 tests, 99.5 %; client 62 tests, 100 % lines; contract 9 paths.
 
 Found and fixed during live verification:
 - Celery redirected worker stdout, wrapping our JSON logs into another record at warning level — `email_failed` would not have alerted; `worker_redirect_stdouts=False`.
