@@ -69,6 +69,9 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 
 ## Pitfalls
 
+- ESLint stays on 9 (marked unsupported upstream) because `eslint-config-next` 16 depends on `eslint-plugin-import`, `eslint-plugin-react` and `eslint-plugin-jsx-a11y`, which all cap ESLint at 9; Dependabot ignores ESLint majors. Migration: TASK-025.
+- `vitest` and `@vitest/*` must be updated together (Dependabot group `vitest`).
+
 - The client image is built with the repository root as context (`client/Dockerfile`, root `.dockerignore`) because the app imports `docs/design/tokens.css`. Fonts come from `next/font` (self-hosted); do not add the Google Fonts `@import` to the app.
 - Local ports bind to `127.0.0.1` only (8080 app, 8025 Mailpit).
 - The API trusts `X-Forwarded-*` only from `FORWARDED_ALLOW_IPS` (uvicorn default `127.0.0.1`); staging/production must set it to the Caddy container network, otherwise client IPs (rate limits) are wrong.

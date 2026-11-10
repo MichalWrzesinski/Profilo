@@ -17,7 +17,7 @@ x-api: &api
 
 services:
   caddy:
-    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    image: caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
     ports:
       - "127.0.0.1:8080:80"
     volumes:
@@ -91,7 +91,7 @@ services:
       retries: 10
 
   mailpit:
-    image: axllent/mailpit:v1.27.11@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
+    image: axllent/mailpit:v1.33.1@sha256:aef2aacc11f075ec0fb6874275ee4a421e688e11a96ebb296134d1735c7761ce
     ports:
       - "127.0.0.1:8025:8025"
     healthcheck:
@@ -102,7 +102,7 @@ services:
 
   # Tool, not a service: `docker compose run --rm gitleaks …` (Makefile `secrets`, pre-commit hook).
   gitleaks:
-    image: zricethezav/gitleaks:v8.28.0@sha256:cdbb7c955abce02001a9f6c9f602fb195b7fadc1e812065883f695d1eeaba854
+    image: zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
     profiles: [tools]
     working_dir: /repo
     volumes:
