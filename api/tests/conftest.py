@@ -21,3 +21,13 @@ async def clean_state() -> None:
     async with get_engine().begin() as conn:
         await conn.execute(text("TRUNCATE accounts CASCADE"))
     await get_valkey().flushdb()
+
+
+@pytest.fixture(autouse=True)
+def sent_emails(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
+    """Capture queued e-mails instead of publishing them to the broker."""
+    from app.modules.notifications.tasks import send_email
+
+    queued: list[dict[str, object]] = []
+    monkeypatch.setattr(send_email, "apply_async", lambda kwargs, **_: queued.append(kwargs))
+    return queued

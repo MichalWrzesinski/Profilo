@@ -25,6 +25,10 @@ class LoginRequest(ApiModel):
     password: Password = Field(max_length=128)  # no stored password can be longer
 
 
+class TokenRequest(ApiModel):
+    token: str = Field(min_length=20, max_length=200)
+
+
 class AccountOut(ApiModel):
     id: uuid.UUID
     email: str
