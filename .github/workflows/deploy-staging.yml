@@ -79,6 +79,21 @@ jobs:
           ssh staging "mkdir -p /srv/profilo/releases/$SHA"
           scp -q infra/server/compose.yml infra/server/Caddyfile infra/server/deploy.sh "staging:/srv/profilo/releases/$SHA/"
 
+      # Runtime secrets reach the server only through this workflow (AGENTS.md).
+      - name: Write runtime secrets on the server
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          SMTP_USERNAME: ${{ secrets.STAGING_SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.STAGING_SMTP_PASSWORD }}
+          MAIL_FROM: ${{ vars.STAGING_MAIL_FROM }}
+        run: |
+          [[ -n "$SMTP_USERNAME" && -n "$SMTP_PASSWORD" && -n "$MAIL_FROM" ]] \
+            || { echo "::error::STAGING_SMTP_USERNAME, STAGING_SMTP_PASSWORD or STAGING_MAIL_FROM missing (docs/runbook.md)"; exit 1; }
+          printf '%s\n' \
+            "SMTP_HOST=smtp-relay.brevo.com" "SMTP_PORT=587" "SMTP_STARTTLS=true" \
+            "SMTP_USERNAME=$SMTP_USERNAME" "SMTP_PASSWORD=$SMTP_PASSWORD" "MAIL_FROM=$MAIL_FROM" \
+            | ssh staging "umask 077 && cat > /srv/profilo/.env.secrets"
+
       - name: Log in to GHCR on the server
         if: steps.guard.outputs.skip != 'true'
         env:

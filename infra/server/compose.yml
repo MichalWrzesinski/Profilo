@@ -11,7 +11,11 @@ x-logging: &logging
 
 x-api: &api
   image: ghcr.io/michalwrzesinski/profilo-api:${IMAGE_TAG:?IMAGE_TAG is required}
-  env_file: ${APP_DIR:?APP_DIR is required}/.env
+  env_file:
+    - ${APP_DIR:?APP_DIR is required}/.env
+    # Runtime secrets written by the deploy workflow (SMTP; later Sentry, Storage Box).
+    - path: ${APP_DIR:?APP_DIR is required}/.env.secrets
+      required: false
   environment:
     # Trust X-Forwarded-* only from Caddy (fixed address below; AGENTS.md pitfalls).
     FORWARDED_ALLOW_IPS: 172.28.0.10
