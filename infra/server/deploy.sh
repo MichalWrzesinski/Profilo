@@ -17,10 +17,23 @@ NEW_DIR="$APP_DIR/releases/$NEW_TAG"
 
 log() { echo "[deploy $(date -u +%H:%M:%S)] $*"; }
 
-# One deployment at a time; keep going if the SSH session drops (output may be lost).
+# The deployment runs detached in its own session and writes to a log file on the server;
+# the caller (SSH from the workflow) only follows the log. A dropped SSH connection then
+# kills just the follower (SIGPIPE/SIGHUP), never the deployment itself.
+if [[ "${DEPLOY_DETACHED:-0}" != 1 ]]; then
+  log_file="$NEW_DIR/deploy.log"
+  : > "$log_file"
+  DEPLOY_DETACHED=1 setsid bash "$0" "$@" >>"$log_file" 2>&1 </dev/null &
+  pid=$!
+  tail -n +1 -f --pid="$pid" "$log_file" || true
+  wait "$pid"
+  exit $?
+fi
+
+# One deployment at a time.
 exec 9>"$APP_DIR/.deploy.lock"
-flock -n 9 || { echo "another deployment is running" >&2; exit 3; }
-trap '' HUP
+flock -n 9 || { echo "another deployment is running"; exit 3; }
+trap '' HUP PIPE
 
 set -a
 # shellcheck source=/dev/null
@@ -69,7 +82,7 @@ rollback() {
     return 1
   fi
   log "restoring previous release $PREV_TAG"
-  start "$PREV_TAG" && smoke && log "previous release $PREV_TAG restored"
+  start "$PREV_TAG" && smoke && touch "$APP_DIR/releases/$PREV_TAG" && log "previous release $PREV_TAG restored"
 }
 
 cleanup_old_releases() {
@@ -101,7 +114,9 @@ fi
 
 if start "$NEW_TAG" && smoke; then
   ln -sfn "releases/$NEW_TAG" "$APP_DIR/current"
+  touch "$NEW_DIR"  # release order for cleanup = last time it became current
   cleanup_old_releases
+  docker image prune -f >/dev/null || true  # dangling layers only; tagged releases stay
   log "deployed $NEW_TAG"
   exit 0
 fi
