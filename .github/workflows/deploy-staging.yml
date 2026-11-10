@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: Full commit SHA on main whose images to deploy
+        description: Full commit SHA on main to deploy (also used to roll back to an older release)
         required: true
 
 permissions:
@@ -42,10 +42,26 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ env.SHA }}
+          ref: main
+          fetch-depth: 0
           persist-credentials: false
 
+      # Only commits on main are deployed (deployment standard). After CI on main, a commit
+      # that is no longer the head of main is skipped: the newer commit's run deploys it.
+      - name: Check the commit is on main
+        id: guard
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "::error::$SHA is not on main"; exit 1; }
+          if [[ "$EVENT" == workflow_run && "$(git rev-parse origin/main)" != "$SHA" ]]; then
+            echo "::notice::main has moved on; skipping $SHA"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+          git checkout --quiet "$SHA"
+
       - name: Configure SSH (pinned host key)
+        if: steps.guard.outputs.skip != 'true'
         env:
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
@@ -57,9 +73,14 @@ jobs:
           printf 'Host staging\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking yes\n' "$SSH_HOST" > ~/.ssh/config
 
       - name: Upload stack files
-        run: scp -q infra/server/compose.yml infra/server/Caddyfile infra/server/deploy.sh staging:/srv/profilo/
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          # shellcheck disable=SC2029  # SHA is validated above (40 hex characters)
+          ssh staging "mkdir -p /srv/profilo/releases/$SHA"
+          scp -q infra/server/compose.yml infra/server/Caddyfile infra/server/deploy.sh "staging:/srv/profilo/releases/$SHA/"
 
       - name: Log in to GHCR on the server
+        if: steps.guard.outputs.skip != 'true'
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
@@ -69,15 +90,17 @@ jobs:
           printf '%s' "$GHCR_TOKEN" | ssh staging "docker login ghcr.io -u '$GHCR_USER' --password-stdin" >/dev/null
 
       - name: Deploy, migrate, verify (rollback on failure)
+        if: steps.guard.outputs.skip != 'true'
         run: |
           # shellcheck disable=SC2029  # SHA is validated above (40 hex characters)
-          ssh staging "/srv/profilo/deploy.sh $SHA"
+          ssh staging "/srv/profilo/releases/$SHA/deploy.sh $SHA"
 
       - name: Log out of GHCR on the server
-        if: always()
+        if: always() && steps.guard.outputs.skip != 'true'
         run: ssh staging "docker logout ghcr.io" >/dev/null || true
 
       - name: External smoke tests
+        if: steps.guard.outputs.skip != 'true'
         run: |
           set -euo pipefail
           for path in /ready /; do
