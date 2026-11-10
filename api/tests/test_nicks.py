@@ -1,6 +1,13 @@
+import json
+import os
+from pathlib import Path
+
 import pytest
 
 from app.modules.profiles import nicks
+
+# Shared with client/src/lib/nick.test.ts so both sides apply the same rules.
+CASES = json.loads(Path(os.environ.get("NICK_CASES_PATH", "/contract/nick-cases.json")).read_text())
 
 
 @pytest.mark.parametrize(
@@ -36,21 +43,7 @@ def test_long_single_word_is_cut_at_forty_characters() -> None:
     assert nicks.propose("a" * 50) == "a" * 40
 
 
-@pytest.mark.parametrize(
-    ("nick", "error"),
-    [
-        ("ab", "too_short"),
-        ("a" * 41, "too_long"),
-        ("-anna", "invalid_format"),
-        ("anna-", "invalid_format"),
-        ("anna--wisniewska", "invalid_format"),
-        ("Anna", "invalid_format"),
-        ("anna_w", "invalid_format"),
-        ("anna-wisniewska", None),
-        ("a1b", None),
-        ("a" * 40, None),
-    ],
-)
+@pytest.mark.parametrize(("nick", "error"), CASES["format"])
 def test_format_rules_prf_br_1(nick: str, error: str | None) -> None:
     assert nicks.format_error(nick) == error
 
@@ -62,15 +55,6 @@ def test_suffix_keeps_the_nick_within_forty_characters() -> None:
     assert nicks.with_suffix("anna", "!!!") is None
 
 
-@pytest.mark.parametrize(
-    ("typed", "expected"),
-    [
-        ("Anna Wiśniewska", "anna-wisniewska"),
-        ("-anna", "-anna"),
-        ("anna--maria", "anna--maria"),
-        ("Anna_W!", "annaw"),
-        ("  Łódź  ", "lodz"),
-    ],
-)
+@pytest.mark.parametrize(("typed", "expected"), CASES["input"])
 def test_typed_input_keeps_hyphen_errors_visible(typed: str, expected: str) -> None:
     assert nicks.normalise_input(typed) == expected

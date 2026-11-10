@@ -379,3 +379,83 @@ async def test_no_suggestion_when_all_variants_are_taken(
 
     assert response.json() == {"nick": None}
     assert garbage.json()["suggestions"] == []
+
+
+# --- review fixes ----------------------------------------------------------------------
+
+
+async def test_offensive_words_block_every_nick_that_contains_them(client: AsyncClient) -> None:
+    auth = await owner(client)
+
+    exact = (await client.get("/api/v1/nicks/kurwa/availability", headers=auth)).json()
+    with_suffix = await set_nick(client, auth, "kurwa-2")
+    inside = (await client.get("/api/v1/nicks/anna-kurwa/availability", headers=auth)).json()
+    harmless = (await client.get("/api/v1/nicks/kurwanek/availability", headers=auth)).json()
+
+    assert (exact["reason"], exact["suggestions"]) == ("reserved", [])
+    assert with_suffix.status_code == 409
+    assert with_suffix.json()["code"] == "nick_reserved"
+    assert inside["reason"] == "reserved"
+    assert harmless["available"] is True
+
+
+async def test_no_suggestion_from_an_offensive_name(client: AsyncClient) -> None:
+    auth = await owner(client)
+
+    response = await client.get(
+        "/api/v1/nicks/suggestion", params={"displayName": "Kurwa"}, headers=auth
+    )
+
+    assert response.json() == {"nick": None}
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda c, a: c.get("/api/v1/nicks/suggestion", params={"displayName": "Anna"}, headers=a),
+        lambda c, a: c.put("/api/v1/me/profile/nick", json={"nick": "anna-w"}, headers=a),
+        lambda c, a: c.get("/api/v1/nicks/anna-w/availability", headers=a),
+    ],
+)
+async def test_nick_checks_share_one_rate_limit(client: AsyncClient, call: Any) -> None:
+    auth = await owner(client)
+    for _ in range(120):
+        await client.get("/api/v1/nicks/anna-x/availability", headers=auth)
+
+    response = await call(client, auth)
+
+    assert response.status_code == 429
+
+
+async def test_empty_public_email_clears_the_field(client: AsyncClient) -> None:
+    auth = await owner(client)
+    first = await client.patch(
+        "/api/v1/me/profile",
+        json={"version": 1, "publicEmail": "Kontakt@Example.PL"},
+        headers=auth,
+    )
+
+    cleared = await client.patch(
+        "/api/v1/me/profile", json={"version": 2, "publicEmail": ""}, headers=auth
+    )
+
+    assert first.json()["draft"]["publicEmail"] == "Kontakt@example.pl"
+    assert cleared.status_code == 200
+    assert cleared.json()["draft"]["publicEmail"] is None
+
+
+async def test_invalid_public_email_has_a_polish_message(client: AsyncClient) -> None:
+    auth = await owner(client)
+
+    response = await client.patch(
+        "/api/v1/me/profile", json={"version": 1, "publicEmail": "anna@"}, headers=auth
+    )
+
+    assert response.status_code == 422
+    assert response.json()["errors"] == [
+        {
+            "field": "publicEmail",
+            "code": "invalid_email",
+            "message": "To nie wygląda na adres e-mail. Sprawdź, czy jest w nim @.",
+        }
+    ]

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import EmailStr, Field
+from pydantic import Field
 
 from app.core.schemas import ApiModel
 
@@ -64,7 +64,8 @@ class OwnerProfileOut(ApiModel):
 
 
 class DraftPatch(ApiModel):
-    """Partial update; `null` clears an optional field. Phone is normalised by the service."""
+    """Partial update; `null` or an empty string clears an optional field. E-mail and phone
+    are validated by the service (Polish messages, phone normalised to E.164)."""
 
     version: int = Field(ge=1)
     display_name: str | None = Field(default=None, min_length=1, max_length=60)
@@ -73,7 +74,7 @@ class DraftPatch(ApiModel):
     city: str | None = Field(default=None, max_length=60)
     company: str | None = Field(default=None, max_length=60)
     position: str | None = Field(default=None, max_length=60)
-    public_email: EmailStr | None = Field(default=None, max_length=254)
+    public_email: str | None = Field(default=None, max_length=254)
     public_phone: str | None = Field(default=None, max_length=32)
     layout: Layout | None = None
     accent: Accent | None = None

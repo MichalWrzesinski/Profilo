@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import phonenumbers
+from email_validator import EmailNotValidError, validate_email
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +24,7 @@ from app.modules.profiles.schemas import (
     ProfileContentOut,
 )
 
+# Shared by availability, suggestion and save: all of them tell whether a nick is free.
 NICK_CHECKS = rate_limit.Limit("nick_check", max_hits=120, window_seconds=60)
 MAX_SUGGESTIONS = 3
 
@@ -96,6 +98,23 @@ def _normalise_phone(value: str) -> str:
     return phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.E164)
 
 
+def _normalise_email(value: str) -> str:
+    try:
+        return validate_email(value, check_deliverability=False).normalized
+    except EmailNotValidError:
+        raise ProblemError(
+            422,
+            "validation_error",
+            errors=[
+                {
+                    "field": "publicEmail",
+                    "code": "invalid_email",
+                    "message": "To nie wygląda na adres e-mail. Sprawdź, czy jest w nim @.",
+                }
+            ],
+        ) from None
+
+
 async def update_draft(session: AsyncSession, account_id: uuid.UUID, patch: DraftPatch) -> Profile:
     """Apply a partial draft update with optimistic locking (PRF-BR-14)."""
     profile = await get_own_profile(session, account_id, lock=True)
@@ -114,9 +133,19 @@ async def update_draft(session: AsyncSession, account_id: uuid.UUID, patch: Draf
             "validation_error",
             errors=[{"field": "displayName", "code": "required", "message": "Wpisz nazwę."}],
         )
-    for empty_to_null in ("headline", "bio", "city", "company", "position", "public_phone"):
+    for empty_to_null in (
+        "headline",
+        "bio",
+        "city",
+        "company",
+        "position",
+        "public_email",
+        "public_phone",
+    ):
         if changes.get(empty_to_null) == "":
             changes[empty_to_null] = None
+    if changes.get("public_email"):
+        changes["public_email"] = _normalise_email(changes["public_email"])
     if changes.get("public_phone"):
         changes["public_phone"] = _normalise_phone(changes["public_phone"])
     for field, value in changes.items():
@@ -134,22 +163,33 @@ async def update_draft(session: AsyncSession, account_id: uuid.UUID, patch: Draf
 async def _unavailable(
     session: AsyncSession, candidates: list[str], account_id: uuid.UUID
 ) -> dict[str, str]:
-    """Map of unavailable candidates → reason ('taken' or 'reserved')."""
+    """Map of unavailable candidates → reason ('taken' or 'reserved'). An offensive word
+    blocks every nick that contains it as a part (`word`, `word-2`, `anna-word`)."""
     if not candidates:
         return {}
     now = datetime.now(UTC)
+    parts = {part for candidate in candidates for part in candidate.split("-")}
     taken = await session.scalars(
-        select(Profile.nick).where(
-            func.lower(Profile.nick).in_(candidates), Profile.account_id != account_id
-        )
+        select(Profile.nick).where(Profile.nick.in_(candidates), Profile.account_id != account_id)
     )
-    reserved = await session.scalars(
-        select(ReservedNick.nick).where(
-            func.lower(ReservedNick.nick).in_(candidates),
-            or_(ReservedNick.expires_at.is_(None), ReservedNick.expires_at > now),
+    reserved = (
+        await session.execute(
+            select(ReservedNick.nick, ReservedNick.reason).where(
+                or_(
+                    ReservedNick.nick.in_(candidates),
+                    (ReservedNick.reason == "offensive") & ReservedNick.nick.in_(parts),
+                ),
+                or_(ReservedNick.expires_at.is_(None), ReservedNick.expires_at > now),
+            )
         )
-    )
-    result = {str(nick).lower(): "reserved" for nick in reserved}
+    ).all()
+    exact = {str(nick).lower() for nick, _ in reserved}
+    offensive = {str(nick).lower() for nick, reason in reserved if reason == "offensive"}
+    result = {
+        candidate: "reserved"
+        for candidate in candidates
+        if candidate in exact or offensive.intersection(candidate.split("-"))
+    }
     result.update({str(nick).lower(): "taken" for nick in taken})
     return result
 
@@ -188,6 +228,7 @@ async def check_availability(
 
 async def suggest(session: AsyncSession, account_id: uuid.UUID, display_name: str) -> str | None:
     """An available nick proposed from the display name (PRF-BR-2), or None."""
+    await rate_limit.hit(NICK_CHECKS, str(account_id))
     proposal = nicks.propose(display_name)
     if proposal is None:
         return None
@@ -205,6 +246,7 @@ def _nick_problem(code: str, detail: str, suggestions: list[str]) -> ProblemErro
 async def set_nick(session: AsyncSession, account_id: uuid.UUID, raw: str) -> Profile:
     """Assign the nick (PRF-BR-6). Uniqueness is guaranteed by the unique index; the
     reserved list is checked in the same transaction (PRF-BR-4)."""
+    await rate_limit.hit(NICK_CHECKS, str(account_id))
     profile = await get_own_profile(session, account_id, lock=True)
     nick = nicks.normalise_input(raw)
     if profile.nick_locked:

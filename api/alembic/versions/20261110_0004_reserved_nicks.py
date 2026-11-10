@@ -67,7 +67,9 @@ SYSTEM = [
     "users",
     "ustawienia",
     "www",
-    # common offensive words
+]
+# Common offensive words: also blocked as a part of a nick (e.g. `word-2`), see the service.
+OFFENSIVE = [
     "chuj",
     "cipa",
     "dziwka",
@@ -91,10 +93,14 @@ def upgrade() -> None:
         sa.Column("reason", sa.String(16), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True)),
         sa.CheckConstraint(
-            "reason IN ('system', 'quarantine')", name="ck_reserved_nicks_reason_value"
+            "reason IN ('system', 'offensive', 'quarantine')", name="ck_reserved_nicks_reason_value"
         ),
     )
-    op.bulk_insert(table, [{"nick": nick, "reason": "system"} for nick in SYSTEM])
+    op.bulk_insert(
+        table,
+        [{"nick": nick, "reason": "system"} for nick in SYSTEM]
+        + [{"nick": nick, "reason": "offensive"} for nick in OFFENSIVE],
+    )
 
 
 def downgrade() -> None:

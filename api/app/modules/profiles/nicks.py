@@ -28,14 +28,15 @@ def normalise(text: str) -> str:
     return _HYPHENS.sub("-", cleaned).strip("-")
 
 
-_SPACES = re.compile(r"\s+")
+_INPUT_SEPARATORS = re.compile(r"[\s_./\\,;:+&|]+")
 
 
 def normalise_input(text: str) -> str:
-    """Normalisation applied to what the owner types (PRF-BR-3): lower case, Polish letters
-    and diacritics, spaces → hyphens, other characters dropped. Hyphen errors (leading,
-    trailing, doubled) are kept so the owner sees the rule (TASK-006 scenario 4)."""
-    return _INVALID.sub("", _SPACES.sub("-", _ascii_lower(text.strip())))
+    """Normalisation applied to what the owner types (PRF-BR-3): as PRF-BR-2, but hyphens
+    typed by the owner are kept as they are (leading, trailing, doubled) so the owner sees
+    the rule (TASK-006 scenario 4). Only leading whitespace is trimmed, like the client,
+    which must let the owner type a space before the next word."""
+    return _INVALID.sub("", _INPUT_SEPARATORS.sub("-", _ascii_lower(text.lstrip())))
 
 
 def propose(display_name: str) -> str | None:
