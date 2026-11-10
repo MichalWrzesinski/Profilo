@@ -32,3 +32,13 @@ export function initials(name: string): string {
   const letters = words.length > 1 ? first(words[0]) + first(words.at(-1)) : first(words[0]);
   return letters.toLocaleUpperCase('pl-PL');
 }
+
+/**
+ * `mailto:` link for an address (RFC 6068): the local part may contain `?`, `#`, `%` or `&`,
+ * which must not become extra headers such as `cc` or `subject`.
+ */
+export function mailtoHref(email: string, subject?: string): string {
+  const at = email.lastIndexOf('@');
+  const address = at > 0 ? `${encodeURIComponent(email.slice(0, at))}@${email.slice(at + 1)}` : '';
+  return `mailto:${address}${subject ? `?subject=${encodeURIComponent(subject)}` : ''}`;
+}

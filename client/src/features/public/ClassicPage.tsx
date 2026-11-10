@@ -2,7 +2,7 @@ import { Mail } from 'lucide-react';
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { Logo } from '@/components/Brand';
-import { ABUSE_EMAIL, initials, type PublicProfile } from '@/lib/publicProfile';
+import { ABUSE_EMAIL, initials, mailtoHref, type PublicProfile } from '@/lib/publicProfile';
 
 /**
  * Public page, Classic layout without a banner (PUB-BR-1, PUB-BR-4). A server component:
@@ -11,9 +11,7 @@ import { ABUSE_EMAIL, initials, type PublicProfile } from '@/lib/publicProfile';
 export function ClassicPage({ profile }: { profile: PublicProfile }) {
   const { content, canonicalUrl } = profile;
   const accent = { '--page-accent': `var(--page-accent-${content.accent})` } as CSSProperties;
-  const abuse = `mailto:${ABUSE_EMAIL}?subject=${encodeURIComponent(
-    `Zgłoszenie nadużycia: ${canonicalUrl}`,
-  )}`;
+  const abuse = mailtoHref(ABUSE_EMAIL, `Zgłoszenie nadużycia: ${canonicalUrl}`);
   return (
     <div className="pp pp-classic" style={accent}>
       <main className="main no-banner">
@@ -25,7 +23,7 @@ export function ClassicPage({ profile }: { profile: PublicProfile }) {
           {content.headline && <p className="headline">{content.headline}</p>}
           {content.publicEmail && (
             <div className="contact">
-              <a className="btn btn-primary" href={`mailto:${content.publicEmail}`}>
+              <a className="btn btn-primary" href={mailtoHref(content.publicEmail)}>
                 <Mail className="i" aria-hidden="true" />
                 Napisz e-mail
               </a>

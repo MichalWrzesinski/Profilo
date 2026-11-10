@@ -1,6 +1,6 @@
 import { json, mockFetch } from '@/test/fetch';
 import { publicProfile } from '@/test/profiles';
-import { getPublicProfile, initials } from './publicProfile';
+import { getPublicProfile, initials, mailtoHref } from './publicProfile';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -42,5 +42,17 @@ describe('getPublicProfile', () => {
     mockFetch(async () => json(500, { status: 500 }));
 
     await expect(getPublicProfile('anna')).rejects.toThrow('500');
+  });
+});
+
+describe('mailtoHref', () => {
+  it.each([
+    ['kontakt@example.pl', undefined, 'mailto:kontakt@example.pl'],
+    ['anna?cc=inna@example.pl', undefined, 'mailto:anna%3Fcc%3Dinna@example.pl'],
+    ['a#b%c&d@example.pl', undefined, 'mailto:a%23b%25c%26d@example.pl'],
+    ['zly-adres', undefined, 'mailto:'],
+    ['n@profilo.pl', 'Temat: x', 'mailto:n@profilo.pl?subject=Temat%3A%20x'],
+  ])('%s → %s', (email, subject, expected) => {
+    expect(mailtoHref(email, subject)).toBe(expected);
   });
 });
