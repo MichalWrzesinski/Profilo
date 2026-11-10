@@ -148,6 +148,9 @@ async def update_draft(session: AsyncSession, account_id: uuid.UUID, patch: Draf
         changes["public_email"] = _normalise_email(changes["public_email"])
     if changes.get("public_phone"):
         changes["public_phone"] = _normalise_phone(changes["public_phone"])
+    # Values equal to the current ones are not changes: they must not bump the version,
+    # or an autosave in one window would make another window's save conflict.
+    changes = {field: value for field, value in changes.items() if getattr(profile, field) != value}
     for field, value in changes.items():
         setattr(profile, field, value)
     if changes:

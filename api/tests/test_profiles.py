@@ -459,3 +459,15 @@ async def test_invalid_public_email_has_a_polish_message(client: AsyncClient) ->
             "message": "To nie wygląda na adres e-mail. Sprawdź, czy jest w nim @.",
         }
     ]
+
+
+async def test_saving_unchanged_values_keeps_the_version(client: AsyncClient) -> None:
+    auth = await owner(client)
+
+    response = await client.patch(
+        "/api/v1/me/profile",
+        json={"version": 1, "publicEmail": "", "displayName": "Anna Wiśniewska"},
+        headers=auth,
+    )
+
+    assert response.json()["version"] == 1
