@@ -95,12 +95,15 @@ async def test_visitors_see_the_previous_version_until_changes_are_published(
     await edit(client, auth, headline="Pierwsza wersja")
     await publish(client, auth)
 
+    first = (await client.get("/api/v1/me/profile", headers=auth)).json()
     draft = await edit(client, auth, headline="Druga wersja")
     before = (await public(client)).json()["content"]["headline"]
-    await publish(client, auth)
+    second = (await publish(client, auth)).json()
     after = (await public(client)).json()["content"]["headline"]
 
     assert draft["hasUnpublishedChanges"] is True
+    assert second["hasUnpublishedChanges"] is False
+    assert second["publishedAt"] > first["publishedAt"]
     assert (before, after) == ("Pierwsza wersja", "Druga wersja")
 
 
@@ -200,6 +203,7 @@ async def test_unknown_nick_gets_the_same_404(client: AsyncClient, nick: str) ->
 
     assert unknown.status_code == draft.status_code == 404
     assert unknown.json() == draft.json()
+    assert unknown.headers["cache-control"] == draft.headers["cache-control"] == "no-store"
     assert auth
 
 
@@ -216,3 +220,17 @@ async def test_publish_requires_login(client: AsyncClient) -> None:
     response = await client.post("/api/v1/me/profile/publish", json={"version": 1})
 
     assert response.status_code == 401
+
+
+async def test_unchanged_values_do_not_count_as_unpublished_changes(client: AsyncClient) -> None:
+    auth = await owner(client)
+    await edit(client, auth, headline="Ten sam")
+    await publish(client, auth)
+
+    response = await client.patch(
+        "/api/v1/me/profile",
+        json={"version": await version(client, auth), "headline": "Ten sam"},
+        headers=auth,
+    )
+
+    assert response.json()["hasUnpublishedChanges"] is False

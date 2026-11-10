@@ -84,6 +84,9 @@ class PublishedProfile(Base):
     )
     content: Mapped[dict[str, Any]] = mapped_column(JSONB)
     schema_version: Mapped[int] = mapped_column(SmallInteger)
+    # Draft version the snapshot was made from: decides "unpublished changes" without
+    # comparing clocks (the draft version only grows, under the profile row lock).
+    draft_version: Mapped[int] = mapped_column(Integer)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 

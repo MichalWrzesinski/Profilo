@@ -76,9 +76,7 @@ async def owner_out(session: AsyncSession, profile: Profile) -> OwnerProfileOut:
         nick=profile.nick,
         nick_locked=profile.nick_locked,
         status="blocked" if profile.blocked_at else profile.status,
-        has_unpublished_changes=(
-            snapshot is not None and profile.draft_updated_at > snapshot.published_at
-        ),
+        has_unpublished_changes=snapshot is not None and snapshot.draft_version != profile.version,
         published_at=snapshot.published_at if snapshot else None,
         version=profile.version,
         draft_updated_at=profile.draft_updated_at,
@@ -333,7 +331,7 @@ async def publish(
     unchanged = (
         snapshot is not None
         and profile.status == "published"
-        and profile.draft_updated_at <= snapshot.published_at
+        and snapshot.draft_version == profile.version
     )
     if not unchanged:
         content = _content(profile).model_dump(mode="json", by_alias=True)
@@ -343,7 +341,8 @@ async def publish(
             session.add(snapshot)
         snapshot.content = content
         snapshot.schema_version = SNAPSHOT_SCHEMA_VERSION
-        snapshot.published_at = max(now, profile.draft_updated_at)
+        snapshot.draft_version = profile.version
+        snapshot.published_at = now
         profile.status = "published"
         profile.nick_locked = True  # PRF-BR-7: permanent after the first publication
         log.info("profile_published", account_id=str(account_id))
@@ -376,7 +375,7 @@ async def get_public_profile(session: AsyncSession, nick: str) -> PublicProfileO
         )
     ).one_or_none()
     if row is None:
-        raise ProblemError(404, "not_found")
+        raise ProblemError(404, "not_found", headers={"Cache-Control": "no-store"})
     public_nick, snapshot = str(row[0]), row[1]  # nick is set: the query matched it
     return PublicProfileOut(
         nick=public_nick,

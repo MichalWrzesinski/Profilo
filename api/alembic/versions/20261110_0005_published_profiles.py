@@ -29,6 +29,7 @@ def upgrade() -> None:
         ),
         sa.Column("content", postgresql.JSONB(), nullable=False),
         sa.Column("schema_version", sa.SmallInteger(), nullable=False),
+        sa.Column("draft_version", sa.Integer(), nullable=False),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=False),
     )
 
