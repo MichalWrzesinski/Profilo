@@ -10,6 +10,7 @@ from app.core.logging import configure_logging, log
 from app.core.request_context import RequestContextMiddleware
 from app.core.settings import get_settings
 from app.core.valkey import close_valkey
+from app.modules.accounts.router import router as accounts_router
 
 
 @asynccontextmanager
@@ -35,6 +36,7 @@ def create_app() -> FastAPI:
     register_error_handlers(app)
     app.add_middleware(RequestContextMiddleware)
     app.include_router(health_router)
+    app.include_router(accounts_router)
     return app
 
 
