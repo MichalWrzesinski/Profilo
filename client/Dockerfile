@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 # Development image: code mounted by Compose, `next dev`.
 FROM base AS dev
 COPY --from=deps /repo/client/node_modules ./node_modules
-COPY docs/design/tokens.css /repo/docs/design/tokens.css
+COPY docs/design/tokens.css docs/design/components.css /repo/docs/design/
 COPY client/ ./
 # node_modules/.vite-temp is world-writable: checks run as the host user (Makefile AS_HOST).
 RUN mkdir -p .next node_modules/.vite-temp && chown -R node:node /repo && chmod 1777 node_modules/.vite-temp
@@ -23,7 +23,7 @@ CMD ["npm", "run", "dev"]
 
 FROM base AS build
 COPY --from=deps /repo/client/node_modules ./node_modules
-COPY docs/design/tokens.css /repo/docs/design/tokens.css
+COPY docs/design/tokens.css docs/design/components.css /repo/docs/design/
 COPY client/ ./
 RUN npm run build
 

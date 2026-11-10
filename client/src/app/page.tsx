@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import styles from './page.module.css';
 
 export default function Home() {
@@ -15,6 +16,14 @@ export default function Home() {
         />
         <h1 className={styles.title}>Twoja wizytówka w sieci.</h1>
         <p className={styles.lead}>Już wkrótce: jeden stały adres z opisem, kontaktem i linkami.</p>
+        <p className={styles.actions}>
+          <Link className="btn btn-primary" href="/rejestracja">
+            Załóż stronę
+          </Link>
+          <Link className="btn btn-secondary" href="/logowanie">
+            Zaloguj się
+          </Link>
+        </p>
       </div>
     </main>
   );
