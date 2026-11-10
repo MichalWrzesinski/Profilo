@@ -1,7 +1,7 @@
 ---
 id: TASK-005
 title: E-mail confirmation and transactional e-mail
-status: IN_PROGRESS
+status: DONE
 priority: highest
 iteration: ITER-01
 depends_on: [TASK-004]
@@ -45,7 +45,7 @@ The owner confirms the e-mail address with a link, which unlocks publishing.
 
 ## Report
 
-**Done (pending review).** Confirmation e-mail queued after registration (after the commit), `POST /auth/email-confirmations` (resend, 1/min) and `/confirm`, `one_time_tokens` (hash only, 48 h, single use, resend invalidates earlier links), `notifications` module (Jinja2 HTML + text templates in Polish, SMTP adapter, Celery task with exponential backoff), client page `/potwierdz-email`, panel banner with „Wyślij ponownie”, login notice after confirming while logged out. Staging: SMTP credentials delivered by `deploy-staging` to `/srv/profilo/.env.secrets` (new secrets in the runbook).
+**Done.** Approved after 2 review rounds (security pass included). Confirmation e-mail queued after registration (after the commit), `POST /auth/email-confirmations` (resend, 1/min) and `/confirm`, `one_time_tokens` (hash only, 48 h, single use, resend invalidates earlier links), `notifications` module (Jinja2 HTML + text templates in Polish, SMTP adapter, Celery task with exponential backoff), client page `/potwierdz-email`, panel banner with „Wyślij ponownie”, login notice after confirming while logged out. Staging: SMTP credentials delivered by `deploy-staging` to `/srv/profilo/.env.secrets` (new secrets in the runbook).
 
 Acceptance criteria (verified live with Mailpit and in the browser, and by tests):
 - S1 confirm — met: link from the received e-mail confirmed the account, the banner disappeared; clicking the same link again still shows success.
@@ -64,5 +64,7 @@ Found and fixed during live verification:
 - An import error in the e-mail path would have turned a committed registration into a 500 — the import is now inside the guarded enqueue.
 
 Decisions: e-mail sending is at-least-once (a retry after a lost SMTP response can send a duplicate); confirmation page sets `Referrer-Policy: no-referrer` so the token does not leak. Small product decisions (check on staging): banner texts after resend („Wysłaliśmy nowy link. Poprzednie linki już nie działają.”, „Nowy link możesz wysłać za minutę.”), e-mail copy.
+
+Open minor points: TLS certificate errors are treated as transient (retried up to ~8 min); rate-limit keys contain plain e-mail addresses (TASK-027).
 
 Limitations: Brevo itself not tested (no account yet); staging delivery waits for TASK-003 access and the new secrets.
