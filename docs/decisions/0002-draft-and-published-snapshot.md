@@ -10,7 +10,7 @@ The owner edits a draft that is autosaved continuously; visitors see only the la
 
 - The draft lives in normal tables (`profiles`, `profile_links`, `images`) with constraints and a `version` column for optimistic locking.
 - "Publish" serialises the draft into one validated JSON document (schema `PublishedProfileV1`) and stores it in `published_profiles.content` in the same transaction that sets `published_at`. The public endpoint reads only this snapshot.
-- `has_unpublished_changes` = `profiles.draft_updated_at > published_profiles.published_at`.
+- `has_unpublished_changes` = `published_profiles.draft_version != profiles.version` (the snapshot stores the draft version it was made from). Comparing `draft_updated_at` with `published_at` was the first idea; it depends on the clock order of the application and the database (amended in TASK-007).
 - Images referenced by the snapshot are kept until no draft or snapshot references them (cleanup job).
 
 ## Consequences
