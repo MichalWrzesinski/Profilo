@@ -12,3 +12,4 @@ e2e
 docs/**
 !docs/design/tokens.css
 !docs/design/components.css
+!docs/api/nick-cases.json

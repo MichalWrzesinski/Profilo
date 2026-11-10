@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
-# Build context: repository root (the app imports docs/design/tokens.css).
+# Build context: repository root (the app imports docs/design/tokens.css; nick tests read docs/api/nick-cases.json).
 FROM node:26.13.0-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /repo/client
@@ -12,6 +12,7 @@ RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 FROM base AS dev
 COPY --from=deps /repo/client/node_modules ./node_modules
 COPY docs/design/tokens.css docs/design/components.css /repo/docs/design/
+COPY docs/api/nick-cases.json /repo/docs/api/
 COPY client/ ./
 # node_modules/.vite-temp is world-writable: checks run as the host user (Makefile AS_HOST).
 RUN mkdir -p .next node_modules/.vite-temp && chown -R node:node /repo && chmod 1777 node_modules/.vite-temp
@@ -24,6 +25,7 @@ CMD ["npm", "run", "dev"]
 FROM base AS build
 COPY --from=deps /repo/client/node_modules ./node_modules
 COPY docs/design/tokens.css docs/design/components.css /repo/docs/design/
+COPY docs/api/nick-cases.json /repo/docs/api/
 COPY client/ ./
 RUN npm run build
 
