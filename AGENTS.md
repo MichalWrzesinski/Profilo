@@ -26,6 +26,8 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 - Runtime: Docker Compose (caddy, client, api, worker, beat, db, valkey); same Compose for staging and production
 - Hosting: Hetzner Cloud — production CX33, staging CX23, off-site backups to Storage Box (ADR 0004)
 - CI/CD: GitHub Actions `ci.yml` (job `check` runs `make check audit secrets` and the prod builds, with a GHA layer cache; `publish` pushes `ghcr.io/michalwrzesinski/profilo-{api,client}:<sha>` on main); actions pinned to commit SHAs; images in GHCR; staging auto-deploy on main; production by `deploy-production` workflow started manually by the user (no GitHub environments — see overrides)
+- Servers: Ubuntu 24.04 prepared by `infra/server/bootstrap.sh` (Docker, ufw 22/80/443, unattended upgrades, `deploy` user with SSH key only); stack `infra/server/compose.yml` + `Caddyfile` in `/srv/profilo`; `deploy.sh <sha>` pulls, migrates, starts with health checks, smoke-tests and restores the previous version on failure (docs/runbook.md)
+- Staging deploy: `.github/workflows/deploy-staging.yml` after CI succeeds on main (or manually with a SHA); secrets `STAGING_SSH_HOST`, `STAGING_SSH_KEY`, `STAGING_SSH_KNOWN_HOSTS`, variable `STAGING_DOMAIN`
 - Monitoring: Sentry (EU region), Better Stack Uptime on `/ready`
 
 ## Project overrides of standards
