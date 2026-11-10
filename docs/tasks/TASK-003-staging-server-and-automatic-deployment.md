@@ -51,11 +51,15 @@ Verified on a local Ubuntu 24.04 VM (OrbStack, `TLS_MODE=internal`, images built
 - Scenario 2 (failed version): an API image that never becomes healthy → `deploy.sh` exits 1, previous version restored in ≈ 80 s, `.deployed-tag` unchanged, `/ready` 200. Staging is unavailable for about a minute during such a failure (no zero-downtime on staging; production in TASK-021).
 - Scenario 3 (HTTPS): HTTP → 308 to HTTPS; HSTS, CSP, nosniff, Referrer-Policy, Permissions-Policy, `X-Robots-Tag: noindex, nofollow`; no `Server` header; API docs 404.
 
+Review round 2 fixes (verified on the VM):
+- The deployment runs detached (`setsid`, log `releases/<sha>/deploy.log`); the SSH caller only follows the log. A simulated dropped connection (`deploy.sh … | head -c 40`) killed only the follower; the deployment finished and `current` was updated (see PR).
+- Release order for cleanup is the last time a release became current; Caddy mounts the release directory (a replaced Caddyfile is seen); dangling images are pruned.
+
 Review round 1 fixes (verified on the VM):
 - Releases in `/srv/profilo/releases/<sha>/` with a `current` symlink; Compose runs from the release directory, so rollback restores images *and* stack files (release B with a broken API and its own Caddyfile → release C restored, its `X-Test-Release: C` header served again, 77 s).
 - Caddy is reloaded after start, so Caddyfile changes take effect (header changed between releases was served).
 - Caddy and PostgreSQL receive only the variables they need (Caddy env: DOMAIN, TLS_MODE, ROBOTS_TAG, ACME_EMAIL).
-- Smoke tests retry for up to 90 s (ACME issuance, Caddy start); deployments are serialised with `flock` (second run exits 3) and ignore SSH hang-ups; old releases beyond 5 are removed with their images, never the current or previous one.
+- Smoke tests retry for up to 90 s (ACME issuance, Caddy start); deployments are serialised with `flock` (second run exits 3); old releases beyond 5 are removed with their images, never the current or previous one.
 - Workflow deploys only commits on main; after CI it skips a commit that is no longer the head of main.
 - Bootstrap validates the deploy key (invalid key → stops before any change), fails if `sshd -t` or the reload fails, uses non-interactive dpkg options, enables automatic reboot at 04:00, takes `ACME_EMAIL`, warns when an existing `.env` differs from the arguments.
 - Runbook: layout, helper for Compose commands, Recovery section. Proposed TASK-024 (CSP nonces).

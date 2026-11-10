@@ -39,7 +39,11 @@ After the CI workflow succeeds on `main` (its `publish` job pushed `ghcr.io/mich
 5. if start or smoke tests fail, the previous release (its images and its stack files) is restored and the workflow fails; a failed pull or migration leaves the running release untouched;
 6. external smoke tests: `/ready`, `/`, HTTP → HTTPS redirect, security headers.
 
-Layout of `/srv/profilo`: `.env` (server-only), `releases/<sha>/` (stack files of each release), `current` → last successful release.
+Layout of `/srv/profilo`: `.env` (server-only), `releases/<sha>/` (stack files and `deploy.log` of each release), `current` → last successful release.
+
+The deployment runs detached on the server (own session, log in `releases/<sha>/deploy.log`); the workflow only follows the log, so a dropped SSH connection does not interrupt it — check the log and `current` afterwards.
+
+If the newest commit on `main` fails CI, older green commits are skipped and staging stays on the last deployed release until `main` is green again (deploy an older commit manually if needed).
 
 ## Manual operations (as `deploy` on the server, in `/srv/profilo`)
 
@@ -72,4 +76,5 @@ Never change code, configuration or data on the server by hand (deployment stand
 - Staging sends `X-Robots-Tag: noindex, nofollow`.
 - Container logs rotate at 10 MB × 14 files per service; Caddy logs contain visitor IPs, the API logs do not.
 - Docker-published ports bypass ufw; the stack publishes only 80 and 443.
+- Caddy is recreated on every new release (its configuration directory is the release directory), causing a short gap; acceptable on staging, production needs zero downtime (TASK-021).
 - Secrets added later (Brevo, Sentry, Storage Box) are delivered by the deploy workflows (AGENTS.md).
