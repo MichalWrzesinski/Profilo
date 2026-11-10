@@ -1,7 +1,7 @@
 ---
 id: TASK-007
 title: Publish, unpublish and the minimal public page
-status: IN_PROGRESS
+status: DONE
 priority: highest
 iteration: ITER-01
 depends_on: [TASK-005, TASK-006]
@@ -52,7 +52,7 @@ The owner publishes the page and visitors see it at `/user/{nick}`; unpublishing
 
 ## Report
 
-**Implemented, review round 1 fixed, waiting for re-review.** `published_profiles` snapshot (migration `0005`, schema version 1 = the draft content model), `POST /me/profile/publish` (403 `email_not_confirmed` / `profile_blocked`, 409 `draft_conflict`, 422 `profile_incomplete` without a nick; idempotent for an unchanged draft), `POST /me/profile/unpublish` (idempotent, snapshot kept), `GET /public/profiles/{nick}` (`Cache-Control: no-store`, case-insensitive, one 404 for unknown, never published, unpublished and blocked pages); `OwnerProfile` now reports `hasUnpublishedChanges`, `publishedAt` and `publicUrl`. Client: `/user/{nick}` server-rendered from the snapshot (Classic layout without a banner: initials avatar, name, headline, „Napisz e-mail”, footer „Utworzono w Profilo” and „Zgłoś nadużycie”), title „{name} — {headline}”, permanent redirect to the lower-case nick, shared 404 page (`app/not-found.tsx`); panel section with the status badge and the publish actions.
+**Done.** Approved after 2 review rounds. `published_profiles` snapshot (migration `0005`, schema version 1 = the draft content model), `POST /me/profile/publish` (403 `email_not_confirmed` / `profile_blocked`, 409 `draft_conflict`, 422 `profile_incomplete` without a nick; idempotent for an unchanged draft), `POST /me/profile/unpublish` (idempotent, snapshot kept), `GET /public/profiles/{nick}` (`Cache-Control: no-store`, case-insensitive, one 404 for unknown, never published, unpublished and blocked pages); `OwnerProfile` now reports `hasUnpublishedChanges`, `publishedAt` and `publicUrl`. Client: `/user/{nick}` server-rendered from the snapshot (Classic layout without a banner: initials avatar, name, headline, „Napisz e-mail”, footer „Utworzono w Profilo” and „Zgłoś nadużycie”), title „{name} — {headline}”, permanent redirect to the lower-case nick, shared 404 page (`app/not-found.tsx`); panel section with the status badge and the publish actions.
 
 Acceptance criteria (verified in the browser, with curl on the running stack and by tests):
 - S1 first publication — met: after confirming the e-mail with the link from Mailpit, „Opublikuj” in the panel published the page; `/user/anna-wisniewska-3` shows it; changing the nick afterwards → 409 `nick_locked`.
