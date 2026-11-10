@@ -2,15 +2,17 @@
 
 import { CircleAlert, Eye } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Alert } from '@/components/Alert';
 import { Brand } from '@/components/Brand';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
 import { api, type Problem } from '@/lib/api/client';
 import { PHONE_COUNTRIES } from '@/lib/phone';
+import { draftStorageKey } from '@/lib/draftStorage';
 import { useSession } from '@/lib/session';
 import styles from './Editor.module.css';
-import { LIMITS, draftKeyOf, type OwnerProfile, type Values } from './fields';
+import { LIMITS, charCount, draftKeyOf, type OwnerProfile, type Values } from './fields';
 import { useAutosave, type SaveStatus } from './useAutosave';
 
 /** Loads the draft, then mounts the editor (the autosave hook needs the first version). */
@@ -33,19 +35,51 @@ export function Editor() {
       </main>
     );
   }
-  if (!profile || !account) {
-    return (
-      <p className={`muted ${styles.message}`} role="status">
-        Wczytywanie…
-      </p>
-    );
-  }
+  if (!profile || !account) return <EditorLoading />;
   return (
     <EditorView
       initial={profile}
-      storageKey={`profilo:draft:${account.id}`}
+      storageKey={draftStorageKey(account.id)}
       emailConfirmed={account.emailConfirmed}
     />
+  );
+}
+
+/** Loading state as in the #editor-loading mockup. */
+function EditorLoading() {
+  const sk = (height: number, width = '100%') => (
+    <div className="skel" style={{ height, width, marginBottom: 12 }} />
+  );
+  return (
+    <>
+      <header className="topbar">
+        <Brand withName={false} />
+        <span className="save-state" role="status">
+          <span className="spinner" aria-hidden="true" />
+          Wczytywanie…
+        </span>
+      </header>
+      <div className={styles.ed} aria-hidden="true">
+        <div className={styles.form}>
+          {[0, 1].map((n) => (
+            <div key={n} className="panel-sec">
+              <header>{sk(16, '30%')}</header>
+              <div className="body">
+                {sk(44)}
+                {sk(44)}
+                {sk(96)}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className={styles.preview}>
+          <div className={styles.frame}>
+            {sk(240)}
+            {sk(28, '60%')}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -82,6 +116,7 @@ function badge(profile: OwnerProfile): { className: string; label: string } | nu
 type ViewProps = { initial: OwnerProfile; storageKey: string; emailConfirmed: boolean };
 
 function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
+  const router = useRouter();
   const draft = useAutosave(initial, storageKey);
   const { profile, values, errors, status } = draft;
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
@@ -111,7 +146,7 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
       const { data, error } = await api.POST('/api/v1/me/profile/publish', {
         body: { version: profile.version },
       });
-      if (data) draft.setProfile(data);
+      if (data) draft.applyPublished(data);
       else setPublishError((error as Problem | undefined)?.detail ?? 'Nie udało się opublikować.');
     } catch {
       setPublishError('Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie.');
@@ -133,22 +168,38 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
       onChange: (event: { target: { value: string } }) => draft.edit(input, event.target.value),
     };
   };
-  const errorOf = (key: keyof typeof errors) =>
-    errors[key] && (
-      <span id={`ed-${key}-error`} className="hint is-error">
-        <CircleAlert className="i sm" aria-hidden="true" />
-        {errors[key]}
-      </span>
-    );
+  // The region is always rendered so screen readers announce an error when it appears.
+  const errorOf = (key: keyof typeof errors) => (
+    <span id={`ed-${key}-error`} aria-live="polite" className={styles.errorSlot}>
+      {errors[key] && (
+        <span className="hint is-error">
+          <CircleAlert className="i sm" aria-hidden="true" />
+          {errors[key]}
+        </span>
+      )}
+    </span>
+  );
 
   return (
     <>
       <header className="topbar">
         <Brand withName={false} />
-        <SaveState status={status} invalid={draft.invalid} />
+        <SaveState status={draft.shownStatus} invalid={draft.invalid} />
         <span className="spacer" />
         {status_ && <span className={`badge ${status_.className} hide-m`}>{status_.label}</span>}
-        <Link className="btn btn-ghost btn-sm" href="/panel">
+        <Link
+          className="btn btn-ghost btn-sm"
+          href="/panel"
+          onClick={async (event) => {
+            if (!draft.unsaved) return;
+            // Save the change typed a moment ago before the panel reads the draft.
+            event.preventDefault();
+            const saved = await draft.settle();
+            if (saved || window.confirm('Część zmian nie jest zapisana. Wyjść bez nich?')) {
+              router.push('/panel');
+            }
+          }}
+        >
           Panel
         </Link>
         <button
@@ -173,6 +224,8 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
             key={name}
             type="button"
             role="tab"
+            id={`ed-tab-${name}`}
+            aria-controls={name === 'edit' ? 'ed-panel-edit' : 'ed-panel-preview'}
             aria-selected={tab === name}
             onClick={() => setTab(name)}
           >
@@ -212,7 +265,12 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
       <ConfirmEmailBanner />
 
       <div className={styles.ed} data-tab={tab}>
-        <div className={styles.form}>
+        <div
+          className={styles.form}
+          id="ed-panel-edit"
+          role="tabpanel"
+          aria-labelledby="ed-tab-edit"
+        >
           <section className="panel-sec" aria-labelledby="ed-about">
             <header>
               <h3 id="ed-about">O mnie</h3>
@@ -241,8 +299,8 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
                   rows={5}
                   placeholder="Kim jesteś i w czym możesz pomóc? 2–3 zdania wystarczą."
                 />
-                <span className="counter" aria-live="polite">
-                  {values.bio.length} / {LIMITS.bio}
+                <span className="counter">
+                  {charCount(values.bio.trim())} / {LIMITS.bio}
                 </span>
                 {errorOf('bio')}
               </div>
@@ -287,8 +345,13 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
                   autoComplete="off"
                   placeholder="np. kontakt@twojafirma.pl"
                 />
-                {errorOf('publicEmail') ?? (
-                  <span className="hint">Może być inny niż e-mail do logowania.</span>
+                {errors.publicEmail ? (
+                  errorOf('publicEmail')
+                ) : (
+                  <>
+                    <span className="hint">Może być inny niż e-mail do logowania.</span>
+                    {errorOf('publicEmail')}
+                  </>
                 )}
               </div>
               <div className="field">
@@ -299,6 +362,7 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
                   <select
                     className="input"
                     aria-label="Kierunkowy kraju"
+                    aria-invalid={errors.publicPhone ? true : undefined}
                     value={values.phoneCountry}
                     onChange={(event) => draft.edit('phoneCountry', event.target.value)}
                   >
@@ -322,7 +386,12 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
           </section>
         </div>
 
-        <aside className={styles.preview} aria-label="Podgląd">
+        <aside
+          className={styles.preview}
+          id="ed-panel-preview"
+          role="tabpanel"
+          aria-labelledby="ed-tab-preview"
+        >
           <div className={styles.bar}>
             <span className="label-caps">Podgląd wersji roboczej</span>
           </div>

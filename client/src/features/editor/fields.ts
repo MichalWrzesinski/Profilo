@@ -77,6 +77,11 @@ export const LIMITS: Partial<Record<DraftKey, number>> = {
   publicEmail: 254,
 };
 
+/** Characters as the API counts them (code points, so an emoji is one). */
+export function charCount(text: string): number {
+  return [...text].length;
+}
+
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Checks done before saving (the API checks again, profile.md limits). */
@@ -84,8 +89,8 @@ export function validate(values: Values, key: DraftKey): string | null {
   const value = patchValue(values, key);
   if (key === 'displayName' && !value) return 'Wpisz nazwę.';
   const limit = LIMITS[key];
-  if (limit && value && value.length > limit) {
-    return `Możesz wpisać najwyżej ${limit} znaków (teraz ${value.length}).`;
+  if (limit && value && charCount(value) > limit) {
+    return `Możesz wpisać najwyżej ${limit} znaków (teraz ${charCount(value)}).`;
   }
   if (key === 'publicEmail' && value && !EMAIL.test(value)) {
     return 'To nie wygląda na adres e-mail. Sprawdź, czy jest w nim @.';

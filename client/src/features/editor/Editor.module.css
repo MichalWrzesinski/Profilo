@@ -43,6 +43,10 @@
   padding: var(--space-8);
 }
 
+.errorSlot {
+  display: contents;
+}
+
 .grid3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

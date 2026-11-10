@@ -45,6 +45,8 @@ describe('editor fields', () => {
       'To nie wygląda na adres e-mail. Sprawdź, czy jest w nim @.',
     ],
     [{ bio: 'x'.repeat(500) }, 'bio', null],
+    [{ bio: '😀'.repeat(300) }, 'bio', null],
+    [{ bio: '😀'.repeat(501) }, 'bio', 'Możesz wpisać najwyżej 500 znaków (teraz 501).'],
     [{ publicEmail: '' }, 'publicEmail', null],
   ] as const)('validates %o', (change, key, message) => {
     expect(validate({ ...base, ...change }, key)).toBe(message);

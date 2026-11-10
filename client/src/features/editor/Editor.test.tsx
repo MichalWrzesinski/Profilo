@@ -1,9 +1,10 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect } from 'react';
 import { tokenStore } from '@/lib/api/client';
 import { SessionProvider, useSession } from '@/lib/session';
 import { json, mockFetch, SESSION } from '@/test/fetch';
+import { router } from '@/test/navigation';
 import { Editor } from './Editor';
 import type { OwnerProfile } from './fields';
 
@@ -50,7 +51,7 @@ function setup({
 }: {
   profile?: OwnerProfile;
   patch?: Handler;
-  publish?: () => Response;
+  publish?: () => Response | Promise<Response>;
   confirmed?: boolean;
   load?: () => Response;
 } = {}) {
@@ -95,6 +96,8 @@ const input = (label: string) => screen.findByLabelText(label, { exact: false })
 const saveState = () => document.querySelector('.save-state')!;
 const publishButton = () => screen.getByRole('button', { name: /^Opublikuj/ });
 
+// `shouldAdvanceTime` keeps Testing Library's waitFor working with fake timers; timing
+// assertions below leave a margin for the real milliseconds that pass meanwhile.
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   window.localStorage.clear();
@@ -102,11 +105,128 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  router.push.mockClear();
   tokenStore.set(null);
   vi.unstubAllGlobals();
 });
 
 describe('Editor', () => {
+  it('restarts the delay with every keystroke', async () => {
+    const { bodies, user } = setup();
+    const city = await input('Miejscowość');
+    await user.type(city, 'K');
+    await act(() => vi.advanceTimersByTimeAsync(800));
+    await user.type(city, 'r');
+    await act(() => vi.advanceTimersByTimeAsync(800));
+
+    expect(bodies).toHaveLength(0);
+    expect(saveState()).toHaveTextContent('Zapisywanie…');
+    await act(() => vi.advanceTimersByTimeAsync(300));
+    await waitFor(() => expect(bodies).toEqual([{ version: 5, city: 'Kr' }]));
+  });
+
+  it('saves a change typed just before leaving to the panel', async () => {
+    const { bodies, user } = setup();
+    await user.type(await input('Nagłówek'), 'UX');
+
+    await user.click(screen.getByRole('link', { name: 'Panel' }));
+
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/panel'));
+    expect(bodies).toEqual([{ version: 5, headline: 'UX' }]);
+  });
+
+  it('asks before leaving when a change cannot be saved', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const { user } = setup();
+    await user.type(await input('Publiczny e-mail'), 'anna@');
+
+    await user.click(screen.getByRole('link', { name: 'Panel' }));
+
+    expect(confirm).toHaveBeenCalledWith('Część zmian nie jest zapisana. Wyjść bez nich?');
+    expect(router.push).not.toHaveBeenCalled();
+    confirm.mockRestore();
+  });
+
+  it('sends a pending change when the editor closes', async () => {
+    const { bodies, fetch, user } = setup();
+    await user.type(await input('Firma'), 'Studio');
+
+    cleanup();
+
+    await waitFor(() => expect(bodies).toEqual([{ version: 5, company: 'Studio' }]));
+    const request = fetch.mock.calls.at(-1)![0] as Request;
+    expect(request.keepalive).toBe(true);
+  });
+
+  it('ignores an API error for a value changed while it was being saved', async () => {
+    let release: (response: Response) => void = () => {};
+    const { bodies, user } = setup({
+      patch: (_body, call) =>
+        call === 1
+          ? new Promise<Response>((resolve) => (release = resolve))
+          : json(200, owner({ version: 6 })),
+    });
+    const phone = await input('Telefon');
+    await user.type(phone, '60123');
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+    await user.type(phone, '4567');
+
+    await act(async () =>
+      release(
+        json(422, {
+          status: 422,
+          code: 'validation_error',
+          errors: [{ field: 'publicPhone', code: 'invalid_phone', message: 'Zły numer.' }],
+        }),
+      ),
+    );
+
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies[1]).toEqual({ version: 5, publicPhone: '+48 601234567' });
+    expect(screen.queryByText('Zły numer.')).toBeNull();
+  });
+
+  it('stops on a validation error it cannot attach to a field', async () => {
+    const { bodies, user } = setup({
+      patch: () =>
+        json(422, {
+          status: 422,
+          code: 'validation_error',
+          errors: [{ field: '', code: 'invalid', message: 'Coś nie tak.' }],
+        }),
+    });
+    await user.type(await input('Firma'), 'X');
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+
+    expect(await screen.findByText('Nie udało się zapisać zmian.')).toBeVisible();
+    await act(() => vi.advanceTimersByTimeAsync(2000));
+    expect(bodies).toHaveLength(1);
+  });
+
+  it('keeps the newer draft version when publishing finishes after a save', async () => {
+    let releasePublish: (response: Response) => void = () => {};
+    const { bodies, user } = setup({
+      profile: owner({ hasUnpublishedChanges: true }),
+      // Publishing is slow: answered only after the autosave below.
+      publish: () => new Promise<Response>((resolve) => (releasePublish = resolve)),
+    });
+    await screen.findByText('Masz nieopublikowane zmiany');
+    await user.click(publishButton());
+    await user.type(await input('Firma'), 'Nowa');
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+
+    await act(async () =>
+      releasePublish(json(200, owner({ version: 5, hasUnpublishedChanges: false }))),
+    );
+    await user.type(await input('Firma'), '!');
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies[1]).toMatchObject({ version: 6 });
+    expect(screen.getByText('Masz nieopublikowane zmiany')).toBeInTheDocument();
+  });
+
   it('saves only the changed field one second after the last edit', async () => {
     const { bodies, user } = setup();
     await user.type(await input('Krótki opis'), 'Projektuję');
@@ -367,6 +487,13 @@ describe('Editor', () => {
     expect(document.querySelector('[data-tab="preview"]')).not.toBeNull();
     await user.click(screen.getByRole('tab', { name: 'Edycja' }));
     expect(document.querySelector('[data-tab="edit"]')).not.toBeNull();
+  });
+
+  it('shows the loading skeleton first', () => {
+    setup({ load: () => new Promise<Response>(() => {}) as unknown as Response });
+
+    expect(screen.getByRole('status')).toHaveTextContent('Wczytywanie…');
+    expect(document.querySelectorAll('.skel').length).toBeGreaterThan(0);
   });
 
   it('reports a failed load', async () => {

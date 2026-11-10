@@ -24,6 +24,9 @@ describe('phone helpers (PRF-BR-12)', () => {
     ['PL', '+44 20 7946 0958', '+44 20 7946 0958'],
     ['PL', '0048601234567', '0048601234567'],
     ['PL', '   ', null],
+    ['PL', '48601234567', '+48601234567'],
+    ['PL', '48 601 234 567', '+48601234567'],
+    ['PL', '486012345', '+48 486012345'],
   ] as const)('prepares %s %s for saving', (country, national, value) => {
     expect(phoneForSave(country, national)).toBe(value);
   });

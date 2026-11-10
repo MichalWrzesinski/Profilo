@@ -2,6 +2,7 @@ import { act, render, renderHook, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { json, mockFetch, SESSION } from '@/test/fetch';
 import { tokenStore } from './api/client';
+import { draftStorageKey } from './draftStorage';
 import { SessionProvider, useSession } from './session';
 
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -63,5 +64,16 @@ describe('SessionProvider', () => {
 
     expect(() => render(<Broken />)).toThrow('useSession must be used inside <SessionProvider>');
     expect(screen.queryByText('unknown')).toBeNull();
+  });
+
+  it('removes drafts kept in this browser at logout', async () => {
+    mockFetch(() => json(204));
+    window.localStorage.setItem(draftStorageKey('a1'), '{}');
+    const { result } = renderHook(() => useSession(), { wrapper });
+    act(() => result.current.signIn(SESSION));
+
+    await act(() => result.current.signOut());
+
+    expect(window.localStorage.getItem(draftStorageKey('a1'))).toBeNull();
   });
 });

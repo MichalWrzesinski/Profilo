@@ -32,5 +32,17 @@ export function phoneForSave(country: CountryCode, national: string): string | n
   if (!typed) return null;
   if (typed.startsWith('+') || typed.startsWith('00')) return typed;
   const dial = PHONE_COUNTRIES.find((c) => c.code === country)?.dial ?? '+48';
+  // „48601234567” typed with +48 chosen: the prefix is already there, without the „+”.
+  const digits = typed.replace(/[\s().-]/g, '');
+  const withPlus = parsePhoneNumberFromString(`+${digits}`);
+  if (
+    /^\d+$/.test(digits) &&
+    digits.startsWith(dial.slice(1)) &&
+    withPlus?.country === country &&
+    withPlus.isValid() &&
+    !parsePhoneNumberFromString(`${dial}${digits}`)?.isValid()
+  ) {
+    return `+${digits}`;
+  }
   return `${dial} ${typed}`;
 }
