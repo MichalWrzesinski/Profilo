@@ -69,7 +69,7 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 
 ## Pitfalls
 
-- ESLint stays on 9 (marked unsupported upstream) because `eslint-plugin-import`, used by `eslint-config-next`, supports ESLint <= 9; Dependabot ignores ESLint majors. Move to 10 when the plugin supports it.
+- ESLint stays on 9 (marked unsupported upstream) because `eslint-config-next` 16 depends on `eslint-plugin-import`, `eslint-plugin-react` and `eslint-plugin-jsx-a11y`, which all cap ESLint at 9; Dependabot ignores ESLint majors. Migration: TASK-025.
 - `vitest` and `@vitest/*` must be updated together (Dependabot group `vitest`).
 
 - The client image is built with the repository root as context (`client/Dockerfile`, root `.dockerignore`) because the app imports `docs/design/tokens.css`. Fonts come from `next/font` (self-hosted); do not add the Google Fonts `@import` to the app.
