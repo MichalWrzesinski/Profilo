@@ -51,7 +51,7 @@ Acceptance criteria (verified in the browser and by tests):
 - S3 taken nick — met: typing „Anna Wiśniewska” normalised live to `anna-wisniewska`, showed „Ten adres jest już zajęty.” and three chips; clicking a chip filled the field and showed „Adres wolny.”; reserved nicks and the unique-index race (IntegrityError → 409 with suggestions) covered by API tests.
 - S4 invalid format — met: 2 characters, a leading hyphen and „--” return 422 with the rule text (API tests) and show the rule under the field (client tests).
 
-Checks: api 161 tests, 99 %; client 103 tests, 95.6 % branches; contract 13 paths.
+Checks: api 162 tests, 99 %; client 103 tests, 95.6 % branches; contract 13 paths.
 
 Pulled forward from TASK-008: the full `PATCH /me/profile` backend (optimistic `version`, 409 `draft_conflict` with the current state, empty strings → null, phone to E.164 with default +48, 422 `invalid_phone`), because step 1 edits the display name. TASK-008 keeps the editor and autosave.
 
@@ -65,5 +65,7 @@ Review round 1 fixes:
 - Suggestion and save share the 120/min limit with the availability check (all of them tell whether a nick is free) — verified live: 429 after the limit.
 - Typed input turns separators (`_ . / , ; : + & |`) into hyphens like PRF-BR-2 and trims only leading whitespace on both sides; test cases moved to one file, `docs/api/nick-cases.json`, read by both test suites.
 - ✓/✗ in the address field and icons in the hints as in the mockup (`lucide-react` 1.61); nick queries compare CITEXT columns directly so the unique indexes are used.
+
+Review round 2 fixes: the production client image failed to build (the nick test imports `docs/api/nick-cases.json`, which the build context excluded) — the file is now allowed in `.dockerignore` and copied in the client Dockerfile, `make images` passes; a PATCH with values equal to the current ones no longer bumps `version` (fewer needless `draft_conflict` errors in autosave).
 
 Decisions: the server normalises input only lightly (lowercase, Polish letters, spaces → hyphens) so hyphen errors stay visible as 422 instead of being silently fixed; suggestions try `{nick}-{city}` first when a city is set, then `-2`, `-3` …; the address prefix shows the current host (`localhost:8080` locally).
