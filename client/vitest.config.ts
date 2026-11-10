@@ -11,6 +11,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
+    // node_modules is read-only for the host uid that runs checks (Makefile AS_HOST).
+    fsModuleCachePath: '/tmp/vitest-cache',
     css: false,
     coverage: {
       provider: 'v8',
