@@ -255,15 +255,54 @@ async def test_refresh_rotates_the_token(client: AsyncClient) -> None:
     assert refresh_cookie(response) != first
 
 
+async def age_used_tokens(seconds: int) -> None:
+    """Move the use time of used refresh tokens into the past (beyond the grace window)."""
+    async with get_sessionmaker()() as session:
+        for token in (await session.scalars(select(RefreshToken))).all():
+            if token.used_at is not None:
+                token.used_at = token.used_at - timedelta(seconds=seconds)
+        await session.commit()
+
+
 async def test_reusing_a_refresh_token_revokes_the_whole_family(client: AsyncClient) -> None:
     first = refresh_cookie(await register(client))
     second = refresh_cookie(await with_cookie(client, "/api/v1/auth/refresh", first))
+    await age_used_tokens(31)
 
     replay = await with_cookie(client, "/api/v1/auth/refresh", first)
     after = await with_cookie(client, "/api/v1/auth/refresh", second)
 
     assert replay.status_code == 401
     assert after.status_code == 401  # the legitimate newer token is revoked too
+
+
+async def test_parallel_refreshes_with_one_token_keep_the_session(client: AsyncClient) -> None:
+    token = refresh_cookie(await register(client))
+    client.cookies.clear()
+
+    async def refresh_once() -> Response:
+        async with AsyncClient(
+            transport=client._transport, base_url="http://test", cookies={"profilo_rt": token}
+        ) as tab:
+            return await tab.post("/api/v1/auth/refresh", headers=CSRF)
+
+    first, second = await asyncio.gather(refresh_once(), refresh_once())
+    newer = [refresh_cookie(first), refresh_cookie(second)]
+
+    assert (first.status_code, second.status_code) == (200, 200)
+    for new_token in newer:  # both tabs keep working
+        assert (await with_cookie(client, "/api/v1/auth/refresh", new_token)).status_code == 200
+
+
+async def test_lost_refresh_response_within_grace_window_keeps_the_session(
+    client: AsyncClient,
+) -> None:
+    token = refresh_cookie(await register(client))
+    await with_cookie(client, "/api/v1/auth/refresh", token)  # response "lost" on reload
+
+    retry = await with_cookie(client, "/api/v1/auth/refresh", token)
+
+    assert retry.status_code == 200
 
 
 async def test_refresh_requires_csrf_header_and_cookie(client: AsyncClient) -> None:
@@ -366,6 +405,21 @@ async def test_access_token_of_deleted_account_is_rejected(client: AsyncClient) 
     )
 
     assert response.status_code == 401
+
+
+async def test_password_is_used_exactly_as_typed(client: AsyncClient) -> None:
+    spaced = "  zielony kubek  "
+    await register(client, password=spaced)
+
+    trimmed = await client.post(
+        "/api/v1/auth/login", json={"email": "anna@example.pl", "password": spaced.strip()}
+    )
+    exact = await client.post(
+        "/api/v1/auth/login", json={"email": "anna@example.pl", "password": spaced}
+    )
+
+    assert trimmed.status_code == 401
+    assert exact.status_code == 200
 
 
 async def test_login_does_not_reveal_the_email_in_logs(

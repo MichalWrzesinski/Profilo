@@ -21,6 +21,9 @@ REGISTER_PER_EMAIL = rate_limit.Limit("register_email", max_hits=5, window_secon
 LOGIN_PER_IP = rate_limit.Limit("login_ip", max_hits=30, window_seconds=900)
 # 5 failed logins per account in 15 minutes; the 6th attempt is refused (429).
 LOGIN_FAILURES = rate_limit.Limit("login_fail", max_hits=5, window_seconds=900)
+# A refresh token used again within this window (parallel tabs, a response lost on
+# reload) gets a sibling token instead of being treated as reuse (ACC-BR-8).
+REFRESH_REUSE_GRACE = timedelta(seconds=30)
 
 EMAIL_TAKEN_DETAIL = "Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło."
 INVALID_CREDENTIALS_DETAIL = "Nieprawidłowy e-mail lub hasło."
@@ -74,7 +77,7 @@ async def register(
     if await session.scalar(select(Account.id).where(Account.email == email)):
         raise ProblemError(409, "email_taken", EMAIL_TAKEN_DETAIL)
 
-    account = Account(email=email, password_hash=passwords.hash_password(password))
+    account = Account(email=email, password_hash=await passwords.hash_password(password))
     session.add(account)
     try:
         await session.flush()
@@ -100,7 +103,7 @@ async def login(session: AsyncSession, email: str, password: str, client_ip: str
             headers={"Retry-After": str(retry_after)},
         )
     account = await session.scalar(select(Account).where(Account.email == email))
-    if not passwords.verify_password(password, account.password_hash if account else None):
+    if not await passwords.verify_password(password, account.password_hash if account else None):
         await rate_limit.hit(LOGIN_FAILURES, _key(email))
         log.warning("login_failed", account_id=str(account.id) if account else None)
         raise _invalid_credentials()
@@ -124,13 +127,13 @@ async def refresh(session: AsyncSession, raw_token: str | None) -> IssuedSession
     )
     if stored is None or stored.revoked_at is not None or stored.expires_at <= now:
         raise _unauthorized()
-    if stored.used_at is not None:
+    if stored.used_at is not None and now - stored.used_at > REFRESH_REUSE_GRACE:
         await _revoke_family(session, stored.family_id, now)
         await session.commit()
         log.warning("refresh_token_reuse", account_id=str(stored.account_id))
         raise _unauthorized()
 
-    stored.used_at = now
+    stored.used_at = stored.used_at or now
     account = await session.get(Account, stored.account_id)
     if account is None:  # pragma: no cover - cascade deletes tokens with the account
         raise _unauthorized()

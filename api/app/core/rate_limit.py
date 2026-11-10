@@ -1,8 +1,8 @@
 """Fixed-window rate limits in Valkey.
 
-If Valkey is unavailable the limit is not enforced (logged as a warning): a cache outage
-must not make login or registration fail (backend standard: dependency failure is not
-an application failure).
+If Valkey is unavailable the limit is not enforced: a cache outage must not make login
+or registration fail (backend standard: dependency failure is not an application failure).
+This also suspends the failed-login lockout, so it is logged at error level for alerting.
 """
 
 from dataclasses import dataclass
@@ -29,7 +29,7 @@ async def hit(limit: Limit, subject: str) -> int:
             await client.expire(key, limit.window_seconds)
         ttl = int(await client.ttl(key))
     except Exception as exc:  # fail open, see module docstring
-        log.warning("rate_limit_unavailable", limit=limit.name, error=type(exc).__name__)
+        log.error("rate_limit_unavailable", limit=limit.name, error=type(exc).__name__)
         return 0
     if count > limit.max_hits:
         log.warning("rate_limited", limit=limit.name)
@@ -52,7 +52,7 @@ async def is_blocked(limit: Limit, subject: str) -> int | None:
         if value is not None and int(value) >= limit.max_hits:
             return max(int(await client.ttl(key)), 1)
     except Exception as exc:
-        log.warning("rate_limit_unavailable", limit=limit.name, error=type(exc).__name__)
+        log.error("rate_limit_unavailable", limit=limit.name, error=type(exc).__name__)
     return None
 
 
@@ -60,4 +60,4 @@ async def reset(limit: Limit, subject: str) -> None:
     try:
         await get_valkey().delete(f"rl:{limit.name}:{subject}")
     except Exception as exc:
-        log.warning("rate_limit_unavailable", limit=limit.name, error=type(exc).__name__)
+        log.error("rate_limit_unavailable", limit=limit.name, error=type(exc).__name__)

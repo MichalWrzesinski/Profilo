@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 
+from anyio import to_thread
 from pwdlib import PasswordHash
 from zxcvbn.frequency_lists import FREQUENCY_LISTS
 
@@ -22,16 +23,20 @@ def _dummy_hash() -> str:
     return _hasher.hash("timing-equaliser-not-a-password")
 
 
-def hash_password(password: str) -> str:
-    return _hasher.hash(password)
+# Argon2 takes tens of milliseconds of CPU: run it in a worker thread so the event loop
+# keeps serving other requests (including /ready) during login bursts.
 
 
-def verify_password(password: str, password_hash: str | None) -> bool:
+async def hash_password(password: str) -> str:
+    return await to_thread.run_sync(_hasher.hash, password)
+
+
+async def verify_password(password: str, password_hash: str | None) -> bool:
     """Verify; with no hash (unknown account) spend the same time and return False."""
     if password_hash is None:
-        _hasher.verify(password, _dummy_hash())
+        await to_thread.run_sync(_hasher.verify, password, _dummy_hash())
         return False
-    return _hasher.verify(password, password_hash)
+    return await to_thread.run_sync(_hasher.verify, password, password_hash)
 
 
 def policy_errors(password: str) -> list[dict[str, str]]:
