@@ -1,12 +1,16 @@
-# Profilo — local development. Requires only Docker and make.
+# Profilo — local development and CI. Requires only Docker and make.
 COMPOSE := docker compose
-API_RUN := $(COMPOSE) run --rm api
-API_RUN_NODEPS := $(COMPOSE) run --rm --no-deps api
-API_TEST_RUN := $(COMPOSE) run --rm -e ENVIRONMENT=test api
-CLIENT_RUN := $(COMPOSE) run --rm --no-deps client
+# Checks run as the host user so files written into bind mounts (coverage, caches) are
+# owned by the caller — required on Linux hosts and CI runners.
+AS_HOST := --user $(shell id -u):$(shell id -g) -e HOME=/tmp
+API_RUN := $(COMPOSE) run --rm $(AS_HOST) api
+API_RUN_NODEPS := $(COMPOSE) run --rm --no-deps $(AS_HOST) api
+API_TEST_RUN := $(COMPOSE) run --rm $(AS_HOST) -e ENVIRONMENT=test api
+CLIENT_RUN := $(COMPOSE) run --rm --no-deps $(AS_HOST) client
 
 .DEFAULT_GOAL := help
-.PHONY: help env up down logs migrate seed test test-api test-client lint lint-api lint-client format check api-shell hooks
+.PHONY: help env up down logs migrate seed test test-api test-client lint lint-api lint-client \
+	format contract check audit secrets images ci api-shell hooks
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -31,7 +35,7 @@ migrate: env ## Apply database migrations
 seed: ## Load demo data (none yet; added with the first features)
 	@echo "No demo data yet."
 
-test: test-api test-client ## Run all tests with coverage
+test: test-api test-client ## Run all tests with coverage (threshold 95 %)
 
 test-api: env
 	$(COMPOSE) up -d --wait db valkey
@@ -52,11 +56,28 @@ format: env ## Format code (api: ruff, client: prettier)
 	$(API_RUN_NODEPS) sh -c 'ruff format . && ruff check --fix .'
 	$(CLIENT_RUN) npm run format
 
-check: lint test ## All checks required in CI
+contract: env ## Check the API against docs/api/openapi.yaml
+	$(API_RUN_NODEPS) python -m scripts.check_contract
+
+check: lint test contract ## Formatters, linters, type checks, tests with coverage, API contract
+
+audit: env ## Known vulnerabilities: fails on runtime deps and on high/critical dev deps
+	$(API_RUN_NODEPS) sh -c 'uv export --frozen --no-dev --no-emit-project --quiet -o /tmp/requirements.txt && pip-audit --strict --disable-pip --require-hashes -r /tmp/requirements.txt'
+	$(CLIENT_RUN) npm audit --omit=dev --audit-level=low
+	$(CLIENT_RUN) npm audit --audit-level=high
+
+secrets: ## Scan the whole git history for secrets (gitleaks)
+	$(COMPOSE) run --rm --no-deps gitleaks git --redact --no-banner /repo
+
+images: ## Build production images (api, client)
+	docker build --target prod -t profilo-api:prod api
+	docker build --target prod -f client/Dockerfile -t profilo-client:prod .
+
+ci: check audit secrets images ## Everything the CI `check` job runs
 
 api-shell: env ## Shell in the api container
 	$(API_RUN) bash
 
-hooks: ## Install git hooks (gitleaks secret scan before each commit)
+hooks: ## Install git hooks (gitleaks, Ruff, Prettier before each commit)
 	git config core.hooksPath .githooks
 	@echo "Git hooks installed from .githooks/"

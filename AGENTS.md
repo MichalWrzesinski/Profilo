@@ -18,11 +18,14 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 - Styling: CSS Modules + `docs/design/tokens.css`; components per `docs/design/design-system.html`; icons Lucide
 - Forms and API client: React Hook Form + Zod; `openapi-typescript` + `openapi-fetch` generated from the contract; `@dnd-kit/sortable` for link order
 - Code style frontend: ESLint + Prettier
-- Tests: pytest + httpx (backend, coverage ≥ 80 % in modules), Vitest + Testing Library (frontend), Playwright (E2E main flow and smoke tests)
+- Tests: pytest + httpx (backend), Vitest + Testing Library (frontend), Playwright (E2E main flow and smoke tests); coverage threshold 95 % per app (quality-checks standard)
+- Contract check: `api/scripts/check_contract.py` compares the FastAPI spec with `docs/api/openapi.yaml` (implemented paths, methods, 2xx statuses, request/response property names recursively; an object with fields on one side only is a difference)
+- Dependency audits: `pip-audit` (runtime deps, hashes) and `npm audit --omit=dev` fail on any advisory; dev-only npm advisories fail at high/critical, moderate/low are reported only
+- Images: base images pinned to patch version + digest; Dependabot weekly for uv, npm, Docker, Compose, GitHub Actions
 - UI language: Polish only; product docs and code in English
 - Runtime: Docker Compose (caddy, client, api, worker, beat, db, valkey); same Compose for staging and production
 - Hosting: Hetzner Cloud — production CX33, staging CX23, off-site backups to Storage Box (ADR 0004)
-- CI/CD: GitHub Actions; required check `check`; images in GHCR; staging auto-deploy on main; production by `deploy-production` workflow started manually by the user (no GitHub environments — see overrides)
+- CI/CD: GitHub Actions `ci.yml` (job `check` runs `make check audit secrets` and the prod builds, with a GHA layer cache; `publish` pushes `ghcr.io/michalwrzesinski/profilo-{api,client}:<sha>` on main); actions pinned to commit SHAs; images in GHCR; staging auto-deploy on main; production by `deploy-production` workflow started manually by the user (no GitHub environments — see overrides)
 - Monitoring: Sentry (EU region), Better Stack Uptime on `/ready`
 
 ## Project overrides of standards
@@ -56,10 +59,11 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 
 ## Commands
 
-- `make up` (first run creates `.env`), `make down`, `make logs`, `make migrate`, `make seed`, `make check` (= `make lint` + `make test`), `make format`, `make api-shell`, `make hooks`.
+- `make up` (first run creates `.env`), `make down`, `make logs`, `make migrate`, `make seed`, `make check` (= lint + test + contract), `make audit`, `make secrets`, `make images`, `make ci` (all of the CI job), `make format`, `make api-shell`, `make hooks`.
 - Only Docker and make are needed; tools run in containers (`docker compose run --rm api|client …`). Host Node/Python versions are irrelevant.
 - Backend tests use the `profilo_test` database (`TEST_DATABASE_URL`), created by `infra/postgres/init/`.
-- Baseline (TASK-001): backend 16 tests, coverage 90.3 % (threshold 80 %), Ruff and mypy strict clean; client 1 test, coverage 100 % (threshold 80 %), ESLint, Prettier, `tsc` clean.
+- Checks run as the host user (`--user $(id -u):$(id -g)`) so they work on Linux runners; the client image keeps `node_modules/.vite-temp` world-writable for that.
+- Baseline (TASK-002): backend 27 tests, coverage 99.2 %; client 1 test, coverage 100 % (threshold 95 % both); Ruff, mypy strict, ESLint, Prettier, `tsc` clean; pip-audit and npm prod audit clean; npm dev audit: 7 moderate (typescript-eslint/minimatch).
 
 ## Pitfalls
 

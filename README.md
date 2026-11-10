@@ -32,10 +32,13 @@ make hooks   # once per clone: gitleaks secret scan before each commit
 | `make logs` | Follow logs |
 | `make migrate` | Apply database migrations |
 | `make seed` | Load demo data (none yet) |
-| `make test` | Backend and frontend tests with coverage (backend uses the `profilo_test` database) |
+| `make test` | Backend and frontend tests with coverage ≥ 95 % (backend uses the `profilo_test` database) |
 | `make lint` | Formatters in check mode, linters, type checks |
 | `make format` | Format code |
-| `make check` | Everything CI runs (`lint` + `test`) |
+| `make contract` | Check the API against `docs/api/openapi.yaml` |
+| `make check` | `lint` + `test` + `contract` |
+| `make audit` / `make secrets` / `make images` | Dependency audit, gitleaks history scan, production image build |
+| `make ci` | Everything the CI `check` job runs |
 | `make api-shell` | Shell in the api container |
 
 Local credentials in `.env.example` are for local development only.

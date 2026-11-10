@@ -4,6 +4,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react()],
+  // Cache outside node_modules: checks may run as the host user (see Makefile AS_HOST).
+  cacheDir: '/tmp/vite',
   resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src') } },
   test: {
     environment: 'jsdom',
@@ -14,7 +16,7 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.{ts,tsx}', 'src/app/layout.tsx'],
-      thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
+      thresholds: { lines: 95, functions: 95, branches: 95, statements: 95 },
     },
   },
 });

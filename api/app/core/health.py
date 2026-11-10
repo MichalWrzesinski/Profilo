@@ -5,6 +5,7 @@ from sqlalchemy import text
 
 from app.core.db import get_engine
 from app.core.errors import problem_response
+from app.core.health_models import HealthStatus
 from app.core.logging import log
 from app.core.settings import get_settings
 from app.core.valkey import get_valkey
@@ -13,9 +14,9 @@ router = APIRouter(tags=["system"])
 
 
 @router.get("/health")
-async def health() -> dict[str, str]:
+async def health() -> HealthStatus:
     """The process is running. Does not check dependencies."""
-    return {"status": "ok"}
+    return HealthStatus()
 
 
 async def _check_database() -> None:
