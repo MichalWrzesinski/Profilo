@@ -198,12 +198,14 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | `api/app/core/auth.py`, `core/rate_limit.py`, `core/schemas.py` | Bearer-token dependency, Valkey fixed-window limits (fail open), camelCase API base model | TASK-004 |
 | `api/app/modules/accounts/` | Accounts and refresh tokens: models, Argon2id + common-password policy, JWT and rotating refresh tokens with reuse detection, service, router (`/accounts`, `/auth/*`, `/me`) | TASK-004 |
 | `api/app/modules/profiles/` | Profile model (draft), `create_profile_for` | TASK-004 |
+| `api/app/modules/profiles/nicks.py`, `service.py`, `router.py` | Nick rules (PRF-BR-2, mirrored in `client/src/lib/nick.ts` with the same test cases), reserved nicks (`0004` migration seeds the system list), suggestions, availability (120/min), `PUT /me/profile/nick`; `GET`/`PATCH /me/profile` with optimistic locking and E.164 phones | TASK-006 |
 | `api/app/modules/accounts/confirmation.py` | E-mail confirmation tokens (48 h, single use, resend invalidates earlier ones), confirm and resend | TASK-005 |
 | `api/app/modules/notifications/` | `send()` (queues after commit, never fails the caller), Celery task with retries, SMTP adapter, Jinja2 templates (HTML + text, Polish) | TASK-005 |
 | `client/src/features/auth/ConfirmEmail*.tsx`, `client/src/app/potwierdz-email/` | Confirmation page (success, expired, logged-out redirect) and the panel banner with resend | TASK-005 |
 | `client/src/app/` | Next.js App Router: `layout.tsx` (font, metadata, tokens, session provider), home, `/rejestracja`, `/logowanie`, `/panel` (guarded shell), `/regulamin`, `/prywatnosc` | TASK-001, TASK-004 |
 | `client/src/lib/api/` | `schema.d.ts` generated from the contract (`npm run api:types`, checked by `api:check`), `client.ts` (openapi-fetch, in-memory access token, silent refresh) | TASK-004 |
 | `client/src/lib/session.tsx`, `client/src/features/auth/` | Session context; registration and login forms (React Hook Form + Zod) | TASK-004 |
+| `client/src/app/kreator/`, `client/src/features/wizard/`, `client/src/lib/useRequireSession.ts` | Wizard shell (stepper, „Dokończę później”), step 1 with live nick check and suggestion chips; session guard shared with `/panel` | TASK-006 |
 | `infra/` | Local Caddy config, PostgreSQL init (test database) | TASK-001 |
 | `infra/server/` | Server bootstrap, staging/production Compose stack, Caddyfile with TLS and security headers, `deploy.sh` with rollback | TASK-003 |
 | `.github/workflows/` | `ci.yml` (check, publish), `deploy-staging.yml` | TASK-002, TASK-003 |

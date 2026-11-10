@@ -73,6 +73,7 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 
 - `client/src/lib/api/client.ts`: only the exact token endpoints (`/auth/login`, `/auth/refresh`, `/auth/logout`, `/accounts`) are sent without the access token; any other endpoint, also under `/auth/`, gets it.
 - After changing `docs/api/openapi.yaml`, regenerate client types with `docker compose run --rm client npm run api:types`; `make lint` fails when they are out of date.
+- Nick rules live twice — `api/app/modules/profiles/nicks.py` and `client/src/lib/nick.ts`; change both and keep their test cases identical. Forms that send credentials use `method="post"` so a submit before hydration never puts them in the URL.
 - API tests use Valkey database 1 and truncate tables per test (`clean_state` fixture); never point them at a shared database.
 
 - ESLint stays on 9 (marked unsupported upstream) because `eslint-config-next` 16 depends on `eslint-plugin-import`, `eslint-plugin-react` and `eslint-plugin-jsx-a11y`, which all cap ESLint at 9; Dependabot ignores ESLint majors. Migration: TASK-025.

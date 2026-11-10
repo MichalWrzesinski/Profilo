@@ -19,7 +19,7 @@ materials:
 The owner edits display name, headline, bio, position, company, city, public e-mail and phone, and every change is saved automatically to the draft.
 
 ## Scope
-- `PATCH /me/profile` with optimistic locking (`version`, 409 with current state), field limits from profile.md, phone normalisation to E.164 (phonenumbers).
+- `PATCH /me/profile` with optimistic locking (backend already done in TASK-006 — extend tests and wire the editor) (`version`, 409 with current state), field limits from profile.md, phone normalisation to E.164 (phonenumbers).
 - Editor layout (form + preview placeholder) and mobile tabs; autosave 1 s after the last change; save states Zapisano / Zapisywanie… / Nie zapisano with retry; unsaved changes kept in the browser while offline.
 - Badge "Masz nieopublikowane zmiany"; public page shows the new fields after publishing.
 - Contact on the public page: „Zadzwoń” → `tel:` with E.164, phone shown grouped (e.g. +48 601 234 567), default country +48; public e-mail field never pre-filled with the login e-mail (PRF-BR-10).
