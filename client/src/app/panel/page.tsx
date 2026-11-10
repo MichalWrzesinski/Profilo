@@ -13,7 +13,10 @@ export default function PanelPage() {
         Zalogowano jako {account?.email}.
       </p>
       <PublishPanel />
-      <p>
+      <p style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+        <Link className="btn btn-primary" href="/edytor">
+          Edytuj stronę
+        </Link>
         <Link className="btn btn-secondary" href="/kreator">
           Przejdź do kreatora
         </Link>

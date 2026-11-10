@@ -25,11 +25,43 @@ describe('ClassicPage', () => {
     );
   });
 
+  it('shows details, the call button with the grouped number and the bio', () => {
+    render(
+      <ClassicPage
+        profile={publicProfile({
+          position: 'Właścicielka',
+          company: 'Studio W',
+          city: 'Kraków',
+          publicPhone: '+48601234567',
+          bio: 'Projektuję aplikacje.\nKraków i zdalnie.',
+        })}
+      />,
+    );
+
+    expect(screen.getByText('Właścicielka, Studio W')).toBeInTheDocument();
+    expect(screen.getByText('Kraków')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Zadzwoń: +48 601 234 567' })).toHaveAttribute(
+      'href',
+      'tel:+48601234567',
+    );
+    expect(screen.getByText('+48 601 234 567')).toBeInTheDocument();
+    expect(screen.getByText(/Projektuję aplikacje\./)).toHaveClass('bio');
+  });
+
+  it('shows the company alone when there is no position', () => {
+    render(<ClassicPage profile={publicProfile({ company: 'Studio W' })} />);
+
+    expect(screen.getByText('Studio W')).toBeInTheDocument();
+  });
+
   it('leaves out empty fields without gaps', () => {
     render(<ClassicPage profile={publicProfile({ headline: null })} />);
 
     expect(screen.queryByRole('link', { name: 'Napisz e-mail' })).toBeNull();
     expect(document.querySelector('.headline')).toBeNull();
     expect(document.querySelector('.contact')).toBeNull();
+    expect(document.querySelector('.meta')).toBeNull();
+    expect(document.querySelector('.bio')).toBeNull();
+    expect(screen.queryByRole('link', { name: /Zadzwoń/ })).toBeNull();
   });
 });
