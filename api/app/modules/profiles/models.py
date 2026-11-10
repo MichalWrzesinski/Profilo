@@ -62,3 +62,17 @@ class Profile(Base):
     draft_updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class ReservedNick(Base):
+    """System words, offensive words (also blocked as a part of a nick) and nicks in quarantine
+    after account deletion (PRF-BR-4, ACC-BR-10)."""
+
+    __tablename__ = "reserved_nicks"
+    __table_args__ = (
+        CheckConstraint("reason IN ('system', 'offensive', 'quarantine')", name="reason_value"),
+    )
+
+    nick: Mapped[str] = mapped_column(CITEXT, primary_key=True)
+    reason: Mapped[str] = mapped_column(String(16))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -1,23 +1,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Brand } from '@/components/Brand';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
-import { useSession } from '@/lib/session';
+import { useRequireSession } from '@/lib/useRequireSession';
 
 export default function PanelLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { status, ensure, signOut } = useSession();
+  const { status, signOut } = useRequireSession();
   const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    void ensure();
-  }, [ensure]);
-
-  useEffect(() => {
-    if (status === 'anonymous') router.replace('/logowanie');
-  }, [status, router]);
 
   if (status !== 'authenticated') {
     return (

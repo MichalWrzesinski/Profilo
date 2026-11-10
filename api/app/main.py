@@ -11,6 +11,7 @@ from app.core.request_context import RequestContextMiddleware
 from app.core.settings import get_settings
 from app.core.valkey import close_valkey
 from app.modules.accounts.router import router as accounts_router
+from app.modules.profiles.router import router as profiles_router
 
 
 @asynccontextmanager
@@ -37,6 +38,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     app.include_router(health_router)
     app.include_router(accounts_router)
+    app.include_router(profiles_router)
     return app
 
 
