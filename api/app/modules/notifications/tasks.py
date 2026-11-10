@@ -9,7 +9,9 @@ from app.core.logging import log
 from app.modules.notifications import mailer, templates
 from app.worker import celery_app
 
-MAX_RETRIES = 6  # with exponential backoff: ~1 s … ~1 min, about 2 minutes in total
+# Exponential backoff with jitter, capped at 10 min per wait: retries span up to ~8 min
+# (1, 2, 4 … 256 s), enough to ride out a short provider outage.
+MAX_RETRIES = 9
 
 
 class EmailTask(Task):  # type: ignore[misc]
@@ -31,7 +33,7 @@ class EmailTask(Task):  # type: ignore[misc]
     autoretry_for=(OSError, smtplib.SMTPException),
     dont_autoretry_for=(smtplib.SMTPRecipientsRefused,),
     retry_backoff=True,
-    retry_backoff_max=60,
+    retry_backoff_max=600,
     retry_jitter=True,
     max_retries=MAX_RETRIES,
     acks_late=True,

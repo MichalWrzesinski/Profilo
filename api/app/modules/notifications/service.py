@@ -10,9 +10,10 @@ from app.core.logging import log
 async def send(template: str, to: str, params: dict[str, Any]) -> bool:
     """Queue an e-mail (after the caller's commit). Returns False and logs when the queue
     is unavailable, so the caller's operation still succeeds; the user can ask again."""
-    from app.modules.notifications.tasks import send_email
 
     def enqueue() -> None:
+        from app.modules.notifications.tasks import send_email
+
         send_email.apply_async(
             kwargs={"template": template, "to": to, "params": params},
             retry=True,
