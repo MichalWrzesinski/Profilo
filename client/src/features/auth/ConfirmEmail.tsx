@@ -7,7 +7,8 @@ import { Alert } from '@/components/Alert';
 import { api, refreshSession } from '@/lib/api/client';
 import { useSession } from '@/lib/session';
 
-type State = 'checking' | 'confirmed' | 'expired' | 'resent' | 'error';
+type State =
+  'checking' | 'confirmed' | 'expired' | 'resent' | 'already' | 'wait' | 'error' | 'resendError';
 
 export function ConfirmEmail() {
   const router = useRouter();
@@ -31,7 +32,9 @@ export function ConfirmEmail() {
         router.replace('/logowanie?potwierdzono=1');
         return;
       }
-      signIn({ ...session, account: { ...session.account, emailConfirmed: true } });
+      // The link may belong to another account than the one signed in: read the truth.
+      const { data: account } = await api.GET('/api/v1/me');
+      signIn({ ...session, account: account ?? session.account });
       setState('confirmed');
     })();
   }, [token, router, signIn]);
@@ -46,7 +49,8 @@ export function ConfirmEmail() {
       signIn(session);
     }
     const { response } = await api.POST('/api/v1/auth/email-confirmations');
-    setState(response.status === 202 ? 'resent' : 'error');
+    const next: Record<number, State> = { 202: 'resent', 409: 'already', 429: 'wait' };
+    setState(next[response.status] ?? 'resendError');
   };
 
   if (state === 'checking') {
@@ -69,13 +73,25 @@ export function ConfirmEmail() {
   if (state === 'resent') {
     return <Alert variant="success">Wysłaliśmy nowy link. Sprawdź skrzynkę.</Alert>;
   }
+  if (state === 'already') {
+    return (
+      <>
+        <Alert variant="success">Twój adres jest już potwierdzony.</Alert>
+        <Link className="btn btn-primary btn-block" href="/panel">
+          Przejdź do panelu
+        </Link>
+      </>
+    );
+  }
+  const messages: Partial<Record<State, string>> = {
+    expired: 'Link wygasł albo został już użyty.',
+    wait: 'Nowy link możesz wysłać za minutę.',
+    resendError: 'Nie udało się wysłać nowego linku. Spróbuj ponownie za chwilę.',
+    error: 'Nie udało się potwierdzić adresu. Spróbuj ponownie za chwilę.',
+  };
   return (
     <>
-      <Alert variant="danger">
-        {state === 'expired'
-          ? 'Link wygasł albo został już użyty.'
-          : 'Nie udało się potwierdzić adresu. Spróbuj ponownie za chwilę.'}
-      </Alert>
+      <Alert variant="danger">{messages[state]}</Alert>
       <button type="button" className="btn btn-primary btn-block" onClick={sendNewLink}>
         Wyślij nowy link
       </button>

@@ -27,6 +27,7 @@ function setup(routes: Routes, token = TOKEN) {
 const CONFIRM = '/api/v1/auth/email-confirmations/confirm';
 const REFRESH = '/api/v1/auth/refresh';
 const RESEND = '/api/v1/auth/email-confirmations';
+const ME = '/api/v1/me';
 const noContent = () => new Response(null, { status: 204 });
 const unauthorized = () => json(401, { status: 401, code: 'unauthorized' });
 const expired = () => json(410, { status: 410, code: 'token_expired' });
@@ -39,7 +40,11 @@ afterEach(() => {
 
 describe('ConfirmEmail', () => {
   it('confirms and offers the panel to a logged-in owner', async () => {
-    const fetch = setup({ [CONFIRM]: noContent, [REFRESH]: () => json(200, SESSION) });
+    const fetch = setup({
+      [CONFIRM]: noContent,
+      [REFRESH]: () => json(200, SESSION),
+      [ME]: () => json(200, { ...SESSION.account, emailConfirmed: true }),
+    });
 
     expect(screen.getByRole('status')).toHaveTextContent('Sprawdzamy link');
     expect(await screen.findByText(/Adres potwierdzony/)).toBeInTheDocument();
@@ -96,16 +101,32 @@ describe('ConfirmEmail', () => {
     expect(await screen.findByText(/Nie udało się potwierdzić adresu/)).toBeInTheDocument();
   });
 
-  it('shows an error when sending the new link fails', async () => {
+  it.each([
+    [500, /Nie udało się wysłać nowego linku/],
+    [429, /Nowy link możesz wysłać za minutę/],
+    [409, /Twój adres jest już potwierdzony/],
+  ])('reports the resend result %i', async (status, message) => {
     setup({
       [CONFIRM]: expired,
       [REFRESH]: () => json(200, SESSION),
-      [RESEND]: () => json(500, { status: 500, code: 'internal_error' }),
+      [RESEND]: () => json(status, { status, code: 'x' }),
     });
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole('button', { name: 'Wyślij nowy link' }));
 
-    expect(await screen.findByText(/Nie udało się potwierdzić adresu/)).toBeInTheDocument();
+    expect(await screen.findByText(message)).toBeInTheDocument();
+  });
+
+  it('uses the account of the current session, not the link, after confirming', async () => {
+    const fetch = setup({
+      [CONFIRM]: noContent,
+      [REFRESH]: () => json(200, SESSION),
+      [ME]: () => json(200, { ...SESSION.account, emailConfirmed: false }),
+    });
+
+    expect(await screen.findByText(/Adres potwierdzony/)).toBeInTheDocument();
+    const paths = fetch.mock.calls.map(([r]) => new URL((r as Request).url).pathname);
+    expect(paths).toEqual([CONFIRM, REFRESH, ME]);
   });
 });

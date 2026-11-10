@@ -57,6 +57,15 @@ describe('authenticated requests', () => {
     expect(requestAt(fetch, 1).headers.get('Authorization')).toBeNull();
   });
 
+  it('sends the access token to authenticated /auth endpoints such as resend', async () => {
+    tokenStore.set('access-1');
+    const fetch = mockFetch(() => new Response(null, { status: 202 }));
+
+    await api.POST('/api/v1/auth/email-confirmations');
+
+    expect(requestAt(fetch, 0).headers.get('Authorization')).toBe('Bearer access-1');
+  });
+
   it('refreshes once and repeats a GET after 401', async () => {
     tokenStore.set('expired');
     const fetch = mockFetch((request) => {

@@ -67,11 +67,22 @@ export async function logoutSession(): Promise<void> {
   }
 }
 
-const AUTH_PATHS = ['/api/v1/auth/', '/api/v1/accounts'];
+// Endpoints authenticated by the refresh cookie or by credentials, never by the access
+// token. Exact paths: other /auth/* endpoints (e.g. resend confirmation) need the token.
+const TOKEN_ENDPOINTS = new Set([
+  '/api/v1/auth/login',
+  '/api/v1/auth/refresh',
+  '/api/v1/auth/logout',
+  '/api/v1/accounts',
+]);
+
+function isTokenEndpoint(request: Request): boolean {
+  return TOKEN_ENDPOINTS.has(new URL(request.url).pathname);
+}
 
 const authMiddleware: Middleware = {
   async onRequest({ request }) {
-    if (AUTH_PATHS.some((path) => request.url.includes(path))) return request;
+    if (isTokenEndpoint(request)) return request;
     if (tokenStore.expiresSoon()) await refreshSession();
     const token = tokenStore.get();
     if (token) request.headers.set('Authorization', `Bearer ${token}`);
@@ -80,7 +91,7 @@ const authMiddleware: Middleware = {
   async onResponse({ request, response }) {
     // Token rejected anyway (e.g. clock skew): refresh once and repeat safe requests.
     const retriable = request.method === 'GET' && !request.headers.has('X-Retried');
-    if (response.status !== 401 || !retriable || AUTH_PATHS.some((p) => request.url.includes(p))) {
+    if (response.status !== 401 || !retriable || isTokenEndpoint(request)) {
       return response;
     }
     const session = await refreshSession();
