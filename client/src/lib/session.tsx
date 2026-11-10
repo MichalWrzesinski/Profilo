@@ -42,7 +42,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     (session: Session) => {
-      tokenStore.set(session.accessToken);
+      tokenStore.set(session.accessToken, session.expiresIn);
       setAccount(session.account);
       setStatus('authenticated');
     },

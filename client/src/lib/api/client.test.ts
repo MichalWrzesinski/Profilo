@@ -72,6 +72,19 @@ describe('authenticated requests', () => {
     expect(fetch).toHaveBeenCalledTimes(3);
   });
 
+  it('refreshes ahead of expiry before any request, including mutations', async () => {
+    tokenStore.set('almost-expired', 30); // less than a minute left
+    const fetch = mockFetch((request) =>
+      request.url.endsWith('/auth/refresh') ? json(200, SESSION) : json(200, SESSION.account),
+    );
+
+    await api.GET('/api/v1/me');
+
+    expect(requestAt(fetch, 0).url).toMatch(/\/auth\/refresh$/);
+    expect(requestAt(fetch, 1).headers.get('Authorization')).toBe('Bearer access-1');
+    expect(tokenStore.expiresSoon()).toBe(false);
+  });
+
   it('returns the 401 when the refresh fails', async () => {
     tokenStore.set('expired');
     mockFetch(() => json(401, { code: 'unauthorized', status: 401 }));

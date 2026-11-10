@@ -11,12 +11,18 @@ const CSRF_HEADERS = { 'X-Requested-With': 'profilo' } as const;
 // Access token lives in memory only (security standard); the refresh token is an
 // HttpOnly cookie that JavaScript cannot read.
 let accessToken: string | null = null;
+let expiresAt = 0;
+
+/** Refresh this long before the access token expires (any request method then works). */
+const REFRESH_AHEAD_MS = 60_000;
 
 export const tokenStore = {
   get: (): string | null => accessToken,
-  set: (token: string | null): void => {
+  set: (token: string | null, expiresInSeconds = 900): void => {
     accessToken = token;
+    expiresAt = token ? Date.now() + expiresInSeconds * 1000 : 0;
   },
+  expiresSoon: (): boolean => accessToken !== null && expiresAt - Date.now() < REFRESH_AHEAD_MS,
 };
 
 function origin(): string {
@@ -39,7 +45,7 @@ export function refreshSession(): Promise<Session | null> {
         // The browser sends the HttpOnly cookie itself; the contract lists it as a parameter.
         params: { header: CSRF_HEADERS, cookie: {} as { profilo_rt: string } },
       });
-      tokenStore.set(data?.accessToken ?? null);
+      tokenStore.set(data?.accessToken ?? null, data?.expiresIn);
       return data ?? null;
     } catch {
       tokenStore.set(null);
@@ -64,15 +70,15 @@ export async function logoutSession(): Promise<void> {
 const AUTH_PATHS = ['/api/v1/auth/', '/api/v1/accounts'];
 
 const authMiddleware: Middleware = {
-  onRequest({ request }) {
+  async onRequest({ request }) {
+    if (AUTH_PATHS.some((path) => request.url.includes(path))) return request;
+    if (tokenStore.expiresSoon()) await refreshSession();
     const token = tokenStore.get();
-    if (token && !AUTH_PATHS.some((path) => request.url.includes(path))) {
-      request.headers.set('Authorization', `Bearer ${token}`);
-    }
+    if (token) request.headers.set('Authorization', `Bearer ${token}`);
     return request;
   },
   async onResponse({ request, response }) {
-    // Expired access token: refresh once and repeat safe requests.
+    // Token rejected anyway (e.g. clock skew): refresh once and repeat safe requests.
     const retriable = request.method === 'GET' && !request.headers.has('X-Retried');
     if (response.status !== 401 || !retriable || AUTH_PATHS.some((p) => request.url.includes(p))) {
       return response;
