@@ -209,6 +209,8 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | `api/app/modules/profiles/` (publishing) | `published_profiles` snapshot (`0005`, `PublishedProfileV1` = `ProfileContentOut`), `POST /me/profile/publish` and `/unpublish`, `GET /public/profiles/{nick}` (`Cache-Control: no-store`, one 404 for every hidden page) | TASK-007 |
 | `client/src/app/user/[nick]/`, `client/src/features/public/`, `client/src/lib/publicProfile.ts` | Public page rendered on the server from `API_INTERNAL_URL` (no data cache, canonical-nick redirect), Classic layout; `app/not-found.tsx` + `components/NotFoundPage.tsx` shared 404 | TASK-007 |
 | `client/src/features/panel/PublishPanel.tsx` | Panel: page status badge, „Opublikuj” / „Opublikuj zmiany” / „Ukryj stronę”, reasons why publishing is disabled | TASK-007 |
+| `client/src/app/edytor/`, `client/src/features/editor/` | Editor: `useAutosave` (1 s debounce, only changed fields, optimistic `version`, invalid fields held back, conflict stops saving, unsaved changes kept in `localStorage` per account), form sections „O mnie” and „Kontakt”, save state and publish in the top bar, preview placeholder and phone tabs | TASK-008 |
+| `client/src/lib/phone.ts` | Phone prefixes, E.164 → grouped display (`libphonenumber-js`), editor split and save value | TASK-008 |
 | `infra/` | Local Caddy config, PostgreSQL init (test database) | TASK-001 |
 | `infra/server/` | Server bootstrap, staging/production Compose stack, Caddyfile with TLS and security headers, `deploy.sh` with rollback | TASK-003 |
 | `.github/workflows/` | `ci.yml` (check, publish), `deploy-staging.yml` | TASK-002, TASK-003 |

@@ -1,7 +1,7 @@
 ---
 id: TASK-008
 title: Editor: details and contact with autosave
-status: READY
+status: IN_PROGRESS
 priority: high
 iteration: ITER-02
 depends_on: [TASK-007]
@@ -49,4 +49,16 @@ The owner edits display name, headline, bio, position, company, city, public e-m
 - When the network fails during autosave, then the error banner is shown, publishing is disabled and the save is retried when the user clicks "Spróbuj ponownie".
 
 ## Report
-Filled in by development after the task.
+
+**Implemented, waiting for review.** Editor at `/edytor` (link „Edytuj stronę” in the panel): sections „O mnie” (name, headline, bio with counter, position, company, city) and „Kontakt” (public e-mail, phone with country prefix, default +48), top bar with save state, badge, „Panel” and „Opublikuj” / „Opublikuj zmiany”; preview column with a placeholder (live preview is TASK-011) and „Edycja” / „Podgląd” tabs on phones. Autosave 1 s after the last edit sends only changed fields with the draft version; a field with an error (checked in the browser and by the API) is held back so the draft keeps its last valid value, the other fields are still saved; a conflict stops saving and offers „Odśwież”; a failed save shows the banner, disables publishing and keeps the changes in this browser (`localStorage`) until „Spróbuj ponownie” succeeds; changes kept from a failed save are restored after reload if the draft version is unchanged. Public page now shows position, company, city, „Zadzwoń” (`tel:` with E.164), the grouped number and the bio; empty fields leave nothing behind. The `PATCH /me/profile` backend was done in TASK-006; this task adds API tests for the editor rules.
+
+Acceptance criteria (verified in the browser and by tests):
+- S1 autosave — met: typing the bio saved it (state „Zapisano”, only `bio` and `version` sent); after „Opublikuj zmiany” the public page showed position, city, phone and bio, and no gaps for empty fields (test).
+- S2 contact — met: „601234567” was stored as `+48601234567`; the page shows „+48 601 234 567” and „Zadzwoń” links to `tel:+48601234567`; a new owner's public e-mail field is empty (API and client tests).
+- S3 conflict — met: after a change from another session the editor showed „Szkic zmienił się w innym oknie — odśwież.”, did not overwrite it, and „Odśwież” loaded the newer draft („Gdańsk”).
+- S4 invalid data — met: a bio of 501 characters and an invalid phone show the error under the field; the draft keeps the last valid value (API test) while other fields keep saving.
+- S5 offline — met: with the API stopped, typing showed „Nie zapisano”, the banner and a disabled publish button; after starting the API „Spróbuj ponownie” saved the change.
+
+Checks: api 182 tests, 99 %; client 183 tests, 95.6 % branches; contract 16 paths.
+
+Decisions: the phone prefix list has 9 countries (PL first); the grouped number is shown under the contact buttons so it is readable without tapping; the editor has its own route `/edytor` with its own top bar (as in the mockup), the panel keeps the status and „Ukryj stronę”; „Opublikuj zmiany” is disabled while anything is unsaved or invalid. New dependency: `libphonenumber-js` 1.13.15.
