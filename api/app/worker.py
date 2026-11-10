@@ -15,7 +15,11 @@ celery_app.conf.update(
     task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,
     worker_hijack_root_logger=False,
+    # Our structlog JSON goes straight to stdout; redirecting would re-wrap it as a warning.
+    worker_redirect_stdouts=False,
     broker_connection_retry_on_startup=True,
+    # Publishing from the API must fail fast when Valkey is down (notifications.send).
+    broker_transport_options={"socket_connect_timeout": 2, "socket_timeout": 2},
     timezone="UTC",
     beat_schedule={},
 )

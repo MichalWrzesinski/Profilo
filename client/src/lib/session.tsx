@@ -26,6 +26,7 @@ type SessionContextValue = {
   ensure: () => Promise<void>;
   signIn: (session: Session) => void;
   signOut: () => Promise<void>;
+  markEmailConfirmed: () => void;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -69,9 +70,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [setStatus]);
 
+  const markEmailConfirmed = useCallback(() => {
+    setAccount((current) => (current ? { ...current, emailConfirmed: true } : current));
+  }, []);
+
   const value = useMemo(
-    () => ({ status, account, ensure, signIn, signOut }),
-    [status, account, ensure, signIn, signOut],
+    () => ({ status, account, ensure, signIn, signOut, markEmailConfirmed }),
+    [status, account, ensure, signIn, signOut, markEmailConfirmed],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

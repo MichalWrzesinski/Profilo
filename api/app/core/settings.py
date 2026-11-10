@@ -23,6 +23,15 @@ class Settings(BaseSettings):
     refresh_token_ttl_days: int = 30
     cookie_secure: bool = True
 
+    # Transactional e-mail (notifications module): Mailpit locally, Brevo on servers.
+    smtp_host: str = "mailpit"
+    smtp_port: int = 1025
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_starttls: bool = False
+    smtp_timeout_seconds: float = 10.0
+    mail_from: str = "Profilo <no-reply@profilo.pl>"
+
 
 @lru_cache
 def get_settings() -> Settings:

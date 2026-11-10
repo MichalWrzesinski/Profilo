@@ -1,0 +1,9 @@
+{% extends "base.html.j2" %}
+{% block content %}
+<h1 style="font-size:22px;color:#0F2747;margin:0 0 12px;">Potwierdź swój adres e-mail</h1>
+<p style="margin:0 0 20px;">Dziękujemy za założenie konta w Profilo. Kliknij przycisk, aby potwierdzić adres i móc opublikować swoją stronę.</p>
+<p style="margin:0 0 20px;"><a href="{{ link }}" style="display:inline-block;background:#0F2747;color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">Potwierdź adres e-mail</a></p>
+<p style="margin:0 0 8px;font-size:14px;color:#5B6B82;">Link jest ważny przez 48 godzin. Jeśli przycisk nie działa, skopiuj ten adres do przeglądarki:</p>
+<p style="margin:0 0 20px;font-size:13px;word-break:break-all;"><a href="{{ link }}" style="color:#1F4E8C;">{{ link }}</a></p>
+<p style="margin:0;font-size:14px;color:#5B6B82;">Jeśli to nie Ty zakładałeś(-aś) konto, zignoruj tę wiadomość.</p>
+{% endblock %}

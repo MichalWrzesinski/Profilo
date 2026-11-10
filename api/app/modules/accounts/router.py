@@ -7,9 +7,15 @@ from app.core.auth import CurrentAccount
 from app.core.db import get_session
 from app.core.errors import ProblemError
 from app.core.settings import get_settings
-from app.modules.accounts import service
+from app.modules.accounts import confirmation, service
 from app.modules.accounts.models import Account
-from app.modules.accounts.schemas import AccountOut, LoginRequest, RegisterRequest, SessionOut
+from app.modules.accounts.schemas import (
+    AccountOut,
+    LoginRequest,
+    RegisterRequest,
+    SessionOut,
+    TokenRequest,
+)
 
 router = APIRouter(prefix="/api/v1")
 
@@ -115,6 +121,20 @@ async def logout(
     _clear_cookie(response)
     response.status_code = 204
     return response
+
+
+@router.post("/auth/email-confirmations", status_code=202, tags=["auth"])
+async def resend_email_confirmation(
+    account: CurrentAccount, request: Request, session: DbSession
+) -> Response:
+    await confirmation.resend(session, account, _client_ip(request))
+    return Response(status_code=202)
+
+
+@router.post("/auth/email-confirmations/confirm", status_code=204, tags=["auth"])
+async def confirm_email(payload: TokenRequest, request: Request, session: DbSession) -> Response:
+    await confirmation.confirm(session, payload.token, _client_ip(request))
+    return Response(status_code=204)
 
 
 @router.get("/me", tags=["account"])

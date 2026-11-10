@@ -21,6 +21,22 @@ class Account(Base):
     )
 
 
+class OneTimeToken(Base):
+    """Single-use token sent by e-mail (confirmation; password reset in TASK-015)."""
+
+    __tablename__ = "one_time_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid7)
+    account_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("accounts.id", ondelete="CASCADE"), index=True
+    )
+    purpose: Mapped[str] = mapped_column(String(32))
+    token_hash: Mapped[bytes] = mapped_column(LargeBinary(32), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 

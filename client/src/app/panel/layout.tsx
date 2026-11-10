@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Brand } from '@/components/Brand';
+import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
 import { useSession } from '@/lib/session';
 
 export default function PanelLayout({ children }: { children: ReactNode }) {
@@ -62,6 +63,7 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
           )}
         </div>
       </header>
+      <ConfirmEmailBanner />
       {children}
     </>
   );

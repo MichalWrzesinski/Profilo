@@ -12,7 +12,7 @@ from app.core import rate_limit
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
-from app.modules.accounts import passwords, tokens
+from app.modules.accounts import confirmation, passwords, tokens
 from app.modules.accounts.models import Account, RefreshToken
 from app.modules.profiles.service import create_profile_for
 
@@ -86,9 +86,12 @@ async def register(
         raise ProblemError(409, "email_taken", EMAIL_TAKEN_DETAIL) from exc
     await create_profile_for(session, account.id, display_name)
     issued = await _new_session(session, account)
+    confirmation_token = await confirmation.issue_token(session, account)
     await session.commit()
     await session.refresh(account)
     log.info("account_registered", account_id=str(account.id))
+    # After the commit: a queue failure must not undo the registration (TASK-005 S5).
+    await confirmation.send_email(account, confirmation_token)
     return issued
 
 
