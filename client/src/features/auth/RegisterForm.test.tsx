@@ -39,7 +39,7 @@ describe('RegisterForm', () => {
 
     await user.click(screen.getByRole('button', { name: 'Załóż konto' }));
 
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/panel'));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kreator'));
     expect(tokenStore.get()).toBe('access-1');
     const body = await requestAt(fetch, 0).json();
     expect(body).toEqual({

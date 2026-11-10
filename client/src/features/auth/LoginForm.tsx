@@ -40,7 +40,7 @@ export function LoginForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate>
+    <form method="post" onSubmit={onSubmit} noValidate>
       {alert && <Alert variant="danger">{alert}</Alert>}
       <Field
         label="E-mail"

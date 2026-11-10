@@ -53,7 +53,7 @@ export function RegisterForm() {
     });
     if (data) {
       signIn(data);
-      router.push('/panel');
+      router.push('/kreator');
       return;
     }
     const problem = error as Problem | undefined;
@@ -70,7 +70,7 @@ export function RegisterForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate>
+    <form method="post" onSubmit={onSubmit} noValidate>
       {alert?.kind === 'email_taken' && (
         <Alert variant="danger">
           Konto z tym adresem już istnieje. <Link href="/logowanie">Zaloguj się</Link>.
