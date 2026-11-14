@@ -56,6 +56,8 @@ services:
 
   api:
     <<: *api
+    # Image decoding is bounded (24 Mpx, two at a time); this caps anything unforeseen.
+    mem_limit: 1536m
 
   worker:
     <<: *api
