@@ -1,7 +1,7 @@
 ---
 id: TASK-012
 title: Layouts Split and Card, accent colours and wizard step 2
-status: IN_PROGRESS
+status: DONE
 priority: high
 iteration: ITER-03
 depends_on: [TASK-011]
@@ -42,7 +42,7 @@ The owner chooses Classic, Split or Card and one of 8 accent colours, and the pu
 
 ## Report
 
-**Implemented, review round 1 fixed, waiting for re-review.** `PublicPage` (was `ClassicPage`) renders the three layouts from shared parts in the fixed order: Classic (banner), Split (image side, content side; image on top on phones), Card (card on the image or the default graphic; up to 6 links as service icons in the card, more as a list in a second card below). Without a background image every layout uses the default graphic in the accent colour (Classic now always has a banner). Text always sits on the page or a card surface, never on the image. Wizard step 2 „Wygląd” (`/kreator/wyglad`) with the layout tiles (mockup miniatures) and the 8 swatches, both radio groups with arrow keys and one tab stop; saved through the editor's autosave, so leaving saves first. The editor has a collapsible „Wygląd” section with the same pickers and a summary („Wizytówka · Bordo”); the live preview follows at once. API: `layout`/`accent` cannot be cleared (`null` → 422, before it was a 500).
+**Done.** Approved after 2 review rounds. `PublicPage` (was `ClassicPage`) renders the three layouts from shared parts in the fixed order: Classic (banner), Split (image side, content side; image on top on phones), Card (card on the image or the default graphic; up to 6 links as service icons in the card, more as a list in a second card below). Without a background image every layout uses the default graphic in the accent colour (Classic now always has a banner). Text always sits on the page or a card surface, never on the image. Wizard step 2 „Wygląd” (`/kreator/wyglad`) with the layout tiles (mockup miniatures) and the 8 swatches, both radio groups with arrow keys and one tab stop; saved through the editor's autosave, so leaving saves first. The editor has a collapsible „Wygląd” section with the same pickers and a summary („Wizytówka · Bordo”); the live preview follows at once. API: `layout`/`accent` cannot be cleared (`null` → 422, before it was a 500).
 
 Acceptance criteria (verified in the browser, by E2E and unit tests):
 - S1 choose layout — met: in the browser Wizytówka + Bordo in step 2, published from step 4 → the public page shows the card on the background image with Bordo buttons and icon links.
