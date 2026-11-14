@@ -1632,7 +1632,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Image. `Cache-Control: public, max-age=31536000, immutable` for public images. */
+            /** @description Image. `Cache-Control: public, max-age=86400` for published images, `private, no-store` for draft images. */
             200: {
                 headers: {
                     [name: string]: unknown;
