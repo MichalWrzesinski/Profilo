@@ -54,6 +54,31 @@ describe('ClassicPage', () => {
     expect(screen.getByText('Studio W')).toBeInTheDocument();
   });
 
+  it('shows links as cards that open safely in a new tab', () => {
+    render(
+      <ClassicPage
+        profile={publicProfile({
+          links: [
+            {
+              id: '00000000-0000-7000-8000-00000000000a',
+              url: 'https://www.linkedin.com/in/anna/',
+              label: 'LinkedIn',
+              service: 'linkedin',
+            },
+          ],
+        })}
+      />,
+    );
+
+    const link = screen.getByRole('link', { name: /LinkedIn/ });
+    expect(link).toHaveAttribute('href', 'https://www.linkedin.com/in/anna/');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'nofollow ugc noopener noreferrer');
+    expect(link).toHaveTextContent('linkedin.com/in/anna');
+    expect(link).toHaveTextContent('(otwiera się w nowej karcie)');
+    expect(screen.getByRole('list', { name: 'Znajdziesz mnie tutaj' })).toBeInTheDocument();
+  });
+
   it('leaves out empty fields without gaps', () => {
     render(<ClassicPage profile={publicProfile({ headline: null })} />);
 
@@ -62,6 +87,7 @@ describe('ClassicPage', () => {
     expect(document.querySelector('.contact')).toBeNull();
     expect(document.querySelector('.meta')).toBeNull();
     expect(document.querySelector('.bio')).toBeNull();
+    expect(document.querySelector('.links')).toBeNull();
     expect(screen.queryByRole('link', { name: /Zadzwoń/ })).toBeNull();
   });
 });

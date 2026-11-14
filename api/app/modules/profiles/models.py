@@ -10,6 +10,7 @@ from sqlalchemy import (
     Integer,
     SmallInteger,
     String,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB
@@ -72,6 +73,48 @@ class Profile(Base):
     draft_updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+SERVICES = (
+    "linkedin",
+    "github",
+    "x",
+    "instagram",
+    "facebook",
+    "youtube",
+    "behance",
+    "dribbble",
+    "tiktok",
+    "other",
+)
+
+
+class ProfileLink(Base):
+    """A link in the draft (PRF-BR-11); `position` orders them (unique per profile, checked at
+    commit so the order can be rewritten in one transaction)."""
+
+    __tablename__ = "profile_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "profile_id",
+            "position",
+            name="uq_profile_links_profile_position",
+            deferrable=True,
+            initially="DEFERRED",
+        ),
+        CheckConstraint("char_length(label) BETWEEN 1 AND 40", name="label_length"),
+        CheckConstraint("char_length(url) <= 2000 AND url ~ '^https?://'", name="url_value"),
+        CheckConstraint(_in("service", SERVICES), name="service_value"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid7)
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("profiles.id", ondelete="CASCADE"), index=True
+    )
+    position: Mapped[int] = mapped_column(SmallInteger)
+    label: Mapped[str] = mapped_column(String(40))
+    url: Mapped[str] = mapped_column(String(2000))
+    service: Mapped[str] = mapped_column(String(16))
 
 
 class PublishedProfile(Base):

@@ -2,7 +2,8 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 
 from app.core.schemas import ApiModel
 
@@ -104,3 +105,32 @@ class PublicProfileOut(ApiModel):
     canonical_url: str
     published_at: datetime
     content: ProfileContentOut
+
+
+class LinkInput(ApiModel):
+    url: str = Field(max_length=2000)
+    label: str | None = Field(default=None, min_length=1, max_length=40)
+
+
+class LinkPatch(ApiModel):
+    """At least one field (contract: minProperties 1); `url` cannot be cleared."""
+
+    url: str | None = Field(default=None, max_length=2000)
+    label: str | None = Field(default=None, min_length=1, max_length=40)
+
+    @field_validator("url")
+    @classmethod
+    def _url_not_null(cls, value: str | None) -> str | None:
+        if value is None:
+            raise PydanticCustomError("invalid_url", "Wpisz adres strony.")
+        return value
+
+    @model_validator(mode="after")
+    def _has_a_change(self) -> LinkPatch:
+        if not self.model_fields_set:
+            raise PydanticCustomError("missing", "Podaj adres albo etykietę.")
+        return self
+
+
+class LinkOrder(ApiModel):
+    link_ids: list[uuid.UUID] = Field(max_length=20)

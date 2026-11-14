@@ -15,10 +15,14 @@ from app.core import rate_limit
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
+from app.modules.profiles import links as link_rules
 from app.modules.profiles import nicks
-from app.modules.profiles.models import Profile, PublishedProfile, ReservedNick
+from app.modules.profiles.models import Profile, ProfileLink, PublishedProfile, ReservedNick
 from app.modules.profiles.schemas import (
     DraftPatch,
+    LinkInput,
+    LinkOut,
+    LinkPatch,
     NickAvailabilityOut,
     OwnerProfileOut,
     ProfileContentOut,
@@ -50,8 +54,22 @@ async def get_own_profile(
     return profile
 
 
-def _content(profile: Profile) -> ProfileContentOut:
+async def _links(session: AsyncSession, profile: Profile) -> list[ProfileLink]:
+    return list(
+        await session.scalars(
+            select(ProfileLink)
+            .where(ProfileLink.profile_id == profile.id)
+            .order_by(ProfileLink.position)
+        )
+    )
+
+
+def _content(profile: Profile, links: list[ProfileLink]) -> ProfileContentOut:
     return ProfileContentOut(
+        links=[
+            LinkOut(id=link.id, url=link.url, label=link.label, service=link.service)
+            for link in links
+        ],
         display_name=profile.display_name,
         headline=profile.headline,
         bio=profile.bio,
@@ -81,7 +99,7 @@ async def owner_out(session: AsyncSession, profile: Profile) -> OwnerProfileOut:
         version=profile.version,
         draft_updated_at=profile.draft_updated_at,
         public_url=_public_url(profile.nick) if published and profile.nick else None,
-        draft=_content(profile),
+        draft=_content(profile, await _links(session, profile)),
     )
 
 
@@ -334,7 +352,9 @@ async def publish(
         and snapshot.draft_version == profile.version
     )
     if not unchanged:
-        content = _content(profile).model_dump(mode="json", by_alias=True)
+        content = _content(profile, await _links(session, profile)).model_dump(
+            mode="json", by_alias=True
+        )
         now = datetime.now(UTC)
         if snapshot is None:
             snapshot = PublishedProfile(profile_id=profile.id)
@@ -383,3 +403,118 @@ async def get_public_profile(session: AsyncSession, nick: str) -> PublicProfileO
         published_at=snapshot.published_at,
         content=ProfileContentOut.model_validate(snapshot.content),
     )
+
+
+# --- links (PRF-BR-11) ----------------------------------------------------------------
+
+
+def _invalid_url() -> ProblemError:
+    return ProblemError(
+        422,
+        "validation_error",
+        errors=[{"field": "url", "code": "invalid_url", "message": link_rules.INVALID_URL}],
+    )
+
+
+def _url(raw: str) -> tuple[str, str]:
+    try:
+        url = link_rules.normalise_url(raw)
+    except link_rules.InvalidUrlError:
+        raise _invalid_url() from None
+    return url, link_rules.detect_service(url)
+
+
+def _touch(profile: Profile) -> None:
+    """A link change is a draft change: new version, unpublished changes (ADR 0002)."""
+    profile.version += 1
+    profile.draft_updated_at = datetime.now(UTC)
+
+
+async def add_link(session: AsyncSession, account_id: uuid.UUID, data: LinkInput) -> Profile:
+    profile = await get_own_profile(session, account_id, lock=True)
+    existing = await _links(session, profile)
+    if len(existing) >= link_rules.MAX_LINKS:
+        raise ProblemError(
+            409,
+            "links_limit_reached",
+            "Możesz dodać najwyżej 20 linków. Usuń któryś, aby dodać nowy.",
+        )
+    url, service = _url(data.url)
+    session.add(
+        ProfileLink(
+            profile_id=profile.id,
+            position=max((link.position for link in existing), default=-1) + 1,
+            url=url,
+            service=service,
+            label=data.label or link_rules.default_label(url, service),
+        )
+    )
+    _touch(profile)
+    await session.commit()
+    return profile
+
+
+async def update_link(
+    session: AsyncSession, account_id: uuid.UUID, link_id: uuid.UUID, patch: LinkPatch
+) -> Profile:
+    profile = await get_own_profile(session, account_id, lock=True)
+    link = await session.scalar(
+        select(ProfileLink).where(ProfileLink.id == link_id, ProfileLink.profile_id == profile.id)
+    )
+    if link is None:
+        raise ProblemError(404, "not_found")
+    changes = patch.model_dump(exclude_unset=True)
+    if "label" in changes and not changes["label"]:
+        raise ProblemError(
+            422,
+            "validation_error",
+            errors=[{"field": "label", "code": "required", "message": "Wpisz etykietę."}],
+        )
+    changed = False
+    if changes.get("url") is not None:
+        url, service = _url(changes["url"])
+        if (url, service) != (link.url, link.service):
+            link.url, link.service = url, service
+            changed = True
+    if changes.get("label") and changes["label"] != link.label:
+        link.label = changes["label"]
+        changed = True
+    if changed:
+        _touch(profile)
+    await session.commit()
+    return profile
+
+
+async def delete_link(session: AsyncSession, account_id: uuid.UUID, link_id: uuid.UUID) -> None:
+    """Idempotent: deleting a missing (or someone else's) link does nothing."""
+    profile = await get_own_profile(session, account_id, lock=True)
+    link = await session.scalar(
+        select(ProfileLink).where(ProfileLink.id == link_id, ProfileLink.profile_id == profile.id)
+    )
+    if link is not None:
+        await session.delete(link)
+        _touch(profile)
+    await session.commit()
+
+
+async def reorder_links(
+    session: AsyncSession, account_id: uuid.UUID, link_ids: list[uuid.UUID]
+) -> Profile:
+    profile = await get_own_profile(session, account_id, lock=True)
+    existing = {link.id: link for link in await _links(session, profile)}
+    if len(link_ids) != len(set(link_ids)) or set(link_ids) != set(existing):
+        raise ProblemError(
+            422,
+            "link_order_mismatch",
+            "Lista linków się zmieniła — odśwież stronę.",
+            errors=[],
+        )
+    changed = False
+    for position, link_id in enumerate(link_ids):
+        if existing[link_id].position != position:
+            existing[link_id].position = position  # unique check deferred to commit
+            changed = True
+    if changed:
+        _touch(profile)
+    await session.commit()
+    return profile
