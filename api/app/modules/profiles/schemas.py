@@ -104,3 +104,17 @@ class PublicProfileOut(ApiModel):
     canonical_url: str
     published_at: datetime
     content: ProfileContentOut
+
+
+class LinkInput(ApiModel):
+    url: str = Field(max_length=2000)
+    label: str | None = Field(default=None, min_length=1, max_length=40)
+
+
+class LinkPatch(ApiModel):
+    url: str | None = Field(default=None, max_length=2000)
+    label: str | None = Field(default=None, min_length=1, max_length=40)
+
+
+class LinkOrder(ApiModel):
+    link_ids: list[uuid.UUID] = Field(max_length=20)

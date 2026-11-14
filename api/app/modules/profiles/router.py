@@ -1,6 +1,7 @@
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Path, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import CurrentAccount
@@ -8,6 +9,9 @@ from app.core.db import get_session
 from app.modules.profiles import service
 from app.modules.profiles.schemas import (
     DraftPatch,
+    LinkInput,
+    LinkOrder,
+    LinkPatch,
     NickAvailabilityOut,
     NickRequest,
     NickSuggestionOut,
@@ -19,6 +23,7 @@ from app.modules.profiles.schemas import (
 router = APIRouter(prefix="/api/v1")
 
 DbSession = Annotated[AsyncSession, Depends(get_session)]
+LinkId = Annotated[uuid.UUID, Path(alias="linkId")]
 
 
 @router.get("/me/profile", tags=["profile"])
@@ -75,3 +80,33 @@ async def get_public_profile(nick: str, session: DbSession, response: Response) 
     # PUB-BR-6/PRF-BR-17: unpublishing must take effect on the next request.
     response.headers["Cache-Control"] = "no-store"
     return await service.get_public_profile(session, nick[:60])
+
+
+@router.post("/me/profile/links", tags=["links"], status_code=status.HTTP_201_CREATED)
+async def add_link(
+    payload: LinkInput, account: CurrentAccount, session: DbSession, response: Response
+) -> OwnerProfileOut:
+    out = await service.owner_out(session, await service.add_link(session, account.id, payload))
+    response.headers["Location"] = f"/api/v1/me/profile/links/{out.draft.links[-1].id}"
+    return out
+
+
+@router.put("/me/profile/links/order", tags=["links"])
+async def reorder_links(
+    payload: LinkOrder, account: CurrentAccount, session: DbSession
+) -> OwnerProfileOut:
+    profile = await service.reorder_links(session, account.id, payload.link_ids)
+    return await service.owner_out(session, profile)
+
+
+@router.patch("/me/profile/links/{linkId}", tags=["links"])
+async def update_link(
+    link_id: LinkId, payload: LinkPatch, account: CurrentAccount, session: DbSession
+) -> OwnerProfileOut:
+    profile = await service.update_link(session, account.id, link_id, payload)
+    return await service.owner_out(session, profile)
+
+
+@router.delete("/me/profile/links/{linkId}", tags=["links"], status_code=status.HTTP_204_NO_CONTENT)
+async def delete_link(link_id: LinkId, account: CurrentAccount, session: DbSession) -> None:
+    await service.delete_link(session, account.id, link_id)
