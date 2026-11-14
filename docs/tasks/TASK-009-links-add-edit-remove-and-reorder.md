@@ -39,4 +39,14 @@ The owner manages up to 20 labelled links in a chosen order, shown as link cards
 - When the owner tries to add a 21st link, then 409 `links_limit_reached` is shown.
 
 ## Report
-Filled in by development after the task.
+
+**Implemented, waiting for review.** API: `POST /me/profile/links` (201 with `Location`), `PATCH` and `DELETE /me/profile/links/{linkId}` (delete idempotent), `PUT /me/profile/links/order` (exactly the existing ids, else 422 `link_order_mismatch`); URL rules in `profiles/links.py` (`https://` added when missing, only http/https, no spaces or control characters, no other schemes such as `javascript:`/`mailto:`/`data:`, no `user@host`, a real domain; 422 `invalid_url` with the mockup message); service detection for the nine services including subdomains (`pl.linkedin.com`, `youtu.be`, `twitter.com` → X), default label = service name or domain; at most 20 (409 `links_limit_reached`); every change bumps the draft version so „Masz nieopublikowane zmiany” appears; links are in the published snapshot. Editor: „Linki” section with the empty state, counter, inline add/edit form, delete, drag and drop with mouse and keyboard (Space, arrows, Space; Polish screen reader instructions and announcements), ↑/↓ buttons instead of the handle on phones. Link changes wait for pending autosaves and autosave waits for them (`useAutosave.exclusive`), so they never send the same draft version. Public page: „Znajdziesz mnie tutaj” with link cards (service tile, label, short address, arrow), new tab, `rel="nofollow ugc noopener noreferrer"`, „(otwiera się w nowej karcie)” for screen readers.
+
+Acceptance criteria (verified in the browser and by tests):
+- S1 add and reorder — met: „linkedin.com/in/anna-wisniewska” without a label was saved as `https://linkedin.com/in/anna-wisniewska`, label „LinkedIn”, tile „in”; Behance moved to the top with the keyboard; after „Opublikuj zmiany” the public page lists Behance first (also an API test with three links).
+- S2 edit and remove — met: label edit, URL change (service follows), delete (API and client tests).
+- S3 invalid link — met: „mój portfolio.pl” showed „To nie wygląda na adres strony. Sprawdź, czy nie ma w nim spacji.” under the field; `javascript:alert(1)` → 422 `invalid_url` (tests); the 21st link → 409 `links_limit_reached`, and the editor disables „Dodaj link” at 20.
+
+Checks: api 229 tests, 99 %; client 230 tests, 95.4 % branches; contract 19 paths.
+
+Decisions: service tiles are short marks („in”, „GH”, „Bē” …) as in the design system, no brand logos; a globe for other sites; URL path and query are kept as typed (only scheme and host are lower-cased); deleting a link does not ask for confirmation (as in the mockup). New dependencies: `@dnd-kit/core` 6.3.1, `@dnd-kit/sortable` 10.0.0, `@dnd-kit/utilities` 3.2.2 (the stack in AGENTS.md).
