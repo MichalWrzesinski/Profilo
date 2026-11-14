@@ -80,6 +80,14 @@ class DraftPatch(ApiModel):
     layout: Layout | None = None
     accent: Accent | None = None
 
+    @field_validator("layout", "accent")
+    @classmethod
+    def _not_null(cls, value: str | None) -> str | None:
+        # Optional to send, but cannot be cleared: the page always has a layout and a colour.
+        if value is None:
+            raise PydanticCustomError("required", "Wybierz jedną z opcji.")
+        return value
+
 
 class NickRequest(ApiModel):
     nick: str = Field(max_length=60)
