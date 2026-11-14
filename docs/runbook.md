@@ -79,5 +79,6 @@ Never change code, configuration or data on the server by hand (deployment stand
 - Staging sends `X-Robots-Tag: noindex, nofollow`.
 - Container logs rotate at 10 MB × 14 files per service; Caddy logs contain visitor IPs, the API logs do not.
 - Docker-published ports bypass ufw; the stack publishes only 80 and 443.
+- User images live in the `media` volume (`/data/media` in api and worker). Caddy limits request bodies to 1 MB, 11 MB for image uploads. The volume is not backed up on staging; production backups come with TASK-021.
 - Caddy is recreated on every new release (its configuration directory is the release directory), causing a short gap; acceptable on staging, production needs zero downtime (TASK-021).
 - Secrets added later (Brevo, Sentry, Storage Box) are delivered by the deploy workflows (AGENTS.md).

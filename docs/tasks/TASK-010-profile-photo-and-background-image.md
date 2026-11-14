@@ -41,4 +41,14 @@ The owner uploads a square-cropped profile photo and an optional background imag
 High-risk change (file upload): security review per code-review standard.
 
 ## Report
-Filled in by development after the task.
+
+**Implemented, waiting for review (security pass included).** API: `media` module (Pillow processing in a worker thread, fsspec storage on the `media` volume, `images` table, upload limit 30/h per account), `PUT /me/profile/images/{kind}` (length checked before the form is parsed, 413 `file_too_large`, 415 `unsupported_image`, 422 `image_too_small` below 128 × 128 px for the photo and 640 × 200 px for the background), `DELETE /me/profile/images/{kind}`, `GET /media/{imageId}/{size}.webp` (owner with the access token, or a visible published page; the same 404 otherwise; `public, max-age=31536000, immutable` for published images, `private, no-store` for drafts); avatar/background in the draft and the snapshot; replaced or removed images are deleted once neither the draft nor the published page shows them. Infra: `media` volume in both stacks, `/data/media` owned by the app user, Caddy body limit 1 MB (11 MB for image uploads). Client: photo crop dialog (`react-easy-crop`, drag, zoom slider, arrow keys, Escape), JPEG of at most 1024 px made in the browser (no EXIF), background uploaded as chosen, progress bar, errors under the field, remove buttons, draft images shown with the access token (blob URLs); public page: photo with `srcset` 128/256/512, background as the Classic banner with `srcset` 960/1600/2400; without images the initials and the page without a banner stay.
+
+Acceptance criteria (verified in the browser, with curl and by tests):
+- S1 upload photo — met: an 8.8 MB JPEG made in the browser was cropped and saved (1024 × 1024 sent, 480 kB), the photo shows in the editor and, after „Opublikuj zmiany”, on the public page with `srcset` 128/256/512; an API test uploads a 6–10 MB JPEG with EXIF (camera, GPS, orientation) and checks that every variant is WebP of the right size without EXIF.
+- S2 visibility — met: a draft image returns 404 to visitors and to other owners and 200 to its owner; after publishing it is public; after hiding the page it returns 404 to visitors and still 200 to the owner (API test).
+- S3 invalid file — met: a PDF renamed to `.jpg` showed „To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik.” and the previous background stayed (browser and API test); more than 10 MB → 413 `file_too_large` (API test; the editor refuses such files before uploading).
+
+Checks: api 279 tests, 99 %; client 277 tests, 95.5 % branches; contract 21 paths; `alembic check` clean.
+
+Decisions: minimum sizes 128 × 128 px (photo) and 640 × 200 px (background); backgrounds are never upscaled (a smaller one is served at its own width for every size); the server crops the photo to a square in the middle if the browser did not; transparency is kept (WebP with alpha); colour profiles are dropped (sRGB assumed); the Classic page shows a banner only when a background is set. New dependencies: Pillow 13.0.0, fsspec 2026.9.0, python-multipart 0.0.33 (api), react-easy-crop 6.2.4 (client).
