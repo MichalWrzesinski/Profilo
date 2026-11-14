@@ -1,38 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
+import { confirmationPath, open, TEST_PASSWORD } from './helpers';
 
 // Main flow (docs/design/flows.md): register → nick → content → preview → confirm e-mail
 // (Mailpit) → publish → public page; the preview must match the public page.
 
-const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025';
 const run = Date.now().toString(36);
 const email = `e2e-${run}@example.pl`;
 const name = `Ewa Testowa ${run}`;
-
-/** Open a page and wait until React has taken it over (forms would submit natively before). */
-async function open(page: Page, path: string) {
-  await page.goto(path);
-  await page.locator('html[data-hydrated]').waitFor();
-}
-
-async function confirmationPath(): Promise<string> {
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    const search = await fetch(
-      `${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`,
-    );
-    const { messages } = (await search.json()) as { messages: { ID: string }[] };
-    if (messages.length) {
-      const message = (await (
-        await fetch(`${MAILPIT}/api/v1/message/${messages[0]!.ID}`)
-      ).json()) as {
-        Text: string;
-      };
-      const match = /\/potwierdz-email\?token=[\w-]+/.exec(message.Text);
-      if (match) return match[0];
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-  throw new Error(`No confirmation e-mail for ${email}`);
-}
 
 /**
  * The rendered public page component. `style` is compared without spaces and a trailing
@@ -52,7 +26,7 @@ test('a new owner publishes a page that looks exactly like the preview', async (
   await open(page, '/rejestracja');
   await page.getByLabel('Imię i nazwisko lub pseudonim').fill(name);
   await page.getByLabel('E-mail do logowania').fill(email);
-  await page.getByLabel('Hasło', { exact: true }).fill('zielony-kubek-na-biurku-e2e');
+  await page.getByLabel('Hasło', { exact: true }).fill(TEST_PASSWORD);
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Załóż konto' }).click();
   await expect(page).toHaveURL(/\/kreator$/);
@@ -62,6 +36,12 @@ test('a new owner publishes a page that looks exactly like the preview', async (
   const nick = await page.getByLabel('Adres Twojej strony').inputValue();
   expect(nick).toMatch(/^ewa-testowa-/);
   await page.getByRole('button', { name: 'Dalej →' }).click();
+
+  // Step 2: layout and colour.
+  await expect(page).toHaveURL(/\/kreator\/wyglad$/);
+  await page.getByRole('radio', { name: /Dzielony/ }).click();
+  await page.getByRole('radio', { name: 'Morski' }).click();
+  await page.getByRole('button', { name: 'Dalej: treść →' }).click();
   await expect(page).toHaveURL(/\/kreator\/tresc$/);
   await expect(page.getByLabel('Krok 3 z 4: Treść')).toBeVisible();
 
@@ -87,7 +67,7 @@ test('a new owner publishes a page that looks exactly like the preview', async (
   await expect(page.getByText('Najpierw potwierdź e-mail')).toBeVisible();
 
   // Confirm with the link from the e-mail, then publish.
-  await open(page, await confirmationPath());
+  await open(page, await confirmationPath(email));
   await expect(page.getByText(/potwierdzony/i)).toBeVisible();
   await open(page, '/kreator/podglad');
   const stepPreview = page.frameLocator('iframe[title="Podgląd strony"]');
@@ -103,6 +83,7 @@ test('a new owner publishes a page that looks exactly like the preview', async (
   // The public page is the preview, element for element.
   await page.goto(`/user/${nick}`);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(name);
+  await expect(page.locator('.pp')).toHaveClass(/pp-split/);
   await expect(page.getByText('Projektantka usług publicznych')).toBeVisible();
   await expect(page.getByRole('link', { name: /LinkedIn/ })).toHaveAttribute(
     'href',
