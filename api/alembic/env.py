@@ -6,6 +6,7 @@ from alembic import context
 from app.core.db import Base
 from app.core.settings import get_settings
 from app.modules.accounts import models as _accounts  # noqa: F401  (register tables)
+from app.modules.media import models as _media  # noqa: F401
 from app.modules.profiles import models as _profiles  # noqa: F401
 
 target_metadata = Base.metadata

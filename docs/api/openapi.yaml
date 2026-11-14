@@ -474,7 +474,7 @@ paths:
         - { name: imageId, in: path, required: true, schema: { type: string, format: uuid } }
         - { name: size, in: path, required: true, schema: { type: string, enum: ['128', '256', '512', '960', '1600', '2400'] } }
       responses:
-        '200': { description: 'Image. `Cache-Control: public, max-age=31536000, immutable` for public images.', content: { image/webp: { schema: { type: string, contentMediaType: image/webp } } } }
+        '200': { description: 'Image. `Cache-Control: public, max-age=86400` for published images, `private, no-store` for draft images.', content: { image/webp: { schema: { type: string, contentMediaType: image/webp } } } }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /health:

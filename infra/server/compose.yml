@@ -22,6 +22,8 @@ x-api: &api
   restart: unless-stopped
   logging: *logging
   networks: [internal]
+  volumes:
+    - media:/data/media
   depends_on:
     db: { condition: service_healthy }
     valkey: { condition: service_healthy }
@@ -54,6 +56,8 @@ services:
 
   api:
     <<: *api
+    # Image decoding is bounded (24 Mpx, two at a time); this caps anything unforeseen.
+    mem_limit: 1536m
 
   worker:
     <<: *api
@@ -129,6 +133,7 @@ networks:
         - subnet: 172.28.0.0/24
 
 volumes:
+  media:
   pgdata:
   valkeydata:
   caddy_data:

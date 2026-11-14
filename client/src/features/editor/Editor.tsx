@@ -13,6 +13,7 @@ import { draftStorageKey } from '@/lib/draftStorage';
 import { useSession } from '@/lib/session';
 import styles from './Editor.module.css';
 import { LIMITS, charCount, draftKeyOf, type OwnerProfile, type Values } from './fields';
+import { ImagesSection } from './ImagesSection';
 import { LinksSection } from './LinksSection';
 import { useAutosave, type SaveStatus } from './useAutosave';
 
@@ -282,6 +283,7 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
               <h3 id="ed-about">O mnie</h3>
             </header>
             <div className="body">
+              <ImagesSection profile={profile} run={draft.exclusive} busy={draft.busy} />
               <div className="field">
                 <label className="field-label" htmlFor="ed-displayName">
                   Imię i nazwisko lub pseudonim

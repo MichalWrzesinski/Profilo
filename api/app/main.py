@@ -11,6 +11,7 @@ from app.core.request_context import RequestContextMiddleware
 from app.core.settings import get_settings
 from app.core.valkey import close_valkey
 from app.modules.accounts.router import router as accounts_router
+from app.modules.media.router import router as media_router
 from app.modules.profiles.router import router as profiles_router
 
 
@@ -39,6 +40,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(accounts_router)
     app.include_router(profiles_router)
+    app.include_router(media_router)
     return app
 
 

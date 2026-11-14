@@ -12,6 +12,7 @@ x-api: &api
     - ./api:/app
     - ./docs/api/openapi.yaml:/contract/openapi.yaml:ro
     - ./docs/api/nick-cases.json:/contract/nick-cases.json:ro
+    - media:/data/media
   depends_on:
     db: { condition: service_healthy }
     valkey: { condition: service_healthy }
@@ -117,6 +118,7 @@ services:
       GIT_CONFIG_VALUE_0: /repo
 
 volumes:
+  media:
   pgdata:
   client_node_modules:
   client_next:

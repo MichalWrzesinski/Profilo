@@ -5,6 +5,14 @@ import { Logo } from '@/components/Brand';
 import { LinkIcon, shortUrl } from '@/components/LinkIcon';
 import { formatPhone } from '@/lib/phone';
 import { ABUSE_EMAIL, initials, mailtoHref, type PublicProfile } from '@/lib/publicProfile';
+import styles from './ClassicPage.module.css';
+
+/** `srcset` from the size → URL map of an image (sizes are widths in px). */
+function srcSet(urls: Record<string, string>): string {
+  return Object.entries(urls)
+    .map(([size, url]) => `${url} ${size}w`)
+    .join(', ');
+}
 
 /**
  * Public page, Classic layout without a banner (PUB-BR-1). Fixed order (PUB-BR-4): identity,
@@ -14,15 +22,42 @@ import { ABUSE_EMAIL, initials, mailtoHref, type PublicProfile } from '@/lib/pub
 export function ClassicPage({ profile }: { profile: PublicProfile }) {
   const { content, canonicalUrl } = profile;
   const work = [content.position, content.company].filter(Boolean).join(', ');
+  const { avatar, background } = content;
   const accent = { '--page-accent': `var(--page-accent-${content.accent})` } as CSSProperties;
   const abuse = mailtoHref(ABUSE_EMAIL, `Zgłoszenie nadużycia: ${canonicalUrl}`);
   return (
     <div className="pp pp-classic" style={accent}>
-      <main className="main no-banner">
+      {background && (
+        <div className={`banner ${styles.banner}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- variants come from /media */}
+          <img
+            src={background.urls['1600']}
+            srcSet={srcSet(background.urls)}
+            sizes="100vw"
+            alt=""
+            fetchPriority="high"
+          />
+        </div>
+      )}
+      <main className={`main${background ? '' : ' no-banner'}`}>
         <div className="head">
-          <div className="avatar" role="img" aria-label={content.displayName}>
-            {initials(content.displayName)}
-          </div>
+          {avatar ? (
+            <div className="avatar">
+              {/* eslint-disable-next-line @next/next/no-img-element -- variants come from /media */}
+              <img
+                src={avatar.urls['256']}
+                srcSet={srcSet(avatar.urls)}
+                sizes="(max-width: 860px) 96px, 112px"
+                alt={content.displayName}
+                width={112}
+                height={112}
+              />
+            </div>
+          ) : (
+            <div className="avatar" role="img" aria-label={content.displayName}>
+              {initials(content.displayName)}
+            </div>
+          )}
           <h1>{content.displayName}</h1>
           {content.headline && <p className="headline">{content.headline}</p>}
           {(work || content.city) && (

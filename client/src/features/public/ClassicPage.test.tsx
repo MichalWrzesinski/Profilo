@@ -79,6 +79,31 @@ describe('ClassicPage', () => {
     expect(screen.getByRole('list', { name: 'Znajdziesz mnie tutaj' })).toBeInTheDocument();
   });
 
+  it('shows the photo and the background in responsive sizes', () => {
+    render(
+      <ClassicPage
+        profile={publicProfile({
+          avatar: {
+            id: 'a1',
+            urls: { '128': '/media/a1/128.webp', '256': '/media/a1/256.webp', '512': '/media/a1/512.webp' },
+          },
+          background: {
+            id: 'b1',
+            urls: { '960': '/media/b1/960.webp', '1600': '/media/b1/1600.webp', '2400': '/media/b1/2400.webp' },
+          },
+        })}
+      />,
+    );
+
+    const photo = screen.getByRole('img', { name: 'Anna Wiśniewska' });
+    expect(photo.tagName).toBe('IMG');
+    expect(photo).toHaveAttribute('srcset', '/media/a1/128.webp 128w, /media/a1/256.webp 256w, /media/a1/512.webp 512w');
+    const banner = document.querySelector('.banner img');
+    expect(banner).toHaveAttribute('src', '/media/b1/1600.webp');
+    expect(banner).toHaveAttribute('alt', '');
+    expect(document.querySelector('.no-banner')).toBeNull();
+  });
+
   it('leaves out empty fields without gaps', () => {
     render(<ClassicPage profile={publicProfile({ headline: null })} />);
 
