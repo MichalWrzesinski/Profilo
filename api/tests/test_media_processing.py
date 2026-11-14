@@ -118,7 +118,9 @@ def test_too_small_images_are_refused(kind: processing.Kind, size: tuple[int, in
         processing.process(images.jpeg(*size), kind)
 
 
-def test_colour_profiles_are_converted_to_srgb(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_images_with_a_colour_profile_go_through_conversion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[str] = []
     original = ImageCms.profileToProfile
 
@@ -127,6 +129,8 @@ def test_colour_profiles_are_converted_to_srgb(monkeypatch: pytest.MonkeyPatch) 
         return original(*args, **kwargs)  # type: ignore[arg-type]
 
     monkeypatch.setattr(ImageCms, "profileToProfile", spy)
+    # Pillow can only build sRGB profiles, so this proves the conversion runs, not that a
+    # wide-gamut colour changes; LittleCMS itself is trusted for the maths.
 
     result = processing.process(images.jpeg_with_profile(), "avatar")
 

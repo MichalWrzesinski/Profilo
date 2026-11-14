@@ -3,7 +3,9 @@
 import asyncio
 import secrets
 import uuid
+from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from typing import Literal
 
 from sqlalchemy import select
@@ -12,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import rate_limit
 from app.core.errors import ProblemError
 from app.core.logging import log
+from app.core.valkey import get_valkey
 from app.modules.media import processing, storage
 from app.modules.media.models import Image
 
@@ -20,6 +23,35 @@ UPLOADS = rate_limit.Limit("image_upload", max_hits=30, window_seconds=3600)
 # Decoding takes up to ~100 MB and a second of CPU per image: at most two at a time per API
 # process, in their own threads, so uploads cannot starve image serving (default pool).
 _PROCESSING = ThreadPoolExecutor(max_workers=2, thread_name_prefix="image")
+_SLOT_SECONDS = 120
+
+
+@asynccontextmanager
+async def upload_slot(account_id: uuid.UUID) -> AsyncIterator[None]:
+    """One upload per account at a time: queued uploads each hold up to 10 MB in memory.
+    Taken before the body is read. Fails open when Valkey is down (like rate limits)."""
+    key = f"upload:{account_id}"
+    try:
+        acquired = await get_valkey().set(key, "1", nx=True, ex=_SLOT_SECONDS)
+    except Exception as exc:  # fail open, as in app.core.rate_limit
+        log.error("upload_slot_unavailable", error=type(exc).__name__)
+        acquired = None
+        yield
+        return
+    if not acquired:
+        raise ProblemError(
+            429,
+            "rate_limited",
+            "Poczekaj, aż poprzedni obraz się wgra.",
+            headers={"Retry-After": "5"},
+        )
+    try:
+        yield
+    finally:
+        try:
+            await get_valkey().delete(key)
+        except Exception as exc:  # the key expires on its own
+            log.error("upload_slot_release_failed", error=type(exc).__name__)
 
 
 def urls_for(image_id: uuid.UUID, kind: Kind) -> dict[str, str]:

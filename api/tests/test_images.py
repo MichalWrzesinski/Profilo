@@ -304,3 +304,57 @@ async def test_partly_written_variants_are_removed(
     assert response.status_code == 500
     assert await storage.get(stored[0]) is None
     assert await image_count() == 0
+
+
+async def test_one_upload_per_account_at_a_time(client: AsyncClient) -> None:
+    from app.core.valkey import get_valkey
+
+    auth = await owner(client)
+    me = (await client.get("/api/v1/me", headers=auth)).json()
+    await get_valkey().set(f"upload:{me['id']}", "1", ex=60)  # another upload is running
+
+    busy = await upload(client, auth, images.jpeg())
+    await get_valkey().delete(f"upload:{me['id']}")
+    free = await upload(client, auth, images.jpeg())
+
+    assert busy.status_code == 429
+    assert busy.json()["detail"] == "Poczekaj, aż poprzedni obraz się wgra."
+    assert free.status_code == 200
+    assert await get_valkey().get(f"upload:{me['id']}") is None  # released
+
+
+async def test_uploads_work_when_valkey_is_down(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.modules.media import service
+
+    auth = await owner(client)
+
+    class Down:
+        async def set(self, *_: object, **__: object) -> None:
+            raise ConnectionError
+
+    monkeypatch.setattr(service, "get_valkey", lambda: Down())
+
+    assert (await upload(client, auth, images.jpeg())).status_code == 200
+
+
+async def test_slot_release_failure_is_only_logged(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.valkey import get_valkey
+    from app.modules.media import service
+
+    auth = await owner(client)
+    real = get_valkey()
+
+    class Flaky:
+        async def set(self, *args: object, **kwargs: object) -> object:
+            return await real.set(*args, **kwargs)  # type: ignore[arg-type]
+
+        async def delete(self, *_: object) -> None:
+            raise ConnectionError
+
+    monkeypatch.setattr(service, "get_valkey", lambda: Flaky())
+
+    assert (await upload(client, auth, images.jpeg())).status_code == 200

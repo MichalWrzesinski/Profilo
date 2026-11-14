@@ -170,8 +170,9 @@ async def _read_upload(request: Request) -> bytes:
 async def upload_image(
     kind: ImageKind, request: Request, account: CurrentAccount, session: DbSession
 ) -> OwnerProfileOut:
-    data = await _read_upload(request)
-    profile = await service.set_image(session, account.id, kind, data)
+    async with media.upload_slot(account.id):
+        data = await _read_upload(request)
+        profile = await service.set_image(session, account.id, kind, data)
     return await service.owner_out(session, profile)
 
 
