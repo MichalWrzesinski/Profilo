@@ -14,6 +14,7 @@ from app.core.db import get_sessionmaker
 from app.modules.accounts.models import Account
 from app.modules.media import storage
 from app.modules.media.models import Image as ImageRow
+from app.modules.profiles.models import Profile
 from tests import images
 
 pytestmark = pytest.mark.usefixtures("clean_state")
@@ -113,10 +114,49 @@ async def test_published_images_are_public_until_the_page_is_hidden(client: Asyn
     as_owner = await client.get(url, headers=auth)
 
     assert public.status_code == 200
-    assert public.headers["cache-control"] == "public, max-age=31536000, immutable"
+    assert public.headers["cache-control"] == "public, max-age=86400"
     assert page["content"]["avatar"]["urls"]["128"] == url
     assert hidden.status_code == 404
     assert as_owner.status_code == 200
+
+
+async def test_blocked_page_hides_its_images_from_visitors(client: AsyncClient) -> None:
+    auth = await owner(client)
+    url = (await upload(client, auth, images.jpeg())).json()["draft"]["avatar"]["urls"]["128"]
+    await publish(client, auth)
+    async with get_sessionmaker()() as session:
+        await session.execute(update(Profile).values(blocked_at=datetime.now(UTC)))
+        await session.commit()
+
+    assert (await client.get(url)).status_code == 404
+    assert (await client.get(url, headers=auth)).status_code == 200
+
+
+async def test_files_are_removed_when_saving_fails(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.modules.profiles import service
+
+    auth = await owner(client)
+    stored: list[str] = []
+    original_put = storage.put
+
+    async def put(key: str, data: bytes) -> None:
+        stored.append(key)
+        await original_put(key, data)
+
+    async def broken(*_: object, **__: object) -> None:
+        raise RuntimeError("database gone")
+
+    monkeypatch.setattr(storage, "put", put)
+    monkeypatch.setattr(service, "_unused_images", broken)
+
+    response = await upload(client, auth, images.jpeg())
+
+    assert response.status_code == 500
+    assert stored
+    assert [await storage.get(key) for key in stored] == [None] * len(stored)
+    assert await image_count() == 0
 
 
 async def test_renamed_pdf_is_refused_and_the_previous_image_stays(client: AsyncClient) -> None:
@@ -242,3 +282,25 @@ async def test_upload_needs_login(client: AsyncClient) -> None:
     response = await client.put(AVATAR, files={"file": ("a.jpg", images.jpeg(), "image/jpeg")})
 
     assert response.status_code == 401
+
+
+async def test_partly_written_variants_are_removed(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    auth = await owner(client)
+    stored: list[str] = []
+    original_put = storage.put
+
+    async def flaky(key: str, data: bytes) -> None:
+        if stored:
+            raise OSError("disk full")
+        stored.append(key)
+        await original_put(key, data)
+
+    monkeypatch.setattr(storage, "put", flaky)
+
+    response = await upload(client, auth, images.jpeg())
+
+    assert response.status_code == 500
+    assert await storage.get(stored[0]) is None
+    assert await image_count() == 0

@@ -3,7 +3,7 @@
 import io
 import os
 
-from PIL import Image
+from PIL import Image, ImageCms, PngImagePlugin
 
 
 def jpeg(
@@ -37,3 +37,25 @@ def animated_webp() -> bytes:
 
 
 PDF = b"%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n"
+
+
+def jpeg_with_profile(icc: bytes | None = None) -> bytes:
+    """A JPEG carrying an ICC profile (sRGB unless given) and XMP metadata with a location."""
+    profile = icc or ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    out = io.BytesIO()
+    Image.new("RGB", (300, 300), (255, 0, 0)).save(
+        out,
+        format="JPEG",
+        icc_profile=profile,
+        xmp=b'<x:xmpmeta xmlns:x="adobe:ns:meta/"><GPS>50.06,19.94</GPS></x:xmpmeta>',
+    )
+    return out.getvalue()
+
+
+def png_with_text() -> bytes:
+    info = PngImagePlugin.PngInfo()
+    info.add_text("Comment", "Adres: ul. Długa 1, Kraków")
+    info.add_itxt("Author", "Anna Wiśniewska", zip=True)
+    out = io.BytesIO()
+    Image.new("RGB", (300, 300), (10, 120, 200)).save(out, format="PNG", pnginfo=info)
+    return out.getvalue()

@@ -33,15 +33,16 @@ async def get_image(
     image = await service.get_image(session, image_id)
     if image is None:
         raise not_found
-    public = await profiles.is_image_public(session, image.id)
+    public = await profiles.is_image_public(session, image.account_id, image.id)
     if not public and (account is None or account.id != image.account_id):
         raise not_found
     data = await service.read_variant(image, int(size))
     if data is None:
         raise not_found
-    # A new upload gets a new id, so a URL never changes content. Draft images are private:
-    # they must not be kept by shared caches, and unpublishing must hide them at once.
-    cache = "public, max-age=31536000, immutable" if public else "private, no-store"
+    # A new upload gets a new id, so a URL never changes content. Published images are cached
+    # for a day (not a year), so an unpublished or blocked page stops showing them soon even
+    # where they were cached (PUB-BR-6, PUB-BR-10). Draft images are never cached.
+    cache = "public, max-age=86400" if public else "private, no-store"
     return Response(
         data,
         media_type="image/webp",

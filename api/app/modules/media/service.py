@@ -3,6 +3,7 @@
 import asyncio
 import secrets
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import Literal
 
 from sqlalchemy import select
@@ -16,6 +17,9 @@ from app.modules.media.models import Image
 
 Kind = Literal["avatar", "background"]
 UPLOADS = rate_limit.Limit("image_upload", max_hits=30, window_seconds=3600)
+# Decoding takes up to ~100 MB and a second of CPU per image: at most two at a time per API
+# process, in their own threads, so uploads cannot starve image serving (default pool).
+_PROCESSING = ThreadPoolExecutor(max_workers=2, thread_name_prefix="image")
 
 
 def urls_for(image_id: uuid.UUID, kind: Kind) -> dict[str, str]:
@@ -31,7 +35,8 @@ async def store_upload(
     if len(data) > processing.MAX_BYTES:
         raise _too_large()
     try:
-        result = await asyncio.to_thread(processing.process, data, kind)
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(_PROCESSING, processing.process, data, kind)
     except processing.ImageTooSmallError:
         min_width, min_height = processing.MIN_SIZE[kind]
         raise ProblemError(
@@ -53,17 +58,21 @@ async def store_upload(
             415, "unsupported_image", "To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik."
         ) from None
     key = f"{account_id}/{secrets.token_urlsafe(18)}"
-    for size, content in result.variants.items():
-        await storage.put(f"{key}/{size}.webp", content)
-    image = Image(
-        account_id=account_id,
-        kind=kind,
-        storage_key=key,
-        width=result.width,
-        height=result.height,
-    )
-    session.add(image)
-    await session.flush()
+    try:
+        for size, content in result.variants.items():
+            await storage.put(f"{key}/{size}.webp", content)
+        image = Image(
+            account_id=account_id,
+            kind=kind,
+            storage_key=key,
+            width=result.width,
+            height=result.height,
+        )
+        session.add(image)
+        await session.flush()
+    except BaseException:
+        await storage.delete_prefix(key)  # no row points at these files
+        raise
     log.info("image_stored", account_id=str(account_id), kind=kind, bytes=len(data))
     return image
 
@@ -82,9 +91,11 @@ async def read_variant(image: Image, size: int) -> bytes | None:
     return await storage.get(f"{image.storage_key}/{size}.webp")
 
 
-async def prune(session: AsyncSession, account_id: uuid.UUID, keep: set[uuid.UUID]) -> None:
-    """Delete the account's images that nothing references any more (draft or published
-    snapshot). Rows go in the caller's transaction; files after it commits."""
+async def prune_rows(
+    session: AsyncSession, account_id: uuid.UUID, keep: set[uuid.UUID]
+) -> list[str]:
+    """Delete (in the caller's transaction) the account's images that nothing references any
+    more; returns their storage keys for `delete_files` once the transaction has committed."""
     unused = list(
         await session.scalars(
             select(Image).where(Image.account_id == account_id, Image.id.not_in(keep))
@@ -92,9 +103,12 @@ async def prune(session: AsyncSession, account_id: uuid.UUID, keep: set[uuid.UUI
     )
     for image in unused:
         await session.delete(image)
-    await session.commit()
-    for image in unused:
-        await storage.delete_prefix(image.storage_key)
+    return [image.storage_key for image in unused]
+
+
+async def delete_files(keys: list[str]) -> None:
+    for key in keys:
+        await storage.delete_prefix(key)
 
 
 def too_large() -> ProblemError:

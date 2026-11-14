@@ -374,8 +374,10 @@ async def publish(
         profile.status = "published"
         profile.nick_locked = True  # PRF-BR-7: permanent after the first publication
         log.info("profile_published", account_id=str(account_id))
+    await session.flush()  # the new snapshot decides which images are still used
+    unused = await _unused_images(session, profile)
     await session.commit()
-    await _prune_images(session, profile)
+    await media.delete_files(unused)
     return profile
 
 
@@ -534,8 +536,10 @@ async def reorder_links(
 _IMAGE_COLUMN = {"avatar": "avatar_image_id", "background": "background_image_id"}
 
 
-async def _prune_images(session: AsyncSession, profile: Profile) -> None:
-    """Images stay while the draft or the published snapshot uses them (ADR 0002)."""
+async def _unused_images(session: AsyncSession, profile: Profile) -> list[str]:
+    """Delete the rows of images neither the draft nor the published snapshot shows (ADR 0002).
+    Called while the profile row is locked, before the commit, so a concurrent upload or
+    publish cannot be pruned by a stale view. Returns storage keys to delete after commit."""
     keep = {i for i in (profile.avatar_image_id, profile.background_image_id) if i}
     snapshot = await session.get(PublishedProfile, profile.id)
     if snapshot is not None:
@@ -543,7 +547,7 @@ async def _prune_images(session: AsyncSession, profile: Profile) -> None:
             ref = snapshot.content.get(kind)
             if ref:
                 keep.add(uuid.UUID(ref["id"]))
-    await media.prune(session, profile.account_id, keep)
+    return await media.prune_rows(session, profile.account_id, keep)
 
 
 async def set_image(
@@ -552,11 +556,17 @@ async def set_image(
     """Store the upload and use it in the draft; the previous image is kept only while the
     published page still shows it. A refused file leaves the previous image in place."""
     image = await media.store_upload(session, account_id, kind, data)
-    profile = await get_own_profile(session, account_id, lock=True)
-    setattr(profile, _IMAGE_COLUMN[kind], image.id)
-    _touch(profile)
-    await session.commit()
-    await _prune_images(session, profile)
+    try:
+        profile = await get_own_profile(session, account_id, lock=True)
+        setattr(profile, _IMAGE_COLUMN[kind], image.id)
+        _touch(profile)
+        unused = await _unused_images(session, profile)
+        await session.commit()
+    except BaseException:
+        await session.rollback()
+        await media.delete_files([image.storage_key])
+        raise
+    await media.delete_files(unused)
     return profile
 
 
@@ -565,25 +575,27 @@ async def remove_image(session: AsyncSession, account_id: uuid.UUID, kind: media
     if getattr(profile, _IMAGE_COLUMN[kind]) is not None:
         setattr(profile, _IMAGE_COLUMN[kind], None)
         _touch(profile)
+    unused = await _unused_images(session, profile)
     await session.commit()
-    await _prune_images(session, profile)
+    await media.delete_files(unused)
     return profile
 
 
-async def is_image_public(session: AsyncSession, image_id: uuid.UUID) -> bool:
-    """True when a visible published page shows the image (PUB-BR-6 rules)."""
-    ref = str(image_id)
-    found = await session.scalar(
-        select(Profile.id)
-        .join(PublishedProfile, PublishedProfile.profile_id == Profile.id)
+async def is_image_public(
+    session: AsyncSession, account_id: uuid.UUID, image_id: uuid.UUID
+) -> bool:
+    """True when the account's visible published page shows the image (PUB-BR-6 rules).
+    One primary-key lookup: the snapshot of the image owner's profile."""
+    snapshot = await session.scalar(
+        select(PublishedProfile.content)
+        .join(Profile, Profile.id == PublishedProfile.profile_id)
         .where(
+            Profile.account_id == account_id,
             Profile.status == "published",
             Profile.blocked_at.is_(None),
-            or_(
-                PublishedProfile.content["avatar"]["id"].astext == ref,
-                PublishedProfile.content["background"]["id"].astext == ref,
-            ),
         )
-        .limit(1)
     )
-    return found is not None
+    if not snapshot:
+        return False
+    ref = str(image_id)
+    return any((snapshot.get(kind) or {}).get("id") == ref for kind in ("avatar", "background"))
