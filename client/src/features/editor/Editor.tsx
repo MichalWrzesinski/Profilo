@@ -13,6 +13,7 @@ import { draftStorageKey } from '@/lib/draftStorage';
 import { useSession } from '@/lib/session';
 import styles from './Editor.module.css';
 import { LIMITS, charCount, draftKeyOf, type OwnerProfile, type Values } from './fields';
+import { LinksSection } from './LinksSection';
 import { useAutosave, type SaveStatus } from './useAutosave';
 
 /** Loads the draft, then mounts the editor (the autosave hook needs the first version). */
@@ -385,6 +386,8 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
               </div>
             </div>
           </section>
+
+          <LinksSection links={profile.draft.links} run={draft.exclusive} />
         </div>
 
         <aside

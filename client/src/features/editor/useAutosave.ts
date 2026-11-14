@@ -45,6 +45,7 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
   const [status, setStatus] = useState<SaveStatus>('saved');
   const [conflict, setConflict] = useState<OwnerProfile | null>(null);
   const [pending, setPending] = useState(restored !== null);
+  const [busy, setBusy] = useState(false);
 
   // Latest state for the timer and request callbacks; updated together with the state.
   const live = useRef({ profile, values, errors });
@@ -54,6 +55,8 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
   const stopped = useRef(false);
   // The last save failed (network, server or an error we cannot show at a field).
   const failed = useRef(false);
+  // A link change is running: autosave waits so the two never send the same version.
+  const locked = useRef(false);
   // `flush` sends follow-up saves through this ref (a callback cannot name itself).
   const again = useRef<() => Promise<void>>(async () => {});
 
@@ -133,6 +136,7 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
       if (timer.current) clearTimeout(timer.current);
       timer.current = null;
       if (inFlight.current || stopped.current) return inFlight.current ?? Promise.resolve();
+      if (locked.current) return Promise.resolve(); // sent when the link change ends
       const { profile: base, values: snapshot, errors: known } = live.current;
       const keys = [...dirty.current].filter((key) => !known[key]);
       if (keys.length === 0) return Promise.resolve();
@@ -170,6 +174,30 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
     }
     return dirty.current.size === 0 && !stopped.current;
   }, [flush]);
+
+  /**
+   * Run a change that bumps the draft version on its own (links): pending field changes are
+   * saved first, autosave waits meanwhile, and the returned profile becomes the base.
+   */
+  const exclusive = useCallback(
+    async (change: () => Promise<OwnerProfile | null>): Promise<void> => {
+      await settle();
+      locked.current = true;
+      setBusy(true);
+      try {
+        const next = await change();
+        if (next) {
+          live.current.profile = next;
+          setProfile(next);
+        }
+      } finally {
+        locked.current = false;
+        setBusy(false);
+        if (savable()) schedule();
+      }
+    },
+    [settle, schedule],
+  );
 
   const edit = useCallback(
     (input: keyof Values, value: string) => {
@@ -254,11 +282,12 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
     /** What the top bar shows: waiting for the delay counts as saving. */
     shownStatus: pending && status === 'saved' && !invalid ? ('saving' as const) : status,
     /** True while some change is not on the server yet (typing, saving, failed or invalid). */
-    unsaved: pending || status !== 'saved' || invalid,
+    unsaved: pending || busy || status !== 'saved' || invalid,
     invalid,
     edit,
     retry: () => void flush(),
     settle,
+    exclusive,
     reload,
   };
 }

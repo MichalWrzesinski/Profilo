@@ -530,6 +530,105 @@ describe('Editor', () => {
     expect(await screen.findByText('Zablokowana')).toBeInTheDocument();
   });
 
+  it('saves typed fields before a link change and continues from its version', async () => {
+    const link = {
+      id: '00000000-0000-7000-8000-00000000000a',
+      url: 'https://github.com/anna',
+      label: 'GitHub',
+      service: 'github' as const,
+    };
+    const calls: string[] = [];
+    let version = 5;
+    const fetch = mockFetch(async (request) => {
+      const path = new URL(request.url).pathname;
+      calls.push(`${request.method} ${path}`);
+      if (request.method === 'GET') return json(200, owner({ version }, { links: [link] }));
+      if (request.method === 'PATCH') {
+        const body = (await request.json()) as { version: number };
+        if (body.version !== version) return json(409, { status: 409, code: 'draft_conflict' });
+        version += 1;
+        return json(200, owner({ version }, { links: path.endsWith('/me/profile') ? [link] : [] }));
+      }
+      version += 1; // DELETE bumps the draft version on the server
+      return new Response(null, { status: 204 });
+    });
+    function SignedIn() {
+      const { signIn } = useSession();
+      useEffect(
+        () => signIn({ ...SESSION, account: { ...SESSION.account, emailConfirmed: true } }),
+        [signIn],
+      );
+      return <Editor />;
+    }
+    render(
+      <SessionProvider>
+        <SignedIn />
+      </SessionProvider>,
+    );
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await user.type(await input('Firma'), 'Studio');
+
+    await user.click(screen.getByRole('button', { name: 'Usuń GitHub' }));
+    await waitFor(() => expect(calls).toHaveLength(4));
+    await user.type(await input('Miejscowość'), 'Łódź');
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+
+    await waitFor(() => expect(calls).toHaveLength(5));
+    expect(calls).toEqual([
+      'GET /api/v1/me/profile',
+      'PATCH /api/v1/me/profile',
+      `DELETE /api/v1/me/profile/links/${link.id}`,
+      'GET /api/v1/me/profile',
+      'PATCH /api/v1/me/profile',
+    ]);
+    expect(saveState()).toHaveTextContent('Zapisano');
+    expect(fetch).toHaveBeenCalledTimes(5);
+  });
+
+  it('keeps saving fields typed while a failed link change was running', async () => {
+    const link = {
+      id: '00000000-0000-7000-8000-00000000000a',
+      url: 'https://github.com/anna',
+      label: 'GitHub',
+      service: 'github' as const,
+    };
+    let release: (response: Response) => void = () => {};
+    const bodies: unknown[] = [];
+    mockFetch(async (request) => {
+      if (request.method === 'GET') return json(200, owner({}, { links: [link] }));
+      if (request.method === 'DELETE') {
+        return new Promise<Response>((resolve) => (release = resolve));
+      }
+      bodies.push(await request.json());
+      return json(200, owner({ version: 6 }, { links: [link] }));
+    });
+    function SignedIn() {
+      const { signIn } = useSession();
+      useEffect(
+        () => signIn({ ...SESSION, account: { ...SESSION.account, emailConfirmed: true } }),
+        [signIn],
+      );
+      return <Editor />;
+    }
+    render(
+      <SessionProvider>
+        <SignedIn />
+      </SessionProvider>,
+    );
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await user.click(await screen.findByRole('button', { name: 'Usuń GitHub' }));
+    await user.type(await input('Firma'), 'Studio');
+    await act(() => vi.advanceTimersByTimeAsync(1500));
+    expect(bodies).toHaveLength(0); // waits for the link change
+    expect(publishButton()).toBeDisabled();
+
+    await act(async () => release(json(500, { status: 500 })));
+    expect(await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie.')).toBeVisible();
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+
+    await waitFor(() => expect(bodies).toEqual([{ version: 5, company: 'Studio' }]));
+  });
+
   it('switches between the form and the preview on phones', async () => {
     const { user } = setup();
     await user.click(await screen.findByRole('tab', { name: 'Podgląd' }));
