@@ -540,3 +540,31 @@ async def test_new_owner_has_no_public_email(client: AsyncClient) -> None:
     draft = (await client.get("/api/v1/me/profile", headers=auth)).json()["draft"]
 
     assert draft["publicEmail"] is None
+
+
+# --- appearance (TASK-012) -----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "patch",
+    [{"accent": "rozowy"}, {"accent": "#ff00ff"}, {"layout": "grid"}, {"accent": None}],
+)
+async def test_values_outside_the_palette_are_refused(
+    client: AsyncClient, patch: dict[str, Any]
+) -> None:
+    auth = await owner(client)
+    await client.patch(
+        "/api/v1/me/profile",
+        json={"version": 1, "layout": "card", "accent": "bordo"},
+        headers=auth,
+    )
+
+    refused = await client.patch("/api/v1/me/profile", json={"version": 2, **patch}, headers=auth)
+    draft = (await client.get("/api/v1/me/profile", headers=auth)).json()
+
+    assert refused.status_code == 422
+    assert (draft["version"], draft["draft"]["layout"], draft["draft"]["accent"]) == (
+        2,
+        "card",
+        "bordo",
+    )
