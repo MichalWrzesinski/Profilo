@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: repoRoot,
   turbopack: { root: repoRoot },
   poweredByHeader: false,
+  // Dev server only: the E2E browser reaches the app through Caddy as http://caddy.
+  allowedDevOrigins: ['caddy'],
   reactStrictMode: true,
 };
 

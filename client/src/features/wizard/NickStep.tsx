@@ -144,7 +144,7 @@ export function NickStep() {
     const { data, error: nickError, response } = result;
     setSaving(false);
     if (data) {
-      router.push('/panel');
+      router.push('/kreator/tresc');
       return;
     }
     const problem = nickError as (Problem & { suggestions?: string[] }) | undefined;

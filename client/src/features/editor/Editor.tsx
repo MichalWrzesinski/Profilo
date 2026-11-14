@@ -1,12 +1,16 @@
 'use client';
 
-import { CircleAlert, Eye } from 'lucide-react';
+import { CircleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from '@/components/Alert';
 import { Brand } from '@/components/Brand';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
+import { draftToPublic } from '@/features/preview/draftToPublic';
+import { DeviceToggle, LivePreview, type Device } from '@/features/preview/LivePreview';
+import { WizardBar } from '@/features/wizard/WizardBar';
+import { useWizardExit } from '@/features/wizard/WizardExit';
 import { api, type Problem } from '@/lib/api/client';
 import { PHONE_COUNTRIES } from '@/lib/phone';
 import { draftStorageKey } from '@/lib/draftStorage';
@@ -17,8 +21,14 @@ import { ImagesSection } from './ImagesSection';
 import { LinksSection } from './LinksSection';
 import { useAutosave, type SaveStatus } from './useAutosave';
 
-/** Loads the draft, then mounts the editor (the autosave hook needs the first version). */
-export function Editor() {
+type Variant = 'editor' | 'wizard';
+
+/**
+ * Loads the draft, then mounts the editor (the autosave hook needs the first version).
+ * `wizard`: step 3 of the wizard — the wizard's top bar comes from its layout and a bottom
+ * bar leads back to step 1 or on to the preview.
+ */
+export function Editor({ variant = 'editor' }: { variant?: Variant }) {
   const { account } = useSession();
   const [profile, setProfile] = useState<OwnerProfile | null>(null);
   const [failed, setFailed] = useState(false);
@@ -37,9 +47,10 @@ export function Editor() {
       </main>
     );
   }
-  if (!profile || !account) return <EditorLoading />;
+  if (!profile || !account) return <EditorLoading topbar={variant === 'editor'} />;
   return (
     <EditorView
+      variant={variant}
       initial={profile}
       storageKey={draftStorageKey(account.id)}
       emailConfirmed={account.emailConfirmed}
@@ -48,19 +59,25 @@ export function Editor() {
 }
 
 /** Loading state as in the #editor-loading mockup. */
-function EditorLoading() {
+function EditorLoading({ topbar }: { topbar: boolean }) {
   const sk = (height: number, width = '100%') => (
     <div className="skel" style={{ height, width, marginBottom: 12 }} />
   );
   return (
     <>
-      <header className="topbar">
-        <Brand withName={false} />
-        <span className="save-state" role="status">
-          <span className="spinner" aria-hidden="true" />
+      {topbar ? (
+        <header className="topbar">
+          <Brand withName={false} />
+          <span className="save-state" role="status">
+            <span className="spinner" aria-hidden="true" />
+            Wczytywanie…
+          </span>
+        </header>
+      ) : (
+        <p className="sr-only" role="status">
           Wczytywanie…
-        </span>
-      </header>
+        </p>
+      )}
       <div className={styles.ed} aria-hidden="true">
         <div className={styles.form}>
           {[0, 1].map((n) => (
@@ -115,15 +132,48 @@ function badge(profile: OwnerProfile): { className: string; label: string } | nu
     : null;
 }
 
-type ViewProps = { initial: OwnerProfile; storageKey: string; emailConfirmed: boolean };
+type ViewProps = {
+  variant: Variant;
+  initial: OwnerProfile;
+  storageKey: string;
+  emailConfirmed: boolean;
+};
 
-function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
+function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps) {
   const router = useRouter();
   const draft = useAutosave(initial, storageKey);
   const { profile, values, errors, status } = draft;
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [device, setDevice] = useState<Device>('desktop');
+  // Coming from the wizard's „Opublikuj stronę” (/edytor?opublikowano=1); the editor view
+  // mounts only in the browser, after the draft has loaded.
+  const [justPublished] = useState(() =>
+    new URLSearchParams(window.location.search).has('opublikowano'),
+  );
+  useEffect(() => {
+    if (justPublished) window.history.replaceState(null, '', window.location.pathname);
+  }, [justPublished]);
+  const preview = useMemo(() => draftToPublic(profile, values), [profile, values]);
+  const wizard = variant === 'wizard';
+
+  /** Save what was typed a moment ago, then go; ask when something cannot be saved. */
+  const { unsaved, settle } = draft;
+  const leaveTo = useCallback(
+    async (href: string) => {
+      const saved = !unsaved || (await settle());
+      const leave =
+        saved ||
+        window.confirm(
+          'Część zmian nie jest zapisana. Zostaną w tej przeglądarce do następnej edycji. Wyjść?',
+        );
+      if (leave) router.push(href);
+    },
+    [unsaved, settle, router],
+  );
+  const leaveWizard = useCallback((href: string) => void leaveTo(href), [leaveTo]);
+  useWizardExit(wizard ? leaveWizard : null);
 
   const published = profile.status === 'published';
   const canPublish =
@@ -184,47 +234,43 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
 
   return (
     <>
-      <header className="topbar">
-        <Brand withName={false} />
-        <SaveState status={draft.shownStatus} invalid={draft.invalid} />
-        <span className="spacer" />
-        {status_ && <span className={`badge ${status_.className} hide-m`}>{status_.label}</span>}
-        <Link
-          className="btn btn-ghost btn-sm"
-          href="/panel"
-          onClick={async (event) => {
-            // Opening the panel in a new tab (Cmd/Ctrl/Shift or middle click) leaves this one as is.
-            if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
-            if (!draft.unsaved) return;
-            // Save the change typed a moment ago before the panel reads the draft.
-            event.preventDefault();
-            const saved = await draft.settle();
-            const leave =
-              saved ||
-              window.confirm(
-                'Część zmian nie jest zapisana. Zostaną w tej przeglądarce do następnej edycji. Wyjść?',
-              );
-            if (leave) router.push('/panel');
-          }}
-        >
-          Panel
-        </Link>
-        <button
-          type="button"
-          className={`btn btn-primary btn-sm${publishing ? ' is-loading' : ''}`}
-          disabled={!canPublish}
-          title={publishHint}
-          aria-describedby={publishHint ? 'ed-publish-hint' : undefined}
-          onClick={() => void publish()}
-        >
-          {published ? 'Opublikuj zmiany' : 'Opublikuj'}
-        </button>
-        {publishHint && (
-          <span id="ed-publish-hint" className="sr-only">
-            {publishHint}
-          </span>
-        )}
-      </header>
+      {!wizard && (
+        <header className="topbar">
+          <Brand withName={false} />
+          <SaveState status={draft.shownStatus} invalid={draft.invalid} />
+          <span className="spacer" />
+          {status_ && <span className={`badge ${status_.className} hide-m`}>{status_.label}</span>}
+          <Link
+            className="btn btn-ghost btn-sm"
+            href="/panel"
+            onClick={(event) => {
+              // Opening the panel in a new tab (Cmd/Ctrl/Shift or middle click) leaves this one.
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+              if (!draft.unsaved) return;
+              // Save the change typed a moment ago before the panel reads the draft.
+              event.preventDefault();
+              void leaveTo('/panel');
+            }}
+          >
+            Panel
+          </Link>
+          <button
+            type="button"
+            className={`btn btn-primary btn-sm${publishing ? ' is-loading' : ''}`}
+            disabled={!canPublish}
+            title={publishHint}
+            aria-describedby={publishHint ? 'ed-publish-hint' : undefined}
+            onClick={() => void publish()}
+          >
+            {published ? 'Opublikuj zmiany' : 'Opublikuj'}
+          </button>
+          {publishHint && (
+            <span id="ed-publish-hint" className="sr-only">
+              {publishHint}
+            </span>
+          )}
+        </header>
+      )}
       <div className={`tabs ${styles.tabsM}`} role="tablist" aria-label="Widok edytora">
         {(['edit', 'preview'] as const).map((name) => (
           <button
@@ -269,9 +315,19 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
           <span className="grow">{publishError}</span>
         </div>
       )}
-      <ConfirmEmailBanner />
+      {!wizard && <ConfirmEmailBanner />}
+      {justPublished && profile.publicUrl && (
+        <div className="alert alert-success banner" role="status">
+          <span className="grow">
+            <b>Strona jest opublikowana.</b> Twój adres:{' '}
+            <a href={profile.publicUrl} target="_blank" rel="noopener">
+              {profile.publicUrl.replace(/^https?:\/\//, '')}
+            </a>
+          </span>
+        </div>
+      )}
 
-      <div className={styles.ed} data-tab={tab}>
+      <div className={`${styles.ed}${wizard ? ` ${styles.wizard}` : ''}`} data-tab={tab}>
         <div
           className={styles.form}
           id="ed-panel-edit"
@@ -400,18 +456,37 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
         >
           <div className={styles.bar}>
             <span className="label-caps">Podgląd wersji roboczej</span>
+            <DeviceToggle device={device} onChange={setDevice} />
           </div>
           <div className={styles.frame}>
-            <Eye className="i" aria-hidden="true" />
-            <p>Podgląd na żywo pojawi się tu wkrótce.</p>
-            {profile.publicUrl && (
-              <a href={profile.publicUrl} target="_blank" rel="noopener">
-                Zobacz opublikowaną stronę
-              </a>
-            )}
+            <LivePreview profile={preview} device={device} label="Podgląd wersji roboczej" />
           </div>
         </aside>
       </div>
+      {wizard && (
+        <WizardBar>
+          <span className={styles.wizStatus}>
+            <SaveState status={draft.shownStatus} invalid={draft.invalid} />
+          </span>
+          <span className={styles.wizActions}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => void leaveTo('/kreator')}
+            >
+              ← Wstecz
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={draft.busy}
+              onClick={() => void leaveTo('/kreator/podglad')}
+            >
+              Dalej: podgląd →
+            </button>
+          </span>
+        </WizardBar>
+      )}
     </>
   );
 }

@@ -6,6 +6,7 @@ import { SessionProvider, useSession } from '@/lib/session';
 import { json, mockFetch, SESSION } from '@/test/fetch';
 import { router } from '@/test/navigation';
 import { Editor } from './Editor';
+import { pathname } from '@/test/navigation';
 import type { OwnerProfile } from './fields';
 
 const STORAGE_KEY = `profilo:draft:${SESSION.account.id}`;
@@ -48,12 +49,14 @@ function setup({
   publish,
   confirmed = true,
   load,
+  variant,
 }: {
   profile?: OwnerProfile;
   patch?: Handler;
   publish?: () => Response | Promise<Response>;
   confirmed?: boolean;
   load?: () => Response;
+  variant?: 'editor' | 'wizard';
 } = {}) {
   let version = profile.version;
   let calls = 0;
@@ -82,7 +85,7 @@ function setup({
     useEffect(() => {
       signIn({ ...SESSION, account: { ...SESSION.account, emailConfirmed: confirmed } });
     }, [signIn]);
-    return <Editor />;
+    return <Editor variant={variant} />;
   }
   render(
     <SessionProvider>
@@ -695,6 +698,44 @@ describe('Editor', () => {
     expect(patches[0]).toMatchObject({ version: 6 });
     await waitFor(() => expect(saveState()).toHaveTextContent('Zapisano'));
     expect(screen.queryByText(/Szkic zmienił się w innym oknie/)).toBeNull();
+  });
+
+  it('runs as wizard step 3: saves, then goes back or on to the preview', async () => {
+    const { bodies, user } = setup({ variant: 'wizard' });
+    await user.type(await input('Firma'), 'Studio');
+
+    expect(screen.queryByRole('link', { name: 'Panel' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Dalej: podgląd →' }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kreator/podglad'));
+    expect(bodies).toEqual([{ version: 5, company: 'Studio' }]);
+    await user.click(screen.getByRole('button', { name: '← Wstecz' }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kreator'));
+  });
+
+  it('shows the wizard loading state without its own top bar', () => {
+    setup({
+      variant: 'wizard',
+      load: () => new Promise<Response>(() => {}) as unknown as Response,
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent('Wczytywanie…');
+    expect(document.querySelector('.topbar')).toBeNull();
+  });
+
+  it('confirms the publication made in the wizard', async () => {
+    window.history.replaceState(null, '', '/edytor?opublikowano=1');
+    setup();
+
+    expect(await screen.findByText('Strona jest opublikowana.')).toBeVisible();
+    await waitFor(() => expect(window.location.search).toBe(''));
+  });
+
+  it('shows the draft in the live preview', async () => {
+    setup();
+
+    const frame = await screen.findByTitle('Podgląd wersji roboczej');
+    expect(frame).toHaveAttribute('src', '/podglad');
+    expect(pathname.current).toBe('/');
   });
 
   it('switches between the form and the preview on phones', async () => {

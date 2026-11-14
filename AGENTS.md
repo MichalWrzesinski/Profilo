@@ -61,7 +61,7 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 
 ## Commands
 
-- `make up` (first run creates `.env`), `make down`, `make logs`, `make migrate`, `make seed`, `make check` (= lint + test + contract), `make audit`, `make secrets`, `make images`, `make ci` (all of the CI job), `make format`, `make api-shell`, `make hooks`.
+- `make up` (first run creates `.env`), `make down`, `make logs`, `make migrate`, `make seed`, `make check` (= lint + test + contract), `make audit`, `make secrets`, `make images`, `make ci` (all of the CI job), `make e2e` (Playwright main flow against the running stack, also the CI job `e2e`), `make format`, `make api-shell`, `make hooks`.
 - Only Docker and make are needed; tools run in containers (`docker compose run --rm api|client …`). Host Node/Python versions are irrelevant.
 - Backend tests use the `profilo_test` database (`TEST_DATABASE_URL`), created by `infra/postgres/init/`.
 - Checks run as the host user (`--user $(id -u):$(id -g)`) so they work on Linux runners; the client image keeps `node_modules/.vite-temp` world-writable for that.
@@ -73,6 +73,8 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 
 - `client/src/lib/api/client.ts`: only the exact token endpoints (`/auth/login`, `/auth/refresh`, `/auth/logout`, `/accounts`) are sent without the access token; any other endpoint, also under `/auth/`, gets it.
 - A named volume takes its ownership from the image the first time it is created: after changing a directory's owner in a Dockerfile (e.g. `/data/media`), rebuild the image and recreate the volume (`docker volume rm profilo_media`), otherwise the app user cannot write. API tests use `MEDIA_URL=memory://media`. Draft images need the access token, so the editor shows them with `OwnerImage` (blob URL), never a plain `<img src>`.
+- The E2E browser reaches the app as `http://caddy`: the Next.js dev server allows that origin (`allowedDevOrigins`), otherwise pages never hydrate. `make e2e` deletes the local `rl:*` rate-limit keys first, because every run registers a new account.
+- The editor preview is an iframe of `/podglad` fed by `postMessage` (same origin only); on servers Caddy sends `frame-ancestors 'self'` for `/podglad` and `'none'` everywhere else.
 - After changing `docs/api/openapi.yaml`, regenerate client types with `docker compose run --rm client npm run api:types`; `make lint` fails when they are out of date.
 - Nick rules live twice — `api/app/modules/profiles/nicks.py` and `client/src/lib/nick.ts`; change both; their test cases live in `docs/api/nick-cases.json` (mounted into both containers). Forms that send credentials use `method="post"` so a submit before hydration never puts them in the URL.
 - API tests use Valkey database 1 and truncate tables per test (`clean_state` fixture); never point them at a shared database.

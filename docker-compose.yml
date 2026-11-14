@@ -117,6 +117,20 @@ services:
       GIT_CONFIG_KEY_0: safe.directory
       GIT_CONFIG_VALUE_0: /repo
 
+  # End-to-end tests (make e2e) against the running stack.
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f
+    profiles: [tools]
+    working_dir: /e2e
+    volumes:
+      - ./e2e:/e2e
+    environment:
+      BASE_URL: http://caddy
+      MAILPIT_URL: http://mailpit:8025
+      CI: ${CI:-}
+    depends_on:
+      caddy: { condition: service_healthy }
+
 volumes:
   media:
   pgdata:

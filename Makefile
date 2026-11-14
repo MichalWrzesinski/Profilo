@@ -10,7 +10,7 @@ CLIENT_RUN := $(COMPOSE) run --rm --no-deps $(AS_HOST) client
 
 .DEFAULT_GOAL := help
 .PHONY: help env up down logs migrate seed test test-api test-client lint lint-api lint-client \
-	format contract check audit secrets images ci api-shell hooks
+	format contract check audit secrets images ci e2e api-shell hooks
 
 help: ## Show available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -74,6 +74,13 @@ images: ## Build production images (api, client)
 	docker build --target prod -f client/Dockerfile -t profilo-client:prod .
 
 ci: check audit secrets images ## Everything the CI `check` job runs
+
+e2e: env ## End-to-end test of the main flow (Playwright) against the running stack
+	$(COMPOSE) up -d --wait
+	$(MAKE) migrate
+	# Each run registers a new account: start without the registration rate limits.
+	$(COMPOSE) exec -T valkey sh -c "valkey-cli --scan --pattern 'rl:*' | xargs -r valkey-cli del" >/dev/null
+	$(COMPOSE) run --rm $(AS_HOST) e2e sh -c 'npm ci --no-audit --no-fund && npm run check && npx playwright test'
 
 api-shell: env ## Shell in the api container
 	$(API_RUN) bash

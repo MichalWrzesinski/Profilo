@@ -1,0 +1,15 @@
+{
+  "name": "profilo-e2e",
+  "private": true,
+  "description": "End-to-end tests of the main flow (Playwright), run with `make e2e`.",
+  "scripts": {
+    "test": "playwright test",
+    "check": "prettier --check . && tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "^24.0.0",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3"
+  }
+}
