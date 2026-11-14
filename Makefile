@@ -5,7 +5,7 @@ COMPOSE := docker compose
 AS_HOST := --user $(shell id -u):$(shell id -g) -e HOME=/tmp
 API_RUN := $(COMPOSE) run --rm $(AS_HOST) api
 API_RUN_NODEPS := $(COMPOSE) run --rm --no-deps $(AS_HOST) api
-API_TEST_RUN := $(COMPOSE) run --rm $(AS_HOST) -e ENVIRONMENT=test -e VALKEY_URL=redis://valkey:6379/1 api
+API_TEST_RUN := $(COMPOSE) run --rm $(AS_HOST) -e ENVIRONMENT=test -e VALKEY_URL=redis://valkey:6379/1 -e MEDIA_URL=memory://media api
 CLIENT_RUN := $(COMPOSE) run --rm --no-deps $(AS_HOST) client
 
 .DEFAULT_GOAL := help

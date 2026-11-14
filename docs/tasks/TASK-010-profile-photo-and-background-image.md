@@ -1,7 +1,7 @@
 ---
 id: TASK-010
 title: Profile photo and background image
-status: READY
+status: IN_PROGRESS
 priority: high
 iteration: ITER-02
 depends_on: [TASK-008]

@@ -2,6 +2,16 @@
 :80 {
 	encode zstd gzip
 
+	# Request size: 10 MB images (plus multipart overhead), 1 MB for everything else.
+	@upload path /api/v1/me/profile/images/*
+	request_body @upload {
+		max_size 11MB
+	}
+	@other not path /api/v1/me/profile/images/*
+	request_body @other {
+		max_size 1MB
+	}
+
 	@api path /api/* /media/* /health /ready
 	handle @api {
 		reverse_proxy api:8000
