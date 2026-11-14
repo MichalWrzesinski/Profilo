@@ -106,6 +106,62 @@ describe('LivePreview', () => {
   });
 });
 
+describe('LivePreview housekeeping', () => {
+  it('revokes the blob of a replaced image and fetches each image once', async () => {
+    let n = 0;
+    (URL.createObjectURL as ReturnType<typeof vi.fn>).mockImplementation(() => `blob:${++n}`);
+    authorizedFetch.mockImplementation(async () => new Response(new Blob(['x'])));
+    function Host() {
+      const [id, setId] = useState('a');
+      return (
+        <>
+          <button type="button" onClick={() => setId('c')}>
+            nowe
+          </button>
+          <LivePreview
+            profile={publicProfile({ avatar: { id, urls: { '512': `/media/${id}/512.webp` } } })}
+            device="desktop"
+          />
+        </>
+      );
+    }
+    const { unmount } = render(<Host />);
+    await act(async () => {});
+
+    await userEvent.click(screen.getByRole('button', { name: 'nowe' }));
+    await act(async () => {});
+
+    expect(authorizedFetch.mock.calls.map(([url]) => url)).toEqual([
+      '/media/a/512.webp',
+      '/media/c/512.webp',
+    ]);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:1');
+    unmount();
+    await act(async () => {});
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:2');
+  });
+
+  it('scales the frame to the space it has', async () => {
+    let report: (entries: { contentRect: { width: number; height: number } }[]) => void = () => {};
+    class FakeObserver {
+      constructor(callback: typeof report) {
+        report = callback;
+      }
+      observe() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('ResizeObserver', FakeObserver);
+    render(<LivePreview profile={publicProfile()} device="desktop" />);
+
+    act(() => report([{ contentRect: { width: 640, height: 500 } }]));
+
+    const frame = screen.getByTitle('Podgląd strony');
+    expect(frame.style.transform).toBe('scale(0.5)');
+    expect(frame.style.height).toBe('1000px');
+    vi.unstubAllGlobals();
+  });
+});
+
 describe('DeviceToggle', () => {
   it('switches between computer and phone', async () => {
     const changes: Device[] = [];

@@ -41,9 +41,13 @@
   min-height: 420px;
 }
 
-/* Step 3 of the wizard: room for the bottom bar. */
+/* Step 3 of the wizard: room for the bottom bar, also under the sticky preview. */
 .wizard {
   padding-bottom: 76px;
+}
+
+.wizard .preview {
+  height: calc(100vh - var(--topbar-height) - 76px);
 }
 
 .wizStatus {

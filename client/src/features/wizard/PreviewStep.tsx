@@ -3,7 +3,7 @@
 import { Info } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert } from '@/components/Alert';
 import type { OwnerProfile } from '@/features/editor/fields';
 import { draftToPublic } from '@/features/preview/draftToPublic';
@@ -22,6 +22,7 @@ export function PreviewStep() {
   const [device, setDevice] = useState<Device>('desktop');
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const preview = useMemo(() => (profile ? draftToPublic(profile) : null), [profile]);
 
   useEffect(() => {
     api
@@ -90,7 +91,7 @@ export function PreviewStep() {
           <DeviceToggle device={device} onChange={setDevice} />
         </div>
         <div className={styles.preview}>
-          <LivePreview profile={draftToPublic(profile)} device={device} />
+          <LivePreview profile={preview!} device={device} />
         </div>
       </main>
       <WizardBar>

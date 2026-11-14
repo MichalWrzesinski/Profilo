@@ -3,13 +3,14 @@
 import { CircleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from '@/components/Alert';
 import { Brand } from '@/components/Brand';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
 import { draftToPublic } from '@/features/preview/draftToPublic';
 import { DeviceToggle, LivePreview, type Device } from '@/features/preview/LivePreview';
 import { WizardBar } from '@/features/wizard/WizardBar';
+import { useWizardExit } from '@/features/wizard/WizardExit';
 import { api, type Problem } from '@/lib/api/client';
 import { PHONE_COUNTRIES } from '@/lib/phone';
 import { draftStorageKey } from '@/lib/draftStorage';
@@ -158,15 +159,21 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
   const wizard = variant === 'wizard';
 
   /** Save what was typed a moment ago, then go; ask when something cannot be saved. */
-  const leaveTo = async (href: string) => {
-    const saved = !draft.unsaved || (await draft.settle());
-    const leave =
-      saved ||
-      window.confirm(
-        'Część zmian nie jest zapisana. Zostaną w tej przeglądarce do następnej edycji. Wyjść?',
-      );
-    if (leave) router.push(href);
-  };
+  const { unsaved, settle } = draft;
+  const leaveTo = useCallback(
+    async (href: string) => {
+      const saved = !unsaved || (await settle());
+      const leave =
+        saved ||
+        window.confirm(
+          'Część zmian nie jest zapisana. Zostaną w tej przeglądarce do następnej edycji. Wyjść?',
+        );
+      if (leave) router.push(href);
+    },
+    [unsaved, settle, router],
+  );
+  const leaveWizard = useCallback((href: string) => void leaveTo(href), [leaveTo]);
+  useWizardExit(wizard ? leaveWizard : null);
 
   const published = profile.status === 'published';
   const canPublish =

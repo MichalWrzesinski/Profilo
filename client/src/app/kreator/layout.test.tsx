@@ -3,6 +3,8 @@ import { pathname, router } from '@/test/navigation';
 import { json, mockFetch, SESSION } from '@/test/fetch';
 import { tokenStore } from '@/lib/api/client';
 import { SessionProvider } from '@/lib/session';
+import { useWizardExit } from '@/features/wizard/WizardExit';
+import userEvent from '@testing-library/user-event';
 import WizardLayout from './layout';
 
 afterEach(() => {
@@ -47,6 +49,37 @@ describe('WizardLayout', () => {
     );
 
     expect(await screen.findByLabelText(label)).toBeInTheDocument();
+  });
+
+  it('lets the current step save before the top-bar links leave', async () => {
+    mockFetch(() => json(200, SESSION));
+    const leave = vi.fn();
+    function Step() {
+      useWizardExit(leave);
+      return <p>krok 3</p>;
+    }
+
+    render(
+      <SessionProvider>
+        <WizardLayout>
+          <Step />
+        </WizardLayout>
+      </SessionProvider>,
+    );
+
+    await userEvent.click(await screen.findByRole('link', { name: /później/ }));
+    await userEvent.click(screen.getByRole('link', { name: 'Profilo — strona główna' }));
+
+    expect(leave.mock.calls).toEqual([['/edytor'], ['/']]);
+
+    // Other clicks and opening in a new tab are left alone.
+    await userEvent.click(screen.getByText('krok 3'));
+    await userEvent.click(screen.getByText(/Krok 1 z 4/));
+    const user = userEvent.setup();
+    await user.keyboard('{Control>}');
+    await user.click(screen.getByRole('link', { name: /później/ }));
+    await user.keyboard('{/Control}');
+    expect(leave).toHaveBeenCalledTimes(2);
   });
 
   it('sends anonymous visitors to the login page', async () => {

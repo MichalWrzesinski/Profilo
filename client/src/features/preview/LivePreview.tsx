@@ -10,38 +10,55 @@ const WIDTH: Record<Device, number> = { desktop: 1280, phone: 390 };
 
 type Props = { profile: PublicProfile; device: Device; label?: string };
 
-/** Fetch draft images with the access token once; the frame gets blob URLs. */
+/**
+ * Fetch draft images with the access token once per URL; the frame gets blob URLs. Each URL
+ * is fetched once even while several updates wait for it; blobs of images that are no
+ * longer in the draft, and all blobs on unmount, are revoked.
+ */
 function useImageUrls(profile: PublicProfile): PublicProfile | null {
-  const cache = useRef(new Map<string, string>());
+  const blobs = useRef(new Map<string, Promise<string | null>>());
   const [resolved, setResolved] = useState<PublicProfile | null>(null);
 
   useEffect(() => {
     let active = true;
     const pick = { avatar: '512', background: '1600' } as const;
+    const wanted = new Set<string>();
+    const blobFor = (url: string) => {
+      let pending = blobs.current.get(url);
+      if (!pending) {
+        pending = authorizedFetch(url)
+          .then(async (response) => {
+            if (!response.ok) throw new Error(String(response.status));
+            return URL.createObjectURL(await response.blob());
+          })
+          .catch(() => {
+            blobs.current.delete(url); // try again on the next update
+            return null;
+          });
+        blobs.current.set(url, pending);
+      }
+      return pending;
+    };
     const resolve = async () => {
       const content = { ...profile.content };
       for (const kind of ['avatar', 'background'] as const) {
         const image = content[kind];
         if (!image) continue;
         const url = image.urls[pick[kind]] ?? Object.values(image.urls)[0]!;
-        let blob = cache.current.get(url);
-        if (!blob) {
-          try {
-            const response = await authorizedFetch(url);
-            if (!response.ok) throw new Error(String(response.status));
-            blob = URL.createObjectURL(await response.blob());
-            cache.current.set(url, blob);
-          } catch {
-            content[kind] = null; // shown like a page without the image
-            continue;
-          }
-        }
-        content[kind] = {
-          ...image,
-          urls: Object.fromEntries(Object.keys(image.urls).map((size) => [size, blob])),
-        };
+        wanted.add(url);
+        const blob = await blobFor(url);
+        // Without its image the page looks like one that has none.
+        content[kind] = blob
+          ? { ...image, urls: Object.fromEntries(Object.keys(image.urls).map((s) => [s, blob])) }
+          : null;
       }
-      if (active) setResolved({ ...profile, content });
+      if (!active) return;
+      setResolved({ ...profile, content });
+      for (const [url, pending] of blobs.current) {
+        if (wanted.has(url)) continue;
+        blobs.current.delete(url);
+        void pending.then((blob) => blob && URL.revokeObjectURL(blob));
+      }
     };
     void resolve();
     return () => {
@@ -50,8 +67,12 @@ function useImageUrls(profile: PublicProfile): PublicProfile | null {
   }, [profile]);
 
   useEffect(() => {
-    const urls = cache.current;
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+    const all = blobs.current;
+    return () => {
+      for (const pending of all.values())
+        void pending.then((blob) => blob && URL.revokeObjectURL(blob));
+      all.clear();
+    };
   }, []);
 
   return resolved;

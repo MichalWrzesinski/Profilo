@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { HydrationMarker } from '@/components/HydrationMarker';
 import { SessionProvider } from '@/lib/session';
 import './globals.css';
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pl" className={jakarta.variable}>
       <body>
+        <HydrationMarker />
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
