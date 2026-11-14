@@ -9,9 +9,9 @@ import { Stepper } from '@/features/wizard/Stepper';
 import { WizardExitProvider, useWizardExitHandler } from '@/features/wizard/WizardExit';
 import { useRequireSession } from '@/lib/useRequireSession';
 
-// Step 2 (layout and colour) comes with TASK-012; until then step 1 leads to step 3.
 const STEPS: Record<string, { step: number; label: string }> = {
   '/kreator': { step: 1, label: 'Nazwa i adres' },
+  '/kreator/wyglad': { step: 2, label: 'Wygląd' },
   '/kreator/tresc': { step: 3, label: 'Treść' },
   '/kreator/podglad': { step: 4, label: 'Podgląd' },
 };

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { isPreviewMessage } from '@/features/preview/draftToPublic';
-import { ClassicPage } from '@/features/public/ClassicPage';
+import { PublicPage } from '@/features/public/PublicPage';
 import type { PublicProfile } from '@/lib/publicProfile';
 
 /**
@@ -36,5 +36,5 @@ export default function PreviewPage() {
       </p>
     );
   }
-  return <ClassicPage profile={profile} />;
+  return <PublicPage profile={profile} />;
 }

@@ -9,6 +9,11 @@
   margin-bottom: var(--space-2);
 }
 
+.subtitle {
+  font-size: var(--text-lg);
+  margin: var(--space-10) 0 var(--space-2);
+}
+
 .lead {
   color: var(--color-text-muted);
   margin-bottom: var(--space-8);

@@ -1,6 +1,6 @@
 'use client';
 
-import { CircleAlert } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -9,6 +9,12 @@ import { Brand } from '@/components/Brand';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
 import { draftToPublic } from '@/features/preview/draftToPublic';
 import { DeviceToggle, LivePreview, type Device } from '@/features/preview/LivePreview';
+import {
+  AccentPicker,
+  LayoutPicker,
+  accentName,
+  layoutName,
+} from '@/features/appearance/AppearancePicker';
 import { WizardBar } from '@/features/wizard/WizardBar';
 import { useWizardExit } from '@/features/wizard/WizardExit';
 import { api, type Problem } from '@/lib/api/client';
@@ -147,6 +153,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [device, setDevice] = useState<Device>('desktop');
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
   // Coming from the wizard's „Opublikuj stronę” (/edytor?opublikowano=1); the editor view
   // mounts only in the browser, after the draft has loaded.
   const [justPublished] = useState(() =>
@@ -334,6 +341,44 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
           role="tabpanel"
           aria-labelledby="ed-tab-edit"
         >
+          <section className={`panel-sec${appearanceOpen ? '' : ' is-collapsed'}`}>
+            <header>
+              <h3 id="ed-appearance">
+                <button
+                  type="button"
+                  className={styles.sectionToggle}
+                  aria-expanded={appearanceOpen}
+                  aria-controls="ed-appearance-body"
+                  onClick={() => setAppearanceOpen((open) => !open)}
+                >
+                  Wygląd
+                </button>
+              </h3>
+              <span className={styles.summary}>
+                <span
+                  className={styles.dot}
+                  style={{ background: `var(--page-accent-${values.accent})` }}
+                  aria-hidden="true"
+                />
+                {layoutName(values.layout)} · {accentName(values.accent)}
+                {appearanceOpen ? (
+                  <ChevronUp className="i sm" aria-hidden="true" />
+                ) : (
+                  <ChevronDown className="i sm" aria-hidden="true" />
+                )}
+              </span>
+            </header>
+            {appearanceOpen && (
+              <div className="body" id="ed-appearance-body">
+                <LayoutPicker value={values.layout} onChange={(v) => draft.edit('layout', v)} />
+                <p className="field-label" style={{ marginTop: 'var(--space-6)' }}>
+                  Kolor przewodni
+                </p>
+                <AccentPicker value={values.accent} onChange={(v) => draft.edit('accent', v)} />
+              </div>
+            )}
+          </section>
+
           <section className="panel-sec" aria-labelledby="ed-about">
             <header>
               <h3 id="ed-about">O mnie</h3>
@@ -472,7 +517,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => void leaveTo('/kreator')}
+              onClick={() => void leaveTo('/kreator/wyglad')}
             >
               ← Wstecz
             </button>
