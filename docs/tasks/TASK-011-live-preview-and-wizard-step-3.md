@@ -1,7 +1,7 @@
 ---
 id: TASK-011
 title: Live preview and wizard step 3–4
-status: IN_PROGRESS
+status: DONE
 priority: high
 iteration: ITER-02
 depends_on: [TASK-009, TASK-010]
@@ -37,7 +37,7 @@ The owner sees the draft rendered exactly like the public page, on desktop and p
 
 ## Report
 
-**Implemented, review round 1 fixed, waiting for re-review.** Preview: `/podglad` renders the same `ClassicPage` as `/user/{nick}`; the editor and wizard step 4 show it in an iframe of 1280 px (Komputer) or 390 px (Telefon), scaled to fit, so the phone layout really uses the phone breakpoints. The draft goes to the frame by `postMessage` (same origin and parent window only), including values typed but not saved yet; draft images are fetched with the access token and passed as blob URLs; links in the frame do not navigate. On servers `/podglad` may be framed by the same origin only (Caddy CSP). Wizard: step 1 „Dalej” → step 3 „Treść” (the editor with the wizard top bar and a bottom bar „← Wstecz” / „Dalej: podgląd →”, which save pending changes first) → step 4 „Podgląd” („← Popraw treść”, „Opublikuj stronę”, disabled with „Najpierw potwierdź e-mail” until the e-mail is confirmed) → the editor with „Strona jest opublikowana.” and the address. „Dokończę później” leads to the editor. Step 2 (layout and colour) comes with TASK-012; until then the stepper shows steps 1, 3 and 4. E2E: Playwright 1.64.1 in its own Compose service (`make e2e`) and a CI job `e2e` that uploads the report on failure.
+**Done.** Approved after 2 review rounds; CI `check` and `e2e` green. Preview: `/podglad` renders the same `ClassicPage` as `/user/{nick}`; the editor and wizard step 4 show it in an iframe of 1280 px (Komputer) or 390 px (Telefon), scaled to fit, so the phone layout really uses the phone breakpoints. The draft goes to the frame by `postMessage` (same origin and parent window only), including values typed but not saved yet; draft images are fetched with the access token and passed as blob URLs; links in the frame do not navigate. On servers `/podglad` may be framed by the same origin only (Caddy CSP). Wizard: step 1 „Dalej” → step 3 „Treść” (the editor with the wizard top bar and a bottom bar „← Wstecz” / „Dalej: podgląd →”, which save pending changes first) → step 4 „Podgląd” („← Popraw treść”, „Opublikuj stronę”, disabled with „Najpierw potwierdź e-mail” until the e-mail is confirmed) → the editor with „Strona jest opublikowana.” and the address. „Dokończę później” leads to the editor. Step 2 (layout and colour) comes with TASK-012; until then the stepper shows steps 1, 3 and 4. E2E: Playwright 1.64.1 in its own Compose service (`make e2e`) and a CI job `e2e` that uploads the report on failure.
 
 Acceptance criteria (verified by the E2E test, in the browser and by unit tests):
 - S1 preview matches — met: in the E2E test a typed headline appears in the preview within 1 second; after publishing, the public page's markup equals the preview's (inline-style spacing normalised); in the browser the phone preview shows the mobile layout.
