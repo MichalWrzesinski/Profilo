@@ -46,6 +46,8 @@ def test_urls_are_normalised(raw: str, url: str) -> None:
         "https://" + "x" * 64 + ".pl",
         "a.pl/" + "x" * 1995,
         "https://example.com:0/",
+        "straße.de",
+        "https://\u03b1\u03c2.gr",
         "https://example.com/\u202egnp.exe",
         "https://a.com\u2060b",
         "https://example.com/\u200b",

@@ -63,6 +63,10 @@ def _canonical_host(host: str) -> str | None:
         unicode_host = ascii_host.encode("ascii").decode("idna")
     except UnicodeError:
         return None
+    # Python's codec is IDNA 2003, which maps some letters to others (ß → ss): that would
+    # store a different, separately registered domain. Accept only hosts it keeps as typed.
+    if unicode_host != unicodedata.normalize("NFKC", host).lower():
+        return None
     labels = ascii_host.split(".")
     if (
         len(labels) < 2

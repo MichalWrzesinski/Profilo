@@ -221,6 +221,7 @@ async def test_link_patch_needs_a_change(
 
     assert response.status_code == 422
     assert response.json()["errors"][0]["message"] == message
+    assert response.json()["errors"][0]["field"] == ("url" if body else "")
 
 
 async def test_lookalike_host_is_stored_in_punycode(client: AsyncClient) -> None:
