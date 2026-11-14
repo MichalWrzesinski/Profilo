@@ -111,3 +111,26 @@
     grid-template-columns: 1fr;
   }
 }
+
+.sectionToggle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}

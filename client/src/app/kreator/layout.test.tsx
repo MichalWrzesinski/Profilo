@@ -33,6 +33,7 @@ describe('WizardLayout', () => {
 
   it.each([
     ['/kreator', 'Krok 1 z 4: Nazwa i adres'],
+    ['/kreator/wyglad', 'Krok 2 z 4: Wygląd'],
     ['/kreator/tresc', 'Krok 3 z 4: Treść'],
     ['/kreator/podglad', 'Krok 4 z 4: Podgląd'],
     ['/kreator/nieznany', 'Krok 1 z 4: Nazwa i adres'],

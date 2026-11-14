@@ -3,6 +3,8 @@ import type { components } from '@/lib/api/schema';
 import { phoneForSave, splitPhone } from '@/lib/phone';
 
 export type OwnerProfile = components['schemas']['OwnerProfile'];
+export type Layout = components['schemas']['Layout'];
+export type Accent = components['schemas']['Accent'];
 
 /** Editor form values: what the inputs show. */
 export type Values = {
@@ -15,6 +17,8 @@ export type Values = {
   publicEmail: string;
   phoneCountry: CountryCode;
   phoneNational: string;
+  layout: Layout;
+  accent: Accent;
 };
 
 /** Draft fields as the API names them (`PATCH /me/profile`). */
@@ -26,7 +30,9 @@ export type DraftKey =
   | 'company'
   | 'city'
   | 'publicEmail'
-  | 'publicPhone';
+  | 'publicPhone'
+  | 'layout'
+  | 'accent';
 
 export const DRAFT_KEYS: DraftKey[] = [
   'displayName',
@@ -37,6 +43,8 @@ export const DRAFT_KEYS: DraftKey[] = [
   'city',
   'publicEmail',
   'publicPhone',
+  'layout',
+  'accent',
 ];
 
 /** The draft field an input belongs to (both phone inputs make `publicPhone`). */
@@ -57,12 +65,15 @@ export function valuesFrom(profile: OwnerProfile): Values {
     publicEmail: draft.publicEmail ?? '',
     phoneCountry: phone.country,
     phoneNational: phone.national,
+    layout: draft.layout,
+    accent: draft.accent,
   };
 }
 
 /** The value sent for a draft field; empty optional fields clear it (`null`). */
 export function patchValue(values: Values, key: DraftKey): string | null {
   if (key === 'publicPhone') return phoneForSave(values.phoneCountry, values.phoneNational);
+  if (key === 'layout' || key === 'accent') return values[key];
   const value = values[key].trim();
   return key === 'displayName' || value ? value : null;
 }
