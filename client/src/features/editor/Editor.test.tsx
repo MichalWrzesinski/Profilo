@@ -629,6 +629,74 @@ describe('Editor', () => {
     await waitFor(() => expect(bodies).toEqual([{ version: 5, company: 'Studio' }]));
   });
 
+  it('runs quick link changes one after another and saves typing with the last version', async () => {
+    const a = {
+      id: '00000000-0000-7000-8000-00000000000a',
+      url: 'https://a.pl',
+      label: 'A',
+      service: 'other' as const,
+    };
+    const b = {
+      id: '00000000-0000-7000-8000-00000000000b',
+      url: 'https://b.pl',
+      label: 'B',
+      service: 'other' as const,
+    };
+    const c = {
+      id: '00000000-0000-7000-8000-00000000000c',
+      url: 'https://c.pl',
+      label: 'C',
+      service: 'other' as const,
+    };
+    let version = 5;
+    let links = [a, b, c];
+    const releases: (() => void)[] = [];
+    const patches: { version: number }[] = [];
+    mockFetch(async (request) => {
+      if (request.method === 'GET') return json(200, owner({ version }, { links }));
+      if (request.method === 'PUT') {
+        const { linkIds } = (await request.json()) as { linkIds: string[] };
+        await new Promise<void>((resolve) => releases.push(resolve));
+        version += 1;
+        links = linkIds.map((id) => [a, b, c].find((link) => link.id === id)!);
+        return json(200, owner({ version }, { links }));
+      }
+      const body = (await request.json()) as { version: number };
+      patches.push(body);
+      if (body.version !== version) return json(409, { status: 409, code: 'draft_conflict' });
+      version += 1;
+      return json(200, owner({ version }, { links }));
+    });
+    function SignedIn() {
+      const { signIn } = useSession();
+      useEffect(
+        () => signIn({ ...SESSION, account: { ...SESSION.account, emailConfirmed: true } }),
+        [signIn],
+      );
+      return <Editor />;
+    }
+    render(
+      <SessionProvider>
+        <SignedIn />
+      </SessionProvider>,
+    );
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    await user.click(await screen.findByRole('button', { name: 'Przesuń w dół: A' }));
+    // The row buttons wait while the first change runs.
+    expect(screen.getByRole('button', { name: 'Przesuń w dół: B' })).toBeDisabled();
+    await user.type(await input('Firma'), 'Studio');
+    await act(() => vi.advanceTimersByTimeAsync(1500));
+    expect(patches).toHaveLength(0);
+
+    await act(async () => releases.shift()!());
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+    await waitFor(() => expect(patches).toHaveLength(1));
+    expect(patches[0]).toMatchObject({ version: 6 });
+    await waitFor(() => expect(saveState()).toHaveTextContent('Zapisano'));
+    expect(screen.queryByText(/Szkic zmienił się w innym oknie/)).toBeNull();
+  });
+
   it('switches between the form and the preview on phones', async () => {
     const { user } = setup();
     await user.click(await screen.findByRole('tab', { name: 'Podgląd' }));

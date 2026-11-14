@@ -176,25 +176,36 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
   }, [flush]);
 
   /**
-   * Run a change that bumps the draft version on its own (links): pending field changes are
-   * saved first, autosave waits meanwhile, and the returned profile becomes the base.
+   * Run a change that bumps the draft version on its own (links). Changes run one after
+   * another; before each, pending field changes are saved; while it runs autosave waits.
+   * A profile older than the one already known is ignored.
    */
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const queued = useRef(0);
   const exclusive = useCallback(
-    async (change: () => Promise<OwnerProfile | null>): Promise<void> => {
-      await settle();
-      locked.current = true;
+    (change: () => Promise<OwnerProfile | null>): Promise<void> => {
+      queued.current += 1;
       setBusy(true);
-      try {
-        const next = await change();
-        if (next) {
-          live.current.profile = next;
-          setProfile(next);
+      const run = queue.current.then(async () => {
+        await settle();
+        locked.current = true;
+        try {
+          const next = await change();
+          if (next && next.version >= live.current.profile.version) {
+            live.current.profile = next;
+            setProfile(next);
+          }
+        } finally {
+          locked.current = false;
+          queued.current -= 1;
+          if (queued.current === 0) {
+            setBusy(false);
+            if (savable()) schedule();
+          }
         }
-      } finally {
-        locked.current = false;
-        setBusy(false);
-        if (savable()) schedule();
-      }
+      });
+      queue.current = run.catch(() => undefined);
+      return run;
     },
     [settle, schedule],
   );
@@ -288,6 +299,8 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
     retry: () => void flush(),
     settle,
     exclusive,
+    /** A link change is waiting or running. */
+    busy,
     reload,
   };
 }

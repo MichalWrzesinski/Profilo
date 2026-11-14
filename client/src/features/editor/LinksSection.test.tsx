@@ -171,6 +171,79 @@ describe('LinksSection', () => {
     ]);
   });
 
+  it('moves focus to the next link after removing one', async () => {
+    const { user } = setup([LINKEDIN, GITHUB], (request) =>
+      request.method === 'DELETE'
+        ? new Response(null, { status: 204 })
+        : json(200, profileWith([GITHUB])),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Usuń LinkedIn' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Edytuj GitHub' })).toHaveFocus(),
+    );
+  });
+
+  it('moves focus to „Dodaj pierwszy link” after removing the last one', async () => {
+    const { user } = setup([LINKEDIN], (request) =>
+      request.method === 'DELETE'
+        ? new Response(null, { status: 204 })
+        : json(200, profileWith([])),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Usuń LinkedIn' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Dodaj pierwszy link' })).toHaveFocus(),
+    );
+  });
+
+  it('says so when the list cannot be refreshed after removing', async () => {
+    let gets = 0;
+    const { user } = setup([LINKEDIN], (request) => {
+      if (request.method === 'DELETE') return new Response(null, { status: 204 });
+      gets += 1;
+      return json(500, {});
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Usuń LinkedIn' }));
+
+    expect(
+      await screen.findByText(/Link został usunięty, ale nie udało się odświeżyć/),
+    ).toBeVisible();
+    expect(gets).toBe(2);
+  });
+
+  it('returns focus to the link after editing or adding', async () => {
+    const { user } = setup([LINKEDIN], () => json(500, {}));
+    await user.click(screen.getByRole('button', { name: 'Edytuj LinkedIn' }));
+    await user.click(screen.getByRole('button', { name: 'Anuluj' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Edytuj LinkedIn' })).toHaveFocus(),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Dodaj link' }));
+    await user.click(screen.getByRole('button', { name: 'Anuluj' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Dodaj link' })).toHaveFocus());
+  });
+
+  it('marks the form with an error', async () => {
+    const { user } = setup([], () => json(500, {}));
+    await user.click(screen.getByRole('button', { name: 'Dodaj pierwszy link' }));
+    await user.click(screen.getByRole('button', { name: 'Zapisz link' }));
+
+    expect(screen.getByLabelText('Adres strony').closest('form')?.className).toMatch(/formError/);
+  });
+
+  it('waits with the row buttons while a link change runs', () => {
+    render(<LinksSection links={[LINKEDIN, GITHUB]} run={vi.fn()} busy />);
+
+    for (const name of ['Edytuj LinkedIn', 'Usuń LinkedIn', 'Przesuń w dół: LinkedIn']) {
+      expect(screen.getByRole('button', { name })).toBeDisabled();
+    }
+  });
+
   it('reports a failed removal', async () => {
     const { user } = setup([LINKEDIN], () => json(500, {}));
 
@@ -198,6 +271,11 @@ describe('LinksSection', () => {
       path: '/api/v1/me/profile/links/order',
       body: { linkIds: [GITHUB.id, LINKEDIN.id] },
     });
+    expect(screen.getByText('Link GitHub jest teraz na miejscu 1 z 2.')).toHaveClass('sr-only');
+    // GitHub is first now, so its „up” arrow is disabled: focus moved to „down”.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Przesuń w dół: GitHub' })).toHaveFocus(),
+    );
     await user.click(screen.getByRole('button', { name: 'Przesuń w dół: GitHub' }));
     expect(bodies[1]?.body).toEqual({ linkIds: [LINKEDIN.id, GITHUB.id] });
   });

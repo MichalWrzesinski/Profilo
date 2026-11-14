@@ -28,7 +28,7 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/Alert';
 import { LinkIcon, shortUrl } from '@/components/LinkIcon';
 import { api, type Problem } from '@/lib/api/client';
@@ -45,6 +45,8 @@ type Props = {
   links: Link[];
   /** Runs a link change between autosaves and adopts the returned profile. */
   run: (change: Change) => Promise<void>;
+  /** A link change is waiting or running: the row buttons wait too. */
+  busy?: boolean;
 };
 
 const labelOf = (links: Link[], id: unknown) =>
@@ -79,10 +81,23 @@ const INSTRUCTIONS =
   'naciśnij spację lub Enter, aby upuścić. Escape anuluje.';
 
 /** Links in the draft: list, inline add/edit form, order by dragging or ↑/↓ (PRF-BR-11). */
-export function LinksSection({ links, run }: Props) {
+export function LinksSection({ links, run, busy = false }: Props) {
   const [order, setOrder] = useState<string[] | null>(null);
   const [editing, setEditing] = useState<string | 'new' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+  const root = useRef<HTMLDivElement>(null);
+  // Where focus goes once the list has re-rendered (the focused element may be gone).
+  const focusNext = useRef<string | null>(null);
+  useEffect(() => {
+    const target = focusNext.current;
+    if (!target || !root.current) return;
+    const element = root.current.querySelector<HTMLElement>(`[data-focus="${target}"]`);
+    if (element && !element.hasAttribute('disabled')) {
+      element.focus();
+      focusNext.current = null;
+    }
+  });
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -106,8 +121,9 @@ export function LinksSection({ links, run }: Props) {
     });
   };
 
-  const move = async (ids: string[]) => {
+  const move = async (ids: string[], moved?: string) => {
     setOrder(ids);
+    let saved = false;
     await call(async () => {
       const { data, error: problem } = await api.PUT('/api/v1/me/profile/links/order', {
         body: { linkIds: ids },
@@ -117,9 +133,16 @@ export function LinksSection({ links, run }: Props) {
           (problem as Problem | undefined)?.detail ?? 'Nie udało się zmienić kolejności linków.',
         );
       }
+      saved = Boolean(data);
       return data ?? null;
     });
     setOrder(null);
+    if (saved && moved) {
+      const place = ids.indexOf(moved) + 1;
+      setAnnouncement(
+        `Link ${labelOf(links, moved)} jest teraz na miejscu ${place} z ${ids.length}.`,
+      );
+    }
   };
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
@@ -133,24 +156,43 @@ export function LinksSection({ links, run }: Props) {
 
   const shift = (index: number, by: -1 | 1) => {
     const ids = shown.map((link) => link.id);
-    void move(arrayMove(ids, index, index + by));
+    const id = ids[index]!;
+    const target = index + by;
+    // At the first or last place the pressed arrow is disabled: focus the other one.
+    const edge = target === 0 || target === ids.length - 1;
+    focusNext.current = `${edge ? (by < 0 ? 'down' : 'up') : by < 0 ? 'up' : 'down'}-${id}`;
+    void move(arrayMove(ids, index, target), id);
   };
 
-  const remove = (link: Link) =>
-    call(async () => {
+  const remove = (link: Link, index: number) => {
+    const neighbour = shown[index + 1] ?? shown[index - 1];
+    focusNext.current = neighbour ? `edit-${neighbour.id}` : 'add';
+    return call(async () => {
       const { response } = await api.DELETE('/api/v1/me/profile/links/{linkId}', {
         params: { path: { linkId: link.id } },
       });
       if (!response.ok) {
+        focusNext.current = null;
         setError('Nie udało się usunąć linku. Spróbuj ponownie.');
         return null;
       }
-      const { data } = await api.GET('/api/v1/me/profile');
-      return data ?? null;
+      // DELETE answers without the profile: read it (twice at most) for the new version.
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const { data } = await api.GET('/api/v1/me/profile');
+        if (data) return data;
+      }
+      setError('Link został usunięty, ale nie udało się odświeżyć strony. Odśwież stronę.');
+      return null;
     });
+  };
+
+  const closeForm = (id: string | 'new') => {
+    focusNext.current = id === 'new' ? 'add' : `edit-${id}`;
+    setEditing(null);
+  };
 
   return (
-    <section className="panel-sec" aria-labelledby="ed-links">
+    <section className="panel-sec" aria-labelledby="ed-links" ref={root}>
       <header>
         <h3 id="ed-links">Linki</h3>
         <span className="muted" style={{ fontSize: 'var(--text-sm)' }}>
@@ -158,6 +200,9 @@ export function LinksSection({ links, run }: Props) {
         </span>
       </header>
       <div className="body">
+        <span className="sr-only" role="status">
+          {announcement}
+        </span>
         {error && <Alert variant="danger">{error}</Alert>}
         {shown.length === 0 && editing !== 'new' && (
           <div className="empty">
@@ -169,6 +214,7 @@ export function LinksSection({ links, run }: Props) {
             <button
               type="button"
               className="btn btn-primary btn-sm"
+              data-focus="add"
               onClick={() => setEditing('new')}
             >
               <Plus className="i sm" aria-hidden="true" />
@@ -195,8 +241,8 @@ export function LinksSection({ links, run }: Props) {
                   <li key={link.id}>
                     <LinkForm
                       link={link}
-                      onCancel={() => setEditing(null)}
-                      onSaved={() => setEditing(null)}
+                      onCancel={() => closeForm(link.id)}
+                      onSaved={() => closeForm(link.id)}
                       run={run}
                     />
                   </li>
@@ -206,10 +252,11 @@ export function LinksSection({ links, run }: Props) {
                     link={link}
                     first={index === 0}
                     last={index === shown.length - 1}
+                    busy={busy}
                     onUp={() => shift(index, -1)}
                     onDown={() => shift(index, 1)}
                     onEdit={() => setEditing(link.id)}
-                    onRemove={() => void remove(link)}
+                    onRemove={() => void remove(link, index)}
                   />
                 ),
               )}
@@ -217,12 +264,13 @@ export function LinksSection({ links, run }: Props) {
           </SortableContext>
         </DndContext>
         {editing === 'new' ? (
-          <LinkForm onCancel={() => setEditing(null)} onSaved={() => setEditing(null)} run={run} />
+          <LinkForm onCancel={() => closeForm('new')} onSaved={() => closeForm('new')} run={run} />
         ) : (
           shown.length > 0 && (
             <button
               type="button"
               className="btn btn-secondary btn-block"
+              data-focus="add"
               disabled={full}
               onClick={() => setEditing('new')}
             >
@@ -246,13 +294,14 @@ type RowProps = {
   link: Link;
   first: boolean;
   last: boolean;
+  busy: boolean;
   onUp: () => void;
   onDown: () => void;
   onEdit: () => void;
   onRemove: () => void;
 };
 
-function SortableRow({ link, first, last, onUp, onDown, onEdit, onRemove }: RowProps) {
+function SortableRow({ link, first, last, busy, onUp, onDown, onEdit, onRemove }: RowProps) {
   const {
     attributes,
     listeners,
@@ -261,7 +310,7 @@ function SortableRow({ link, first, last, onUp, onDown, onEdit, onRemove }: RowP
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: link.id });
+  } = useSortable({ id: link.id, disabled: busy });
   return (
     <li
       ref={setNodeRef}
@@ -288,7 +337,8 @@ function SortableRow({ link, first, last, onUp, onDown, onEdit, onRemove }: RowP
           type="button"
           className={`btn btn-ghost btn-icon ${styles.arrow}`}
           aria-label={`Przesuń w górę: ${link.label}`}
-          disabled={first}
+          data-focus={`up-${link.id}`}
+          disabled={first || busy}
           onClick={onUp}
         >
           <ArrowUp className="i sm" aria-hidden="true" />
@@ -297,7 +347,8 @@ function SortableRow({ link, first, last, onUp, onDown, onEdit, onRemove }: RowP
           type="button"
           className={`btn btn-ghost btn-icon ${styles.arrow}`}
           aria-label={`Przesuń w dół: ${link.label}`}
-          disabled={last}
+          data-focus={`down-${link.id}`}
+          disabled={last || busy}
           onClick={onDown}
         >
           <ArrowDown className="i sm" aria-hidden="true" />
@@ -306,6 +357,8 @@ function SortableRow({ link, first, last, onUp, onDown, onEdit, onRemove }: RowP
           type="button"
           className="btn btn-ghost btn-icon"
           aria-label={`Edytuj ${link.label}`}
+          data-focus={`edit-${link.id}`}
+          disabled={busy}
           onClick={onEdit}
         >
           <Pencil className="i sm" aria-hidden="true" />
@@ -314,6 +367,7 @@ function SortableRow({ link, first, last, onUp, onDown, onEdit, onRemove }: RowP
           type="button"
           className="btn btn-ghost btn-icon"
           aria-label={`Usuń ${link.label}`}
+          disabled={busy}
           onClick={onRemove}
         >
           <Trash2 className="i sm" aria-hidden="true" />
@@ -388,7 +442,11 @@ function LinkForm({ link, onCancel, onSaved, run }: FormProps) {
   );
 
   return (
-    <form className={`card ${styles.form}`} onSubmit={(event) => void submit(event)} noValidate>
+    <form
+      className={`card ${styles.form}${errors.url || errors.label || general ? ` ${styles.formError}` : ''}`}
+      onSubmit={(event) => void submit(event)}
+      noValidate
+    >
       {general && <Alert variant="danger">{general}</Alert>}
       <div className="field">
         <label className="field-label" htmlFor={`link-${id}-url`}>

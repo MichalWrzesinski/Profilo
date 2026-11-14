@@ -387,7 +387,7 @@ function EditorView({ initial, storageKey, emailConfirmed }: ViewProps) {
             </div>
           </section>
 
-          <LinksSection links={profile.draft.links} run={draft.exclusive} />
+          <LinksSection links={profile.draft.links} run={draft.exclusive} busy={draft.busy} />
         </div>
 
         <aside
