@@ -8,12 +8,22 @@ const run = Date.now().toString(36);
 const email = `e2e-${run}@example.pl`;
 const name = `Ewa Testowa ${run}`;
 
+/** Open a page and wait until React has taken it over (forms would submit natively before). */
+async function open(page: Page, path: string) {
+  await page.goto(path);
+  await page.locator('html[data-hydrated]').waitFor();
+}
+
 async function confirmationPath(): Promise<string> {
   for (let attempt = 0; attempt < 30; attempt += 1) {
-    const search = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`);
+    const search = await fetch(
+      `${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`,
+    );
     const { messages } = (await search.json()) as { messages: { ID: string }[] };
     if (messages.length) {
-      const message = (await (await fetch(`${MAILPIT}/api/v1/message/${messages[0]!.ID}`)).json()) as {
+      const message = (await (
+        await fetch(`${MAILPIT}/api/v1/message/${messages[0]!.ID}`)
+      ).json()) as {
         Text: string;
       };
       const match = /\/potwierdz-email\?token=[\w-]+/.exec(message.Text);
@@ -31,12 +41,15 @@ async function confirmationPath(): Promise<string> {
  */
 async function pageHtml(page: Page | ReturnType<Page['frameLocator']>) {
   const html = await page.locator('.pp').evaluate((element) => element.outerHTML);
-  return html.replace(/style="([^"]*)"/g, (_, style: string) => `style="${style.replace(/\s+/g, '').replace(/;$/, '')}"`);
+  return html.replace(
+    /style="([^"]*)"/g,
+    (_, style: string) => `style="${style.replace(/\s+/g, '').replace(/;$/, '')}"`,
+  );
 }
 
 test('a new owner publishes a page that looks exactly like the preview', async ({ page }) => {
   // Registration lands in the wizard.
-  await page.goto('/rejestracja');
+  await open(page, '/rejestracja');
   await page.getByLabel('Imię i nazwisko lub pseudonim').fill(name);
   await page.getByLabel('E-mail do logowania').fill(email);
   await page.getByLabel('Hasło', { exact: true }).fill('zielony-kubek-na-biurku-e2e');
@@ -74,9 +87,9 @@ test('a new owner publishes a page that looks exactly like the preview', async (
   await expect(page.getByText('Najpierw potwierdź e-mail')).toBeVisible();
 
   // Confirm with the link from the e-mail, then publish.
-  await page.goto(await confirmationPath());
+  await open(page, await confirmationPath());
   await expect(page.getByText(/potwierdzony/i)).toBeVisible();
-  await page.goto('/kreator/podglad');
+  await open(page, '/kreator/podglad');
   const stepPreview = page.frameLocator('iframe[title="Podgląd strony"]');
   await expect(stepPreview.locator('h1')).toHaveText(name);
   await expect(publish).toBeEnabled();
