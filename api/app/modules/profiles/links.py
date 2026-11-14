@@ -1,7 +1,8 @@
 """Link rules (docs/product/areas/profile.md, PRF-BR-11). Pure functions."""
 
 import re
-from urllib.parse import urlsplit
+import unicodedata
+from urllib.parse import urlsplit, urlunsplit
 
 MAX_LINKS = 20
 MAX_URL_LENGTH = 2000
@@ -44,26 +45,44 @@ class InvalidUrlError(ValueError):
     pass
 
 
-def _host_is_valid(host: str) -> bool:
+# Control, format (zero-width, bidi overrides), separator, private-use and unassigned
+# characters: invisible or misleading in a link shown to visitors.
+_FORBIDDEN_CATEGORIES = {"Cc", "Cf", "Zs", "Zl", "Zp", "Co", "Cn"}
+
+
+def _has_forbidden_characters(text: str) -> bool:
+    return any(unicodedata.category(ch) in _FORBIDDEN_CATEGORIES for ch in text)
+
+
+def _canonical_host(host: str) -> str | None:
+    """The host as stored, or None when it is not a valid domain. Hosts with letters from
+    scripts other than Latin are kept in ASCII (punycode) so a look-alike such as Cyrillic
+    „a” in „apple.com” cannot pass for the real one on the page."""
     try:
-        ascii_host = host.encode("idna").decode("ascii")
+        ascii_host = host.encode("idna").decode("ascii").lower()
+        unicode_host = ascii_host.encode("ascii").decode("idna")
     except UnicodeError:
-        return False
+        return None
     labels = ascii_host.split(".")
-    return (
-        len(labels) >= 2
-        and len(ascii_host) <= 253
-        and all(_LABEL.match(label) for label in labels)
-        and not labels[-1].isdigit()
-    )
+    if (
+        len(labels) < 2
+        or len(ascii_host) > 253
+        or not all(_LABEL.match(label) for label in labels)
+        or labels[-1].isdigit()
+    ):
+        return None
+    latin = all(ch.isascii() or unicodedata.name(ch, "").startswith("LATIN") for ch in unicode_host)
+    return unicode_host if latin else ascii_host
 
 
 def normalise_url(raw: str) -> str:
     """http(s) URL with `https://` added when the scheme is missing; anything else raises.
-    Rejected: spaces and control characters, other schemes (javascript:, mailto:, data:),
-    user:password@ (used to disguise the real host), hosts without a domain."""
+    Rejected: whitespace, control and invisible characters, other schemes (javascript:,
+    mailto:, data:), user:password@ (used to disguise the real host), hosts without a domain,
+    port 0. The result is built from the parsed parts and parsed again, so the stored host
+    is exactly the one that was checked."""
     text = raw.strip()
-    if not text or len(text) > MAX_URL_LENGTH or any(ch.isspace() or ord(ch) < 32 for ch in text):
+    if not text or len(text) > MAX_URL_LENGTH or _has_forbidden_characters(text):
         raise InvalidUrlError
     scheme = _SCHEME.match(text)
     if scheme and scheme.group(1).lower() not in ("http", "https"):
@@ -72,18 +91,18 @@ def normalise_url(raw: str) -> str:
         text = f"https://{text.lstrip('/')}"
     try:
         parts = urlsplit(text)
-        host = parts.hostname or ""
-        _ = parts.port  # raises for a bad port
+        port = parts.port  # raises for a bad port
     except ValueError:
         raise InvalidUrlError from None
-    if parts.scheme.lower() not in ("http", "https") or "@" in parts.netloc:
+    if parts.scheme.lower() not in ("http", "https") or "@" in parts.netloc or port == 0:
         raise InvalidUrlError
-    if not _host_is_valid(host):
+    host = _canonical_host(parts.hostname or "")
+    if host is None:
         raise InvalidUrlError
-    # Lower-case scheme and host; path, query and fragment stay as typed.
-    netloc = parts.netloc.lower()
-    url = f"{parts.scheme.lower()}://{netloc}{text[len(parts.scheme) + 3 + len(netloc) :]}"
-    if len(url) > MAX_URL_LENGTH:
+    netloc = host if port is None else f"{host}:{port}"
+    url = urlunsplit((parts.scheme.lower(), netloc, parts.path, parts.query, parts.fragment))
+    check = urlsplit(url)
+    if check.hostname != host or "@" in check.netloc or len(url) > MAX_URL_LENGTH:
         raise InvalidUrlError
     return url
 

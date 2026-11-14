@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 import pytest
 
 from app.modules.profiles import links
@@ -13,6 +15,9 @@ from app.modules.profiles import links
         ("example.com:8080/a", "https://example.com:8080/a"),
         ("//example.com/a", "https://example.com/a"),
         ("żółw.pl", "https://żółw.pl"),
+        ("Żółw.PL/Ala", "https://żółw.pl/Ala"),
+        ("https://\u0430pple.com/x", "https://xn--pple-43d.com/x"),
+        ("https://example.com/#", "https://example.com/"),
     ],
 )
 def test_urls_are_normalised(raw: str, url: str) -> None:
@@ -40,6 +45,13 @@ def test_urls_are_normalised(raw: str, url: str) -> None:
         "https://" + "a" * 2000 + ".pl",
         "https://" + "x" * 64 + ".pl",
         "a.pl/" + "x" * 1995,
+        "https://example.com:0/",
+        "https://example.com/\u202egnp.exe",
+        "https://a.com\u2060b",
+        "https://example.com/\u200b",
+        "https://example.com/\x7f",
+        "https://example.com/\x85a",
+        "https://example.com/\u00a0a",
     ],
 )
 def test_invalid_urls_are_rejected(raw: str) -> None:
@@ -57,9 +69,24 @@ def test_invalid_urls_are_rejected(raw: str) -> None:
         ("https://m.facebook.com/anna", "facebook", "Facebook"),
         ("https://www.behance.net/anna", "behance", "Behance"),
         ("https://notlinkedin.com/anna", "other", "notlinkedin.com"),
+        ("https://linkedin.com.evil.pl/in/anna", "other", "linkedin.com.evil.pl"),
+        ("https://evil.pl/.linkedin.com", "other", "evil.pl"),
         ("https://www.studiowisniewska.pl/blog", "other", "studiowisniewska.pl"),
     ],
 )
 def test_service_and_default_label(url: str, service: str, label: str) -> None:
     assert links.detect_service(url) == service
     assert links.default_label(url, service) == label
+
+
+@pytest.mark.parametrize(
+    ("raw", "host", "path"),
+    [
+        ("https://İexample.pl/x", "xn--iexample-o0e.pl", "/x"),
+        ("https://İ.com/@evil.com", "xn--i-9bb.com", "/@evil.com"),
+    ],
+)
+def test_lowercasing_never_moves_text_between_host_and_path(raw: str, host: str, path: str) -> None:
+    parts = urlsplit(links.normalise_url(raw))
+
+    assert (parts.hostname, parts.path, parts.username) == (host, path, None)

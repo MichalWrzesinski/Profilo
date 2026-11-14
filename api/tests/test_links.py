@@ -205,3 +205,28 @@ async def test_links_of_another_owner_cannot_be_changed(client: AsyncClient) -> 
 
 async def test_links_need_login(client: AsyncClient) -> None:
     assert (await client.post(LINKS, json={"url": "github.com/a"})).status_code == 401
+
+
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [({}, "Podaj adres albo etykietę."), ({"url": None}, "Wpisz adres strony.")],
+)
+async def test_link_patch_needs_a_change(
+    client: AsyncClient, body: dict[str, Any], message: str
+) -> None:
+    auth = await owner(client)
+    link_id = links_of((await add(client, auth, "github.com/a")).json())[0]["id"]
+
+    response = await client.patch(f"{LINKS}/{link_id}", json=body, headers=auth)
+
+    assert response.status_code == 422
+    assert response.json()["errors"][0]["message"] == message
+
+
+async def test_lookalike_host_is_stored_in_punycode(client: AsyncClient) -> None:
+    auth = await owner(client)
+
+    link = links_of((await add(client, auth, "https://\u0430pple.com/x")).json())[0]
+
+    assert link["url"] == "https://xn--pple-43d.com/x"
+    assert link["label"] == "xn--pple-43d.com"
