@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     smtp_timeout_seconds: float = 10.0
     mail_from: str = "Profilo <no-reply@profilo.pl>"
 
+    # User images (media module): an fsspec URL; a volume on servers, memory:// in tests.
+    media_url: str = "file:///data/media"
+
 
 @lru_cache
 def get_settings() -> Settings:

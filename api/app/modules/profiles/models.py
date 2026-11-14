@@ -28,8 +28,8 @@ def _in(column: str, values: tuple[str, ...]) -> str:
 
 
 class Profile(Base):
-    """The owner's page draft (docs/product/areas/profile.md). Links and images are added
-    by later tasks; the published version is `PublishedProfile`."""
+    """The owner's page draft (docs/product/areas/profile.md); links are `ProfileLink`,
+    images live in the media module, the published version is `PublishedProfile`."""
 
     __tablename__ = "profiles"
     __table_args__ = (
@@ -69,6 +69,12 @@ class Profile(Base):
         String(20), default="never_published", server_default="never_published"
     )
     blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    avatar_image_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("images.id", ondelete="SET NULL")
+    )
+    background_image_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("images.id", ondelete="SET NULL")
+    )
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     draft_updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

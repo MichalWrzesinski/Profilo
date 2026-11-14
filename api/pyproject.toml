@@ -20,6 +20,9 @@ dependencies = [
     "zxcvbn>=4.5",
     "jinja2>=3.1",
     "phonenumbers>=9.0",
+    "pillow>=13.0",
+    "fsspec>=2026.9",
+    "python-multipart>=0.0.33",
 ]
 
 [dependency-groups]
@@ -59,7 +62,7 @@ plugins = ["pydantic.mypy"]
 exclude = ["alembic/versions"]
 
 [[tool.mypy.overrides]]
-module = ["celery", "celery.*", "zxcvbn", "zxcvbn.*"]
+module = ["celery", "celery.*", "zxcvbn", "zxcvbn.*", "fsspec", "fsspec.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

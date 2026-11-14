@@ -15,11 +15,13 @@ from app.core import rate_limit
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
+from app.modules.media import service as media
 from app.modules.profiles import links as link_rules
 from app.modules.profiles import nicks
 from app.modules.profiles.models import Profile, ProfileLink, PublishedProfile, ReservedNick
 from app.modules.profiles.schemas import (
     DraftPatch,
+    ImageRefOut,
     LinkInput,
     LinkOut,
     LinkPatch,
@@ -64,8 +66,14 @@ async def _links(session: AsyncSession, profile: Profile) -> list[ProfileLink]:
     )
 
 
+def _image(image_id: uuid.UUID | None, kind: media.Kind) -> ImageRefOut | None:
+    return ImageRefOut(id=image_id, urls=media.urls_for(image_id, kind)) if image_id else None
+
+
 def _content(profile: Profile, links: list[ProfileLink]) -> ProfileContentOut:
     return ProfileContentOut(
+        avatar=_image(profile.avatar_image_id, "avatar"),
+        background=_image(profile.background_image_id, "background"),
         links=[
             LinkOut(id=link.id, url=link.url, label=link.label, service=link.service)
             for link in links
@@ -367,6 +375,7 @@ async def publish(
         profile.nick_locked = True  # PRF-BR-7: permanent after the first publication
         log.info("profile_published", account_id=str(account_id))
     await session.commit()
+    await _prune_images(session, profile)
     return profile
 
 
@@ -518,3 +527,63 @@ async def reorder_links(
         _touch(profile)
     await session.commit()
     return profile
+
+
+# --- images (PRF-BR-13) -----------------------------------------------------------------
+
+_IMAGE_COLUMN = {"avatar": "avatar_image_id", "background": "background_image_id"}
+
+
+async def _prune_images(session: AsyncSession, profile: Profile) -> None:
+    """Images stay while the draft or the published snapshot uses them (ADR 0002)."""
+    keep = {i for i in (profile.avatar_image_id, profile.background_image_id) if i}
+    snapshot = await session.get(PublishedProfile, profile.id)
+    if snapshot is not None:
+        for kind in ("avatar", "background"):
+            ref = snapshot.content.get(kind)
+            if ref:
+                keep.add(uuid.UUID(ref["id"]))
+    await media.prune(session, profile.account_id, keep)
+
+
+async def set_image(
+    session: AsyncSession, account_id: uuid.UUID, kind: media.Kind, data: bytes
+) -> Profile:
+    """Store the upload and use it in the draft; the previous image is kept only while the
+    published page still shows it. A refused file leaves the previous image in place."""
+    image = await media.store_upload(session, account_id, kind, data)
+    profile = await get_own_profile(session, account_id, lock=True)
+    setattr(profile, _IMAGE_COLUMN[kind], image.id)
+    _touch(profile)
+    await session.commit()
+    await _prune_images(session, profile)
+    return profile
+
+
+async def remove_image(session: AsyncSession, account_id: uuid.UUID, kind: media.Kind) -> Profile:
+    profile = await get_own_profile(session, account_id, lock=True)
+    if getattr(profile, _IMAGE_COLUMN[kind]) is not None:
+        setattr(profile, _IMAGE_COLUMN[kind], None)
+        _touch(profile)
+    await session.commit()
+    await _prune_images(session, profile)
+    return profile
+
+
+async def is_image_public(session: AsyncSession, image_id: uuid.UUID) -> bool:
+    """True when a visible published page shows the image (PUB-BR-6 rules)."""
+    ref = str(image_id)
+    found = await session.scalar(
+        select(Profile.id)
+        .join(PublishedProfile, PublishedProfile.profile_id == Profile.id)
+        .where(
+            Profile.status == "published",
+            Profile.blocked_at.is_(None),
+            or_(
+                PublishedProfile.content["avatar"]["id"].astext == ref,
+                PublishedProfile.content["background"]["id"].astext == ref,
+            ),
+        )
+        .limit(1)
+    )
+    return found is not None

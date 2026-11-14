@@ -1,0 +1,39 @@
+"""Test images built in memory."""
+
+import io
+import os
+
+from PIL import Image
+
+
+def jpeg(
+    width: int = 800, height: int = 600, *, noise: bool = False, orientation: int = 1
+) -> bytes:
+    if noise:
+        image = Image.frombytes("RGB", (width, height), os.urandom(width * height * 3))
+    else:
+        image = Image.new("RGB", (width, height), (200, 30, 30))
+        image.paste((30, 30, 200), (0, 0, width // 2, height))  # left half blue
+    exif = Image.Exif()
+    exif[0x0112] = orientation  # Orientation
+    exif[0x010F] = "Aparat Anny"  # Make
+    exif[0x8825] = {2: (50.0, 3.0, 0.0), 1: "N"}  # GPS: latitude
+    out = io.BytesIO()
+    image.save(out, format="JPEG", quality=95 if not noise else 100, exif=exif)
+    return out.getvalue()
+
+
+def png(width: int = 400, height: int = 400, mode: str = "RGBA") -> bytes:
+    out = io.BytesIO()
+    Image.new(mode, (width, height), 0).save(out, format="PNG")
+    return out.getvalue()
+
+
+def animated_webp() -> bytes:
+    frames = [Image.new("RGB", (300, 300), color) for color in ((255, 0, 0), (0, 255, 0))]
+    out = io.BytesIO()
+    frames[0].save(out, format="WEBP", save_all=True, append_images=frames[1:])
+    return out.getvalue()
+
+
+PDF = b"%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n"
