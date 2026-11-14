@@ -80,7 +80,7 @@ e2e: env ## End-to-end test of the main flow (Playwright) against the running st
 	$(MAKE) migrate
 	# Each run registers a new account: start without the registration rate limits.
 	$(COMPOSE) exec -T valkey sh -c "valkey-cli --scan --pattern 'rl:*' | xargs -r valkey-cli del" >/dev/null
-	$(COMPOSE) run --rm $(AS_HOST) e2e sh -c 'npm ci --no-audit --no-fund && npx playwright test'
+	$(COMPOSE) run --rm $(AS_HOST) e2e sh -c 'npm ci --no-audit --no-fund && npm run check && npx playwright test'
 
 api-shell: env ## Shell in the api container
 	$(API_RUN) bash
