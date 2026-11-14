@@ -228,6 +228,46 @@ describe('LinksSection', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Dodaj link' })).toHaveFocus());
   });
 
+  it('does not take focus back when the owner has moved to another field', async () => {
+    let release: (response: Response) => void = () => {};
+    const user = userEvent.setup();
+    mockFetch(() => new Promise<Response>((resolve) => (release = resolve)));
+    const run = async (change: () => Promise<OwnerProfile | null>) => {
+      await change();
+    };
+    render(
+      <>
+        <input aria-label="Opis" />
+        <LinksSection links={[LINKEDIN, GITHUB]} run={run} />
+      </>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Usuń LinkedIn' }));
+    await user.click(screen.getByLabelText('Opis'));
+    release(new Response(null, { status: 500 }));
+
+    await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie.');
+    expect(screen.getByLabelText('Opis')).toHaveFocus();
+  });
+
+  it('focuses the last link when „Dodaj link” is disabled at 20', async () => {
+    const links = Array.from({ length: 19 }, (_, n) => ({
+      ...GITHUB,
+      id: `00000000-0000-7000-8000-0000000002${String(n).padStart(2, '0')}`,
+      label: `Link ${n}`,
+    }));
+    const added = { ...GITHUB, id: '00000000-0000-7000-8000-000000000299', label: 'Ostatni' };
+    const { user } = setup(links, () => json(201, profileWith([...links, added])));
+
+    await user.click(screen.getByRole('button', { name: 'Dodaj link' }));
+    await user.type(screen.getByLabelText('Adres strony'), 'github.com/x');
+    await user.click(screen.getByRole('button', { name: 'Zapisz link' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Edytuj Ostatni' })).toHaveFocus(),
+    );
+  });
+
   it('marks the form with an error', async () => {
     const { user } = setup([], () => json(500, {}));
     await user.click(screen.getByRole('button', { name: 'Dodaj pierwszy link' }));

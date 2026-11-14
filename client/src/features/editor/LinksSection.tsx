@@ -91,8 +91,19 @@ export function LinksSection({ links, run, busy = false }: Props) {
   const focusNext = useRef<string | null>(null);
   useEffect(() => {
     const target = focusNext.current;
-    if (!target || !root.current) return;
-    const element = root.current.querySelector<HTMLElement>(`[data-focus="${target}"]`);
+    const section = root.current;
+    if (!target || !section) return;
+    // The owner has moved on (e.g. typing in another field): leave their focus alone.
+    const active = document.activeElement;
+    if (active && active !== document.body && !section.contains(active)) {
+      focusNext.current = null;
+      return;
+    }
+    let element = section.querySelector<HTMLElement>(`[data-focus="${target}"]`);
+    if (target === 'add' && element?.hasAttribute('disabled')) {
+      // „Dodaj link” is disabled at 20 links: focus the last link instead.
+      element = [...section.querySelectorAll<HTMLElement>('[data-focus^="edit-"]')].at(-1) ?? null;
+    }
     if (element && !element.hasAttribute('disabled')) {
       element.focus();
       focusNext.current = null;
