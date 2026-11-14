@@ -1,5 +1,12 @@
 import { json, mockFetch, requestAt, SESSION } from '@/test/fetch';
-import { api, logoutSession, refreshSession, tokenStore } from './client';
+import {
+  api,
+  authorizedFetch,
+  logoutSession,
+  refreshSession,
+  tokenStore,
+  uploadWithProgress,
+} from './client';
 
 afterEach(() => {
   tokenStore.set(null);
@@ -113,5 +120,113 @@ describe('logoutSession', () => {
 
     expect(requestAt(fetch, 0).url).toMatch(/\/api\/v1\/auth\/logout$/);
     expect(tokenStore.get()).toBeNull();
+  });
+});
+
+describe('authorizedFetch and uploadWithProgress', () => {
+  it('sends the access token with a plain fetch', async () => {
+    tokenStore.set('access-9', 900);
+    const fetch = mockFetch(async () => new Response('x'));
+
+    await authorizedFetch('http://localhost/media/a/128.webp');
+
+    const init = fetch.mock.calls[0]![1] as RequestInit;
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer access-9');
+  });
+
+  it('refreshes a missing token first and sends nothing when there is none', async () => {
+    tokenStore.set(null);
+    const fetch = mockFetch(async (request) =>
+      request.url.endsWith('/auth/refresh') ? json(401, { status: 401 }) : new Response('x'),
+    );
+
+    await authorizedFetch('http://localhost/media/a/128.webp');
+
+    const init = fetch.mock.calls.at(-1)![1] as RequestInit;
+    expect(new Headers(init.headers).has('Authorization')).toBe(false);
+  });
+
+  it('uploads with progress and returns the status and body', async () => {
+    tokenStore.set('access-9', 900);
+    const sent: { method?: string; url?: string; auth?: string | null } = {};
+    class FakeXhr {
+      upload: {
+        onprogress:
+          ((e: { lengthComputable: boolean; loaded: number; total: number }) => void) | null;
+      } = { onprogress: null };
+      status = 200;
+      responseText = '{"version":5}';
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      open(method: string, url: string) {
+        sent.method = method;
+        sent.url = url;
+      }
+      setRequestHeader(name: string, value: string) {
+        if (name === 'Authorization') sent.auth = value;
+      }
+      send() {
+        this.upload.onprogress?.({ lengthComputable: true, loaded: 5, total: 10 });
+        this.upload.onprogress?.({ lengthComputable: false, loaded: 0, total: 0 });
+        this.onload?.();
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXhr);
+    const progress: number[] = [];
+
+    const result = await uploadWithProgress(
+      '/api/v1/me/profile/images/avatar',
+      'PUT',
+      new FormData(),
+      (f) => progress.push(f),
+    );
+
+    expect(result).toEqual({ status: 200, body: { version: 5 } });
+    expect(sent).toEqual({
+      method: 'PUT',
+      url: '/api/v1/me/profile/images/avatar',
+      auth: 'Bearer access-9',
+    });
+    expect(progress).toEqual([0.5]);
+  });
+
+  it.each([
+    ['', null],
+    ['<html>', null],
+  ])('reads a non-JSON body %j as null', async (text, body) => {
+    tokenStore.set('access-9', 900);
+    class FakeXhr {
+      upload = { onprogress: null };
+      status = 502;
+      responseText = text;
+      onload: (() => void) | null = null;
+      open() {}
+      setRequestHeader() {}
+      send() {
+        this.onload?.();
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXhr);
+
+    expect(await uploadWithProgress('/x', 'PUT', new FormData(), () => {})).toEqual({
+      status: 502,
+      body,
+    });
+  });
+
+  it('rejects when the network fails', async () => {
+    tokenStore.set('access-9', 900);
+    class FakeXhr {
+      upload = { onprogress: null };
+      onerror: (() => void) | null = null;
+      open() {}
+      setRequestHeader() {}
+      send() {
+        this.onerror?.();
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXhr);
+
+    await expect(uploadWithProgress('/x', 'PUT', new FormData(), () => {})).rejects.toThrow();
   });
 });

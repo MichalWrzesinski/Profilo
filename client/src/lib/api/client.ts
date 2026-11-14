@@ -104,3 +104,51 @@ const authMiddleware: Middleware = {
 };
 
 api.use(authMiddleware);
+
+/** A fresh access token (refreshed first when it is about to expire), or null. */
+export async function freshAccessToken(): Promise<string | null> {
+  if (tokenStore.expiresSoon() || !tokenStore.get()) await refreshSession();
+  return tokenStore.get();
+}
+
+/** `fetch` with the access token, for responses that are not JSON (e.g. draft images). */
+export async function authorizedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const token = await freshAccessToken();
+  const headers = new Headers(init.headers);
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  return globalThis.fetch(url, { ...init, headers });
+}
+
+export type UploadResult = { status: number; body: unknown };
+
+/**
+ * Upload a file with progress (fetch cannot report upload progress). Resolves with the
+ * status and parsed JSON body; rejects only when the network fails.
+ */
+export async function uploadWithProgress(
+  url: string,
+  method: 'PUT' | 'POST',
+  form: FormData,
+  onProgress: (fraction: number) => void,
+): Promise<UploadResult> {
+  const token = await freshAccessToken();
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      let body: unknown = null;
+      try {
+        body = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        body = null;
+      }
+      resolve({ status: xhr.status, body });
+    };
+    xhr.onerror = () => reject(new Error('Upload failed'));
+    xhr.send(form);
+  });
+}
