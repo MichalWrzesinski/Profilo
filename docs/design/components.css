@@ -219,7 +219,7 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .pp .contact .btn-primary svg { color: var(--color-accent-soft); }
 .pp .contact .btn-secondary { color: var(--page-accent); }
 .pp .bio { font-size: var(--text-md); max-width: 60ch; margin-bottom: var(--space-8); white-space: pre-line; }
-.pp .links { display: grid; gap: var(--space-3); list-style: none; padding: 0; margin: var(--space-4) 0 var(--space-10); }
+.pp .links { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); list-style: none; padding: 0; margin: var(--space-4) 0 var(--space-10); }
 .pp footer { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); padding-top: var(--space-5); border-top: var(--border-width) solid var(--color-border); font-size: 13px; color: var(--color-text-muted); }
 .pp footer a { color: inherit; text-decoration: none; }
 .pp footer a:hover { text-decoration: underline; }
