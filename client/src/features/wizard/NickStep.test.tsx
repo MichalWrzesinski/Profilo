@@ -103,7 +103,7 @@ describe('NickStep', () => {
     expect(screen.getByText(/Adres wolny/)).toBeInTheDocument();
     await user.click(next());
 
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/panel'));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kreator/tresc'));
     const [put] = calls(fetch, 'PUT', '/api/v1/me/profile/nick');
     expect(await put!.json()).toEqual({ nick: 'anna-wisniewska' });
     expect(calls(fetch, 'PATCH', '/api/v1/me/profile')).toHaveLength(0);
@@ -163,7 +163,7 @@ describe('NickStep', () => {
     await screen.findByText(/Adres wolny/);
     await user.click(next());
 
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/panel'));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kreator/tresc'));
     const [patch] = calls(fetch, 'PATCH', '/api/v1/me/profile');
     expect(await patch!.json()).toEqual({ version: 3, displayName: 'Anna W.' });
   });
