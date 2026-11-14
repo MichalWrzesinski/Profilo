@@ -14,9 +14,13 @@ export function draftToPublic(profile: OwnerProfile, values?: Values): PublicPro
         key === 'displayName' ? value || content.displayName : value;
     }
   }
+  const nick = profile.nick ?? 'twoj-adres';
   return {
-    nick: profile.nick ?? 'twoj-adres',
-    canonicalUrl: profile.publicUrl ?? '',
+    nick,
+    // Before the first publication the address is not public yet; show the one it will have.
+    canonicalUrl:
+      profile.publicUrl ??
+      (typeof window === 'undefined' ? '' : `${window.location.origin}/user/${nick}`),
     publishedAt: profile.publishedAt ?? new Date(0).toISOString(),
     content,
   };

@@ -52,7 +52,7 @@ describe('draftToPublic', () => {
     const page = draftToPublic({ ...profile, nick: null, publicUrl: null, publishedAt: null });
 
     expect(page.nick).toBe('twoj-adres');
-    expect(page.canonicalUrl).toBe('');
+    expect(page.canonicalUrl).toBe(`${window.location.origin}/user/twoj-adres`);
     expect(page.content.headline).toBe('Stary');
   });
 });
