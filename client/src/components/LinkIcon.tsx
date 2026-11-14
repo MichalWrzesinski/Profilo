@@ -16,10 +16,15 @@ const MARKS: Record<Exclude<Service, 'other'>, string> = {
   tiktok: 'TT',
 };
 
+/** The service mark alone (Card layout icon links). */
+export function LinkMark({ service }: { service: Service }) {
+  return service === 'other' ? <Globe className="i" aria-hidden="true" /> : <>{MARKS[service]}</>;
+}
+
 export function LinkIcon({ service }: { service: Service }) {
   return (
     <span className="link-ico" aria-hidden="true">
-      {service === 'other' ? <Globe className="i" /> : MARKS[service]}
+      <LinkMark service={service} />
     </span>
   );
 }

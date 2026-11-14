@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
-import { ClassicPage } from '@/features/public/ClassicPage';
+import { PublicPage as Page } from '@/features/public/PublicPage';
 import { getPublicProfile } from '@/lib/publicProfile';
 
 type Props = { params: Promise<{ nick: string }> };
@@ -33,5 +33,5 @@ export default async function PublicPage({ params }: Props) {
   if (!profile) notFound();
   // One address per page: /user/Anna-Wisniewska → /user/anna-wisniewska.
   if (profile.nick !== nick) permanentRedirect(`/user/${profile.nick}`);
-  return <ClassicPage profile={profile} />;
+  return <Page profile={profile} />;
 }

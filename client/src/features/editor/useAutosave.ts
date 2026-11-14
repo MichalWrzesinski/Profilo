@@ -40,7 +40,10 @@ export function useAutosave(initial: OwnerProfile, storageKey: string) {
     return null;
   });
   const [profile, setProfile] = useState(initial);
-  const [values, setValues] = useState<Values>(() => restored?.values ?? valuesFrom(initial));
+  // Kept values may come from an older release without newer fields (layout, accent).
+  const [values, setValues] = useState<Values>(() =>
+    restored ? { ...valuesFrom(initial), ...restored.values } : valuesFrom(initial),
+  );
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<SaveStatus>('saved');
   const [conflict, setConflict] = useState<OwnerProfile | null>(null);

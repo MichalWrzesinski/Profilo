@@ -17,6 +17,8 @@ const base: Values = {
   publicEmail: '',
   phoneCountry: 'PL',
   phoneNational: '',
+  layout: 'classic',
+  accent: 'granat',
 };
 
 describe('editor fields', () => {
@@ -63,6 +65,8 @@ describe('editor fields', () => {
         position: null,
         publicEmail: null,
         publicPhone: '+48601234567',
+        layout: 'classic',
+        accent: 'granat',
       },
     } as OwnerProfile;
 
