@@ -709,7 +709,7 @@ describe('Editor', () => {
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kreator/podglad'));
     expect(bodies).toEqual([{ version: 5, company: 'Studio' }]);
     await user.click(screen.getByRole('button', { name: '← Wstecz' }));
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kreator'));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kreator/wyglad'));
   });
 
   it('shows the wizard loading state without its own top bar', () => {
@@ -736,6 +736,23 @@ describe('Editor', () => {
     const frame = await screen.findByTitle('Podgląd wersji roboczej');
     expect(frame).toHaveAttribute('src', '/podglad');
     expect(pathname.current).toBe('/');
+  });
+
+  it('changes the layout and colour in the „Wygląd” section', async () => {
+    const { bodies, user } = setup();
+    const toggle = await screen.findByRole('button', { name: 'Wygląd' });
+    expect(screen.getByText('Klasyczny · Granat')).toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await user.click(screen.getByRole('radio', { name: /Dzielony/ }));
+    await user.click(screen.getByRole('radio', { name: 'Miedź' }));
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+
+    await waitFor(() => expect(bodies).toEqual([{ version: 5, layout: 'split', accent: 'miedz' }]));
+    expect(screen.getByText('Dzielony · Miedź')).toBeInTheDocument();
+    await user.click(toggle);
+    expect(screen.queryByRole('radiogroup', { name: 'Układ strony' })).toBeNull();
   });
 
   it('switches between the form and the preview on phones', async () => {
@@ -783,5 +800,7 @@ function valuesOf(profile: OwnerProfile) {
     publicEmail: '',
     phoneCountry: 'PL',
     phoneNational: '',
+    layout: 'classic',
+    accent: 'granat',
   };
 }

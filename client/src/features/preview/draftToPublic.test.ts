@@ -32,6 +32,8 @@ const values: Values = {
   publicEmail: '',
   phoneCountry: 'PL',
   phoneNational: '601 234 567',
+  layout: 'classic',
+  accent: 'granat',
 };
 
 describe('draftToPublic', () => {

@@ -1,11 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import { publicProfile } from '@/test/profiles';
-import { ClassicPage } from './ClassicPage';
+import { CARD_ICON_LINKS, PublicPage } from './PublicPage';
 
-describe('ClassicPage', () => {
+describe('PublicPage', () => {
   it('shows identity, the e-mail button and the footer', () => {
     const { container } = render(
-      <ClassicPage profile={publicProfile({ publicEmail: 'kontakt@example.pl' })} />,
+      <PublicPage profile={publicProfile({ publicEmail: 'kontakt@example.pl' })} />,
     );
 
     expect(screen.getByRole('heading', { level: 1, name: 'Anna Wiśniewska' })).toBeVisible();
@@ -27,7 +27,7 @@ describe('ClassicPage', () => {
 
   it('shows details, the call button with the grouped number and the bio', () => {
     render(
-      <ClassicPage
+      <PublicPage
         profile={publicProfile({
           position: 'Właścicielka',
           company: 'Studio W',
@@ -49,14 +49,14 @@ describe('ClassicPage', () => {
   });
 
   it('shows the company alone when there is no position', () => {
-    render(<ClassicPage profile={publicProfile({ company: 'Studio W' })} />);
+    render(<PublicPage profile={publicProfile({ company: 'Studio W' })} />);
 
     expect(screen.getByText('Studio W')).toBeInTheDocument();
   });
 
   it('shows links as cards that open safely in a new tab', () => {
     render(
-      <ClassicPage
+      <PublicPage
         profile={publicProfile({
           links: [
             {
@@ -81,7 +81,7 @@ describe('ClassicPage', () => {
 
   it('shows the photo and the background in responsive sizes', () => {
     render(
-      <ClassicPage
+      <PublicPage
         profile={publicProfile({
           avatar: {
             id: 'a1',
@@ -105,7 +105,7 @@ describe('ClassicPage', () => {
   });
 
   it('leaves out empty fields without gaps', () => {
-    render(<ClassicPage profile={publicProfile({ headline: null })} />);
+    render(<PublicPage profile={publicProfile({ headline: null })} />);
 
     expect(screen.queryByRole('link', { name: 'Napisz e-mail' })).toBeNull();
     expect(document.querySelector('.headline')).toBeNull();
@@ -114,5 +114,66 @@ describe('ClassicPage', () => {
     expect(document.querySelector('.bio')).toBeNull();
     expect(document.querySelector('.links')).toBeNull();
     expect(screen.queryByRole('link', { name: /Zadzwoń/ })).toBeNull();
+  });
+
+  const links = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `00000000-0000-7000-8000-0000000000${String(i).padStart(2, '0')}`,
+      url: `https://example.com/${i}`,
+      label: `Link ${i}`,
+      service: (i === 0 ? 'github' : 'other') as 'github' | 'other',
+    }));
+  const background = {
+    id: 'b1',
+    urls: { '960': '/media/b1/960.webp', '1600': '/media/b1/1600.webp', '2400': '/media/b1/2400.webp' },
+  };
+
+  it('uses the default graphic in the accent colour without a background', () => {
+    const { container } = render(<PublicPage profile={publicProfile({ accent: 'bordo' })} />);
+
+    expect(container.querySelector('.banner.hero-art')).not.toBeNull();
+    expect(container.firstElementChild?.getAttribute('style')).toContain('var(--page-accent-bordo)');
+  });
+
+  it('renders the Split layout with the image on one side', () => {
+    const { container } = render(
+      <PublicPage profile={publicProfile({ layout: 'split', background, links: links(2) })} />,
+    );
+
+    expect(container.querySelector('.pp-split > .side img')).toHaveAttribute('src', '/media/b1/1600.webp');
+    expect(container.querySelector('.pp-split > main.main h1')).toHaveTextContent('Anna Wiśniewska');
+    expect(screen.getByRole('list', { name: 'Znajdziesz mnie tutaj' })).toHaveClass('links');
+  });
+
+  it('renders the Card layout with icon links on the default graphic', () => {
+    const { container } = render(
+      <PublicPage profile={publicProfile({ layout: 'card', links: links(CARD_ICON_LINKS) })} />,
+    );
+
+    expect(container.querySelector('.pp-card > .bgfill.hero-art')).not.toBeNull();
+    const icons = screen.getByRole('list', { name: 'Znajdziesz mnie tutaj' });
+    expect(icons).toHaveClass('icon-links');
+    const first = screen.getByRole('link', { name: 'Link 0 (otwiera się w nowej karcie)' });
+    expect(first).toHaveTextContent('GH');
+    expect(first).toHaveAttribute('rel', 'nofollow ugc noopener noreferrer');
+    expect(container.querySelectorAll('.vcard')).toHaveLength(1);
+  });
+
+  it('lists more than six links in a second card below the card', () => {
+    const { container } = render(
+      <PublicPage profile={publicProfile({ layout: 'card', background, links: links(7) })} />,
+    );
+
+    expect(container.querySelector('.bgfill img')).toHaveAttribute('src', '/media/b1/1600.webp');
+    expect(container.querySelectorAll('.vcard')).toHaveLength(2);
+    expect(container.querySelector('.icon-links')).toBeNull();
+    expect(screen.getAllByRole('link', { name: /Link \d/ })).toHaveLength(7);
+  });
+
+  it('shows a card without links and without the links section', () => {
+    const { container } = render(<PublicPage profile={publicProfile({ layout: 'card' })} />);
+
+    expect(container.querySelector('.icon-links')).toBeNull();
+    expect(container.querySelector('.links')).toBeNull();
   });
 });
