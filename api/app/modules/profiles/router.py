@@ -93,10 +93,11 @@ async def get_public_profile(nick: str, session: DbSession, response: Response) 
     response_class=Response,
     responses={200: {"content": {"image/jpeg": {}}}},
 )
-async def get_og_image(nick: str, session: DbSession) -> Response:
+async def get_og_image(nick: str, request: Request, session: DbSession) -> Response:
     """Link preview card (PUB-BR-7). Cached for a day like the page images, so unpublishing
     stops it soon; the page links it with the publication as version."""
-    data = await service.og_card(session, nick[:60])
+    client_ip = request.client.host if request.client else "unknown"
+    data = await service.og_card(session, nick[:60], client_ip)
     return Response(
         data,
         media_type="image/jpeg",

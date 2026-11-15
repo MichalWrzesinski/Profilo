@@ -144,6 +144,44 @@ async def test_hidden_pages_have_no_card(client: AsyncClient) -> None:
         assert response.headers["cache-control"] == "no-store"
 
 
+@pytest.mark.parametrize("hide", ["unpublish", "block"])
+async def test_a_cached_card_is_gone_once_the_page_is_hidden(
+    client: AsyncClient, hide: str
+) -> None:
+    auth = await owner(client, "anna@example.pl")
+    await publish(client, auth)
+    assert (await client.get(CARD)).status_code == 200  # now cached
+
+    if hide == "unpublish":
+        await client.post("/api/v1/me/profile/unpublish", headers=auth)
+    else:
+        async with get_sessionmaker()() as session:
+            await session.execute(update(Profile).values(blocked_at=datetime.now(UTC)))
+            await session.commit()
+    response = await client.get(CARD)
+
+    assert response.status_code == 404
+    assert response.headers["cache-control"] == "no-store"
+
+
+async def test_renders_are_rate_limited_but_cached_cards_are_not(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core import rate_limit
+
+    auth = await owner(client, "anna@example.pl")
+    await publish(client, auth)
+    monkeypatch.setattr(profiles, "OG_RENDERS", rate_limit.Limit("og_render", 1, 60))
+    assert (await client.get(CARD)).status_code == 200
+    assert (await client.get(CARD)).status_code == 200  # from the cache
+
+    await edit(client, auth, headline="Nowy nagłówek")
+    await publish(client, auth)
+    response = await client.get(CARD)
+
+    assert response.status_code == 429
+
+
 async def test_sitemap_lists_visible_pages_newest_first(client: AsyncClient) -> None:
     for email in ("anna@example.pl", "bartek@example.pl", "cezary@example.pl", "dorota@example.pl"):
         auth = await owner(client, email)
@@ -196,6 +234,13 @@ def test_very_long_names_get_the_smallest_size() -> None:
 )
 def test_initials(name: str, expected: str) -> None:
     assert og_image.initials(name) == expected
+
+
+def test_empty_name_does_not_break_the_layout() -> None:
+    font, lines = og_image._fit_name("")
+
+    assert lines == [""]
+    assert font.size == 76
 
 
 def test_unknown_accent_uses_the_default() -> None:

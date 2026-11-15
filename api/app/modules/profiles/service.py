@@ -417,6 +417,7 @@ async def get_public_profile(session: AsyncSession, nick: str) -> PublicProfileO
 _OG_CACHE_SECONDS = 7 * 24 * 3600
 # Rendering takes ~50 ms of CPU: at most two at a time, off the event loop.
 _RENDERING = ThreadPoolExecutor(max_workers=2, thread_name_prefix="og-image")
+OG_RENDERS = rate_limit.Limit("og_render", max_hits=60, window_seconds=60)
 SITEMAP_LIMIT = 50_000  # one sitemap file holds at most 50 000 addresses
 
 
@@ -467,20 +468,24 @@ async def _cache_set(key: str, value: bytes) -> None:
         log.error("og_cache_unavailable", error=type(exc).__name__)
 
 
-async def og_card(session: AsyncSession, nick: str) -> bytes:
+async def og_card(session: AsyncSession, nick: str, client_ip: str) -> bytes:
     """The Open Graph card of a visible published page as JPEG; the same 404 as the page
     otherwise. Cached per published draft version, so crawlers do not cost a render each."""
-    page = await _visible(session, nick)
+    page = await _visible(session, nick)  # before the cache: hidden pages never get a card
     content = ProfileContentOut.model_validate(page.snapshot.content)
-    # A draft version always has the same content and the images never change.
-    key = f"og:{page.profile_id}:{page.snapshot.draft_version}"
+    # A draft version always has the same content and the images never change; the renderer
+    # version changes the key when the card design changes.
+    key = f"og:{og_image.VERSION}:{page.profile_id}:{page.snapshot.draft_version}"
     if (cached := await _cache_get(key)) is not None:
         return cached
+    await rate_limit.hit(OG_RENDERS, client_ip)  # only renders cost CPU
     avatar: bytes | None = None
     if content.avatar:
         image = await media.get_image(session, content.avatar.id)
         if image is not None and image.account_id == page.account_id:
             avatar = await media.read_variant(image, 512)
+    # Nothing more to read: give the connection back before queueing for a render thread.
+    await session.commit()
     base = urlsplit(get_settings().public_base_url)
     card = await asyncio.get_running_loop().run_in_executor(
         _RENDERING,

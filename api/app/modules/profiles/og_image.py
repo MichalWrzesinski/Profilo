@@ -3,6 +3,9 @@
 A pure function, run in a worker thread. One card for every page (with the avatar when there
 is one, initials otherwise): messengers and social sites crop a square photo badly, and the
 card also shows the name and headline in previews that print no text.
+
+Known limitation: Pillow here has no raqm, so right-to-left scripts are drawn in logical
+order, and emoji (not in the brand font) appear as empty boxes.
 """
 
 import io
@@ -11,6 +14,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+VERSION = 1  # part of the cache key: raise it when the card design changes
 WIDTH, HEIGHT = 1200, 630
 JPEG_QUALITY = 88
 # Owner accent palette (docs/design/tokens.css, PUB-BR-3): white text passes AA on each.
@@ -36,6 +40,7 @@ _TEXT_X = _PAD + _AVATAR + 64
 _TEXT_WIDTH = WIDTH - _TEXT_X - _PAD
 
 
+# Shared by the render threads: FreeType calls run under the GIL in Pillow.
 @cache
 def _font(size: int, weight: int) -> ImageFont.FreeTypeFont:
     font = ImageFont.truetype(str(_FONT), size)
@@ -81,7 +86,7 @@ def _fit_name(name: str) -> tuple[ImageFont.FreeTypeFont, list[str]]:
     """The largest size at which the name fits in two lines (long names get smaller)."""
     for size in (76, 68, 60, 52):
         font = _font(size, 800)
-        lines = wrap(name, font, _TEXT_WIDTH, 2)
+        lines = wrap(name, font, _TEXT_WIDTH, 2) or [""]
         if not lines[-1].endswith("…"):
             return font, lines
     return font, lines
