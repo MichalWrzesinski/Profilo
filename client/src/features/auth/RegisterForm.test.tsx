@@ -6,6 +6,18 @@ import { tokenStore } from '@/lib/api/client';
 import { SessionProvider } from '@/lib/session';
 import { RegisterForm } from './RegisterForm';
 
+const solveInBackground = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/proofOfWork', () => ({ solveInBackground }));
+
+const CHALLENGE = {
+  algorithm: 'SHA-256',
+  challenge: 'abc',
+  maxnumber: 10,
+  salt: 's?expires=1',
+  signature: 'sig',
+};
+const required = () => json(428, { status: 428, code: 'challenge_required', challenge: CHALLENGE });
+
 function setup() {
   render(
     <SessionProvider>
@@ -32,6 +44,36 @@ afterEach(() => {
 });
 
 describe('RegisterForm', () => {
+  it('solves the challenge after a 428 and sends the form again', async () => {
+    let finish: (solution: string) => void = () => undefined;
+    solveInBackground.mockReturnValue(new Promise<string>((resolve) => (finish = resolve)));
+    let calls = 0;
+    const fetch = mockFetch(() => ((calls += 1) === 1 ? required() : json(201, SESSION)));
+    const user = setup();
+    await fill(user);
+
+    await user.click(screen.getByRole('button', { name: 'Załóż konto' }));
+
+    expect(await screen.findByText(/Sprawdzamy, czy nie jesteś automatem/)).toBeVisible();
+    expect(solveInBackground).toHaveBeenCalledWith(CHALLENGE);
+    finish('rozwiazanie');
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kreator'));
+    expect((await requestAt(fetch, 1).json()).challenge).toBe('rozwiazanie');
+    expect(screen.queryByText(/Sprawdzamy/)).toBeNull();
+  });
+
+  it('reports a challenge that could not be solved', async () => {
+    solveInBackground.mockResolvedValue(null);
+    mockFetch(required);
+    const user = setup();
+    await fill(user);
+
+    await user.click(screen.getByRole('button', { name: 'Załóż konto' }));
+
+    expect(await screen.findByText(/Nie udało się potwierdzić/)).toBeVisible();
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
   it('creates the account, keeps the token in memory and opens the panel', async () => {
     const fetch = mockFetch(() => json(201, SESSION));
     const user = setup();

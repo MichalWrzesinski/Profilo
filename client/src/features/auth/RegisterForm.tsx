@@ -9,7 +9,9 @@ import { z } from 'zod';
 import { Alert } from '@/components/Alert';
 import { Field } from '@/components/Field';
 import { api, type Problem } from '@/lib/api/client';
+import type { components } from '@/lib/api/schema';
 import { plural } from '@/lib/plural';
+import { solveInBackground } from '@/lib/proofOfWork';
 import { useSession } from '@/lib/session';
 import { problemMessage } from './messages';
 
@@ -28,6 +30,7 @@ const schema = z.object({
 });
 
 type Values = z.input<typeof schema>;
+type ChallengeProblem = components['schemas']['ChallengeProblem'];
 type FormAlert = { kind: 'email_taken' } | { kind: 'error'; message: string };
 
 const FIELDS = ['displayName', 'email', 'password', 'acceptTerms'] as const;
@@ -37,6 +40,7 @@ export function RegisterForm() {
   const { signIn } = useSession();
   const [showPassword, setShowPassword] = useState(false);
   const [alert, setAlert] = useState<FormAlert | null>(null);
+  const [verifying, setVerifying] = useState(false);
   const {
     register,
     handleSubmit,
@@ -46,11 +50,22 @@ export function RegisterForm() {
 
   const errorCount = FIELDS.filter((field) => errors[field]).length;
 
+  const send = (values: Values, challenge: string | null) =>
+    api.POST('/api/v1/accounts', { body: { ...values, acceptTerms: true, challenge } });
+
   const onSubmit = handleSubmit(async (values) => {
     setAlert(null);
-    const { data, error, response } = await api.POST('/api/v1/accounts', {
-      body: { ...values, acceptTerms: true, challenge: null },
-    });
+    let { data, error, response } = await send(values, null);
+    if (response.status === 428) {
+      // Many registrations from this network: prove some work first (TASK-018).
+      setVerifying(true);
+      try {
+        const solution = await solveInBackground((error as ChallengeProblem).challenge);
+        ({ data, error, response } = await send(values, solution));
+      } finally {
+        setVerifying(false);
+      }
+    }
     if (data) {
       signIn(data);
       router.push('/kreator');
@@ -64,6 +79,11 @@ export function RegisterForm() {
         const field = FIELDS.find((name) => name === fieldError.field) ?? 'password';
         setError(field, { message: fieldError.message });
       }
+    } else if (response.status === 428) {
+      setAlert({
+        kind: 'error',
+        message: 'Nie udało się potwierdzić, że nie jesteś automatem. Spróbuj ponownie.',
+      });
     } else {
       setAlert({ kind: 'error', message: problemMessage(problem) });
     }
@@ -141,6 +161,10 @@ export function RegisterForm() {
       >
         Załóż konto
       </button>
+      {/* Always rendered: screen readers announce the text when it appears. */}
+      <p className="hint" role="status" aria-live="polite">
+        {verifying && 'Sprawdzamy, czy nie jesteś automatem. To potrwa kilka sekund…'}
+      </p>
     </form>
   );
 }
