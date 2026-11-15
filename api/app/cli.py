@@ -3,7 +3,9 @@
     profilo block-profile <nick>     hide a page reported as illegal (404 at once)
     profilo unblock-profile <nick>   show its last published version again
 
-On a server: `dc exec api profilo block-profile anna` (docs/runbook.md).
+On a server: `dc exec api profilo block-profile anna` (docs/runbook.md). Exit codes: 0 done,
+1 unknown nick, 2 wrong usage, 3 database or Valkey unavailable. A nick of a blocked page
+whose owner deletes the account stays reserved (`reserved_nicks`, reason `blocked`).
 """
 
 import argparse
@@ -40,15 +42,19 @@ def _parser() -> argparse.ArgumentParser:
 
 
 async def _run(command: str, nick: str) -> int:
+    nick = nick.strip().lower()
     try:
         result = await service.set_blocked(nick, blocked=command == "block-profile")
+    except Exception as exc:  # database or Valkey down: a clear line, not a traceback
+        print(f"Nie udało się: {type(exc).__name__}. Spróbuj ponownie.", file=sys.stderr)
+        return 3
     finally:
         await dispose_engine()
         await close_valkey()
     if result == "unknown":
         print(f"Nie ma strony o adresie {nick}.", file=sys.stderr)
         return 1
-    print(MESSAGES[(command, result)].format(nick=nick.strip().lower()))
+    print(MESSAGES[(command, result)].format(nick=nick))
     return 0
 
 

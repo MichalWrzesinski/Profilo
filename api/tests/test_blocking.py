@@ -151,3 +151,40 @@ async def test_the_command_works_as_a_separate_process(client: AsyncClient) -> N
     assert process.returncode == 0, err.decode()
     assert "Zablokowano stronę anna-wisniewska" in out.decode()
     assert (await public(client)).status_code == 404
+
+
+async def test_a_blocked_nick_stays_reserved_after_the_owner_deletes_the_account(
+    client: AsyncClient,
+) -> None:
+    from sqlalchemy import select
+
+    from app.core.db import get_sessionmaker
+    from app.modules.profiles.models import ReservedNick
+
+    auth = await owner(client)
+    await publish(client, auth)
+    await service.set_blocked("anna-wisniewska", blocked=True)
+
+    deleted = await client.post(
+        "/api/v1/me/deletion", json={"password": "jasne-niebo-nad-krakowem"}, headers=auth
+    )
+
+    assert deleted.status_code == 204
+    async with get_sessionmaker()() as session:
+        row = await session.scalar(
+            select(ReservedNick).where(ReservedNick.nick == "anna-wisniewska")
+        )
+        assert row is not None
+        assert (row.reason, row.expires_at) == ("blocked", None)
+
+
+async def test_a_failing_database_is_a_clear_error(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    async def broken(*_: Any, **__: Any) -> str:
+        raise ConnectionError
+
+    monkeypatch.setattr(service, "set_blocked", broken)
+
+    assert await cli._run("block-profile", "anna") == 3
+    assert "Nie udało się: ConnectionError" in capsys.readouterr().err

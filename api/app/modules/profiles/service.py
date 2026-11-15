@@ -735,13 +735,27 @@ async def quarantine_nick_of(session: AsyncSession, account_id: uuid.UUID) -> uu
     Returns the profile id, for `forget_cards` after the commit."""
     row = (
         await session.execute(
-            select(Profile.id, Profile.nick).where(Profile.account_id == account_id)
+            select(Profile.id, Profile.nick, Profile.blocked_at).where(
+                Profile.account_id == account_id
+            )
         )
     ).one_or_none()
     if row is None:  # pragma: no cover - every account gets a profile at registration
         return None
-    profile_id, nick = row
+    profile_id, nick, blocked_at = row
     if not nick:
+        return profile_id
+    if blocked_at is not None:
+        # A blocked page: its address stays reserved for good (the operator may lift it).
+        await session.execute(
+            pg_insert(ReservedNick)
+            .values(nick=nick, reason="blocked", expires_at=None)
+            .on_conflict_do_update(
+                index_elements=[ReservedNick.nick],
+                set_={"reason": "blocked", "expires_at": None},
+                where=ReservedNick.reason == "quarantine",
+            )
+        )
         return profile_id
     expires = datetime.now(UTC) + QUARANTINE
     await session.execute(

@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv PATH="/opt/venv/bin:$PATH"
 RUN groupadd --system app && useradd --system --gid app --home /app app \
     && mkdir -p /data/media && chown app:app /data/media \
-    && printf '#!/bin/sh\nexec python -m app.cli "$@"\n' > /usr/local/bin/profilo \
+    && printf '#!/bin/sh\ncd /app && exec python -m app.cli "$@"\n' > /usr/local/bin/profilo \
     && chmod 755 /usr/local/bin/profilo
 # `profilo` is the operator CLI (app/cli.py), e.g. `profilo block-profile <nick>`.
 WORKDIR /app
