@@ -60,7 +60,6 @@ async def accept_request(email: str, client_ip: str) -> bool:
     await rate_limit.hit(REQUEST_PER_IP, ip_key(client_ip))
     try:
         await rate_limit.hit(REQUEST_PER_EMAIL, _key(email))
-        await rate_limit.hit(MAILS_PER_DAY, "all")
     except ProblemError:
         log.warning("password_reset_dropped")
         return False
@@ -76,6 +75,12 @@ async def send_link(email: str) -> None:
             account = await session.scalar(select(Account).where(Account.email == email))
             if account is None:
                 log.info("password_reset_unknown_email")
+                return
+            # Counted only for real accounts, so made-up addresses cannot use up the cap.
+            try:
+                await rate_limit.hit(MAILS_PER_DAY, "all")
+            except ProblemError:
+                log.error("password_reset_daily_cap_reached")
                 return
             now = datetime.now(UTC)
             await _use_open_tokens(session, account, now)  # a new link replaces older ones

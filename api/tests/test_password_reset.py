@@ -10,6 +10,7 @@ from sqlalchemy import select, update
 
 from app.core import rate_limit
 from app.core.db import get_sessionmaker
+from app.core.errors import ProblemError
 from app.modules.accounts import password_reset, tokens
 from app.modules.accounts.models import Account, OneTimeToken
 from app.modules.notifications import service as notifications
@@ -286,8 +287,9 @@ async def test_a_refresh_running_during_the_reset_does_not_keep_its_session(
     sibling, _ = await asyncio.gather(rotate(), reset())
 
     async with get_sessionmaker()() as session:
-        with pytest.raises(Exception, match="unauthorized"):
+        with pytest.raises(ProblemError) as refused:
             await service.refresh(session, sibling)
+    assert refused.value.status == 401
 
 
 async def test_reset_requests_count_an_ipv6_network_as_one_address() -> None:
@@ -306,6 +308,7 @@ async def test_reset_mails_have_a_daily_cap(
     monkeypatch.setattr(
         password_reset, "MAILS_PER_DAY", rate_limit.Limit("reset_mail_day", 1, 86400)
     )
+    await client.post(REQUEST, json={"email": "nikt@example.pl"})  # unknown: not counted
     await client.post(REQUEST, json={"email": EMAIL})
 
     response = await client.post(REQUEST, json={"email": EMAIL})
