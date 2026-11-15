@@ -1,5 +1,5 @@
 # Staging and production stack (one server per environment, ADR 0004).
-# Started by deploy.sh from /srv/profilo/releases/<sha>/ with IMAGE_TAG=<sha> and the
+# Started by deploy.sh from $APP_DIR/releases/<sha>/ with IMAGE_TAG=<sha> and the
 # variables of /srv/profilo/.env exported (bootstrap.sh; server-only, never committed).
 # Only the application containers read the whole .env; Caddy and PostgreSQL get the
 # few variables they need (least privilege).
@@ -45,8 +45,10 @@ services:
       ROBOTS_TAG: ${ROBOTS_TAG:?}
       ACME_EMAIL: ${ACME_EMAIL:-unused@example.invalid}
     volumes:
-      # The whole release directory: a replaced Caddyfile (new inode) is still seen on reload.
-      - ./:/etc/caddy:ro
+      # A fixed directory (deploy.sh copies the release's Caddyfile there), so the container
+      # is not recreated by a new release; the whole directory, so a replaced file (new
+      # inode) is still seen on reload.
+      - ${APP_DIR:?APP_DIR is required}/caddy:/etc/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
     logging: *logging

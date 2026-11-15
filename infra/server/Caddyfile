@@ -60,12 +60,21 @@
 	}
 
 	@api path /api/* /media/* /health /ready
+	# During a release switch (deploy.sh) two containers answer to a name for a moment and the
+	# old one then stops: a request whose connection fails is retried for up to 10 s, on the
+	# address Docker's DNS gives at that time.
 	handle @api {
-		reverse_proxy api:8000
+		reverse_proxy api:8000 {
+			lb_try_duration 10s
+			lb_try_interval 250ms
+		}
 	}
 
 	handle {
-		reverse_proxy client:3000
+		reverse_proxy client:3000 {
+			lb_try_duration 10s
+			lb_try_interval 250ms
+		}
 	}
 
 	log {
