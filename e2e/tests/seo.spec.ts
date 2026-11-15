@@ -40,7 +40,7 @@ test('a published page has link-preview tags and is in the sitemap until unpubli
 });
 
 test('panel pages are kept out of search results', async ({ request }) => {
-  for (const path of ['/panel', '/edytor', '/kreator']) {
+  for (const path of ['/panel', '/edytor', '/kreator', '/opublikowano']) {
     const html = await (await request.get(path)).text();
     expect(html, path).toContain('<meta name="robots" content="noindex, nofollow"/>');
   }
