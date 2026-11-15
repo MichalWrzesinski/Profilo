@@ -19,6 +19,7 @@ on:
 permissions:
   contents: read
   packages: read
+  statuses: write
 
 concurrency:
   group: deploy-staging
@@ -64,32 +65,17 @@ jobs:
             echo "::notice::main has moved on; skipping $SHA"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
+          # The runner script comes from main; the stack files from the deployed commit.
+          cp infra/ci/deploy-remote.sh "$RUNNER_TEMP/"
           git checkout --quiet "$SHA"
 
-      - name: Configure SSH (pinned host key)
+      - name: Deploy, migrate, verify (rollback on failure), external smoke tests
         if: steps.guard.outputs.skip != 'true'
         env:
+          MODE: deploy
+          ENV_NAME: staging
           SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
-        run: |
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
-          printf 'Host staging\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking yes\n' "$SSH_HOST" "$SSH_USER" > ~/.ssh/config
-
-      - name: Upload stack files
-        if: steps.guard.outputs.skip != 'true'
-        run: |
-          # shellcheck disable=SC2029  # SHA is validated above (40 hex characters)
-          ssh staging "mkdir -p '$APP_DIR/releases/$SHA'"
-          scp -q infra/server/compose.yml infra/server/compose.proxied.yml infra/server/Caddyfile \
-            infra/server/deploy.sh "staging:$APP_DIR/releases/$SHA/"
-
-      # Runtime secrets reach the server only through this workflow (AGENTS.md).
-      - name: Write runtime secrets on the server
-        if: steps.guard.outputs.skip != 'true'
-        env:
           SMTP_USERNAME: ${{ secrets.STAGING_SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.STAGING_SMTP_PASSWORD }}
           MAIL_FROM: ${{ vars.STAGING_MAIL_FROM }}
@@ -97,60 +83,16 @@ jobs:
           SMTP_HOST: ${{ vars.STAGING_SMTP_HOST || 'smtp-relay.brevo.com' }}
           SMTP_PORT: ${{ vars.STAGING_SMTP_PORT || '587' }}
           SMTP_SECURITY: ${{ vars.STAGING_SMTP_SECURITY || 'starttls' }}
-        run: |
-          [[ -n "$SMTP_USERNAME" && -n "$SMTP_PASSWORD" && -n "$MAIL_FROM" ]] \
-            || { echo "::error::STAGING_SMTP_USERNAME, STAGING_SMTP_PASSWORD or STAGING_MAIL_FROM missing (docs/runbook.md)"; exit 1; }
-          [[ "$SMTP_HOST" =~ ^[A-Za-z0-9.-]+$ && "$SMTP_PORT" =~ ^[0-9]{2,5}$ ]] \
-            || { echo "::error::invalid STAGING_SMTP_HOST or STAGING_SMTP_PORT"; exit 1; }
-          # Single-quoted in the env file (taken literally: `$`, `#` and spaces are safe).
-          for value in "$SMTP_USERNAME" "$SMTP_PASSWORD" "$MAIL_FROM"; do
-            [[ "$value" != *"'"* && "$value" != *$'\n'* ]] \
-              || { echo "::error::SMTP values must not contain ' or a line break"; exit 1; }
-          done
-          case "$SMTP_SECURITY" in
-            starttls) tls=(SMTP_STARTTLS=true SMTP_SSL=false) ;;
-            ssl) tls=(SMTP_STARTTLS=false SMTP_SSL=true) ;;
-            *) echo "::error::STAGING_SMTP_SECURITY must be starttls or ssl"; exit 1 ;;
-          esac
-          # shellcheck disable=SC2029  # APP_DIR is validated above
-          printf '%s\n' \
-            "SMTP_HOST=$SMTP_HOST" "SMTP_PORT=$SMTP_PORT" "${tls[@]}" \
-            "SMTP_USERNAME='$SMTP_USERNAME'" "SMTP_PASSWORD='$SMTP_PASSWORD'" "MAIL_FROM='$MAIL_FROM'" \
-            | ssh staging "umask 077 && cat > '$APP_DIR/.env.secrets'"
-
-      - name: Log in to GHCR on the server
-        if: steps.guard.outputs.skip != 'true'
-        env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
-        # Client-side expansion is intended: GHCR_USER is a GitHub login, the token goes via stdin.
-        run: |
-          # shellcheck disable=SC2029
-          printf '%s' "$GHCR_TOKEN" | ssh staging "docker login ghcr.io -u '$GHCR_USER' --password-stdin" >/dev/null
+        run: bash "$RUNNER_TEMP/deploy-remote.sh"
 
-      - name: Deploy, migrate, verify (rollback on failure)
+      # deploy-production accepts only commits that staging verified (deployment standard).
+      - name: Mark the commit as verified on staging
         if: steps.guard.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          # shellcheck disable=SC2029  # SHA and APP_DIR are validated above
-          ssh staging "APP_DIR='$APP_DIR' '$APP_DIR/releases/$SHA/deploy.sh' $SHA"
-
-      - name: Log out of GHCR on the server
-        if: always() && steps.guard.outputs.skip != 'true'
-        run: ssh staging "docker logout ghcr.io" >/dev/null || true
-
-      - name: External smoke tests
-        if: steps.guard.outputs.skip != 'true'
-        run: |
-          set -euo pipefail
-          for path in /ready /; do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "https://$DOMAIN$path")
-            [[ "$code" == 200 ]] || { echo "::error::$path returned $code"; exit 1; }
-          done
-          headers=$(curl -sS -D - -o /dev/null --max-time 15 "http://$DOMAIN/")
-          grep -qiE '^HTTP/[0-9.]+ 30[18]' <<<"$headers" || { echo "::error::HTTP does not redirect"; exit 1; }
-          grep -qi '^location: https://' <<<"$headers" || { echo "::error::redirect is not to HTTPS"; exit 1; }
-          secure=$(curl -sS -D - -o /dev/null --max-time 15 "https://$DOMAIN/")
-          for h in strict-transport-security content-security-policy x-content-type-options referrer-policy; do
-            grep -qi "^$h:" <<<"$secure" || { echo "::error::missing header $h"; exit 1; }
-          done
-          echo "Staging serves $SHA at https://$DOMAIN"
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=success -f context=deploy/staging \
+            -f description="Deployed and verified on staging" -f target_url="$RUN_URL" >/dev/null

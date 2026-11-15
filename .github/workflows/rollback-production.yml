@@ -1,0 +1,75 @@
+name: Rollback production
+
+# Returns production to a release that was deployed there before (deployment standard: the
+# agent may start it without consent and informs the user at once). No dump and no
+# migrations: the database stays as it is, and the release's migrations are already applied.
+# Same secrets and variables as deploy-production.
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full commit SHA of an earlier production release (tag production-*)
+        required: true
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: rollback production
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.actor == 'MichalWrzesinski' &&
+      github.triggering_actor == 'MichalWrzesinski'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SHA: ${{ inputs.sha }}
+      DOMAIN: ${{ vars.PROD_DOMAIN }}
+      SSH_USER: ${{ vars.PROD_SSH_USER || 'deploy' }}
+      APP_DIR: ${{ vars.PROD_APP_DIR || '/srv/profilo' }}
+    steps:
+      - name: Validate inputs
+        run: '[[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::invalid commit SHA (40 hex characters)"; exit 1; }'
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      # First check here (no secret needed): the commit carries a production release tag.
+      # The server checks again against what it actually ran (.deployed-history).
+      - name: Check the commit was released to production
+        run: |
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "::error::$SHA is not on main"; exit 1; }
+          git tag --points-at "$SHA" | grep -q '^production-' \
+            || { echo "::error::$SHA was never deployed to production (no production-* tag); rollback accepts only earlier releases"; exit 1; }
+          cp infra/ci/deploy-remote.sh "$RUNNER_TEMP/"
+          git checkout --quiet "$SHA"
+
+      - name: Switch to the earlier release and verify
+        env:
+          MODE: rollback
+          ENV_NAME: production
+          SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
+          SMTP_USERNAME: ${{ secrets.PROD_SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.PROD_SMTP_PASSWORD }}
+          MAIL_FROM: ${{ vars.PROD_MAIL_FROM }}
+          SMTP_HOST: ${{ vars.PROD_SMTP_HOST || 'smtp-relay.brevo.com' }}
+          SMTP_PORT: ${{ vars.PROD_SMTP_PORT || '587' }}
+          SMTP_SECURITY: ${{ vars.PROD_SMTP_SECURITY || 'starttls' }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: bash "$RUNNER_TEMP/deploy-remote.sh"
+
+      - name: Summary
+        run: echo "### Production rolled back to \`${SHA:0:7}\` — https://$DOMAIN" >> "$GITHUB_STEP_SUMMARY"
