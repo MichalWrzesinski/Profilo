@@ -41,8 +41,10 @@ Acceptance criteria:
 - S2 unblock — met: API test (the last published version is shown, the draft edited during the block stays a draft); live: 200 again.
 - S3 blocked owner — met: publish → 403 `profile_blocked` (API test).
 
-Checks: api 422 tests, 99 %; client 442 tests; contract unchanged; E2E unchanged (17).
+Checks: api 424 tests, 99 %; client 446 tests; contract unchanged; E2E unchanged (17).
 
 Found while verifying live: the CLI failed on the server-like run although its tests passed — a standalone process had imported only the profiles models, so SQLAlchemy could not resolve the foreign key to `accounts` on flush. `app/models.py` now registers every model and the CLI and the Celery worker import it; a new test runs the CLI in a separate process and fails without the fix.
 
 Decisions: no statement of reasons is sent automatically (it needs a human-written reason; the runbook and the pre-production list say the operator e-mails it); the abuse address is a setting rather than a constant, so the same image serves every environment.
+
+Review round 1 fixes: the editor preview (`/podglad`, now a server page around the client frame) reads the same `ABUSE_EMAIL` as the public page, so preview and page stay identical when it is set (the E2E compares them); the placeholder is a non-deliverable `naduzycia@profilo.invalid` and a malformed `ABUSE_EMAIL` (e.g. with `?bcc=`) is ignored; deleting the account of a blocked page reserves its nick for good (migration `0008`, reason `blocked`) instead of releasing it after the 30-day quarantine; the runbook applies `ABUSE_EMAIL` with `dc up -d client`, mentions the preview card cache and how to free a blocked nick; the CLI works from any directory, normalises the nick it prints and exits 3 with one line when the database or Valkey is down; the notice is a status, not an alert; env stubs reset in `afterEach`.
