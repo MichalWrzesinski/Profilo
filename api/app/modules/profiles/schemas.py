@@ -111,8 +111,18 @@ class PublishRequest(ApiModel):
 class PublicProfileOut(ApiModel):
     nick: str
     canonical_url: str
+    og_image_url: str
     published_at: datetime
     content: ProfileContentOut
+
+
+class SitemapEntryOut(ApiModel):
+    url: str
+    last_modified: datetime
+
+
+class SitemapOut(ApiModel):
+    items: list[SitemapEntryOut]
 
 
 class LinkInput(ApiModel):

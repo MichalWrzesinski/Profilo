@@ -1,9 +1,13 @@
 """Profiles: the owner's draft, nick assignment (PRF-BR-1…7), publishing (PRF-BR-8, 15-17)
 and the public read path (PUB-BR-6). Public interface for other modules: `create_profile_for`."""
 
+import asyncio
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlsplit
 
 import phonenumbers
 from email_validator import EmailNotValidError, validate_email
@@ -15,9 +19,10 @@ from app.core import rate_limit
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
+from app.core.valkey import get_valkey
 from app.modules.media import service as media
 from app.modules.profiles import links as link_rules
-from app.modules.profiles import nicks
+from app.modules.profiles import nicks, og_image
 from app.modules.profiles.models import Profile, ProfileLink, PublishedProfile, ReservedNick
 from app.modules.profiles.schemas import (
     DraftPatch,
@@ -29,6 +34,8 @@ from app.modules.profiles.schemas import (
     OwnerProfileOut,
     ProfileContentOut,
     PublicProfileOut,
+    SitemapEntryOut,
+    SitemapOut,
 )
 
 # Shared by availability, suggestion and save: all of them tell whether a nick is free.
@@ -394,9 +401,44 @@ async def unpublish(session: AsyncSession, account_id: uuid.UUID) -> Profile:
 async def get_public_profile(session: AsyncSession, nick: str) -> PublicProfileOut:
     """The published snapshot, or the same 404 for unknown, unpublished and blocked nicks
     (PUB-BR-6). Never reads the draft or the account."""
+    page = await _visible(session, nick)
+    return PublicProfileOut(
+        nick=page.nick,
+        canonical_url=_public_url(page.nick),
+        og_image_url=_og_image_url(page.nick, page.snapshot.draft_version),
+        published_at=page.snapshot.published_at,
+        content=ProfileContentOut.model_validate(page.snapshot.content),
+    )
+
+
+# --- link previews and search engines (PUB-BR-7) ---------------------------------------
+
+# Cards are small (about 50 kB) and change only when the page is published again.
+_OG_CACHE_SECONDS = 7 * 24 * 3600
+# Rendering takes ~50 ms of CPU: at most two at a time, off the event loop.
+_RENDERING = ThreadPoolExecutor(max_workers=2, thread_name_prefix="og-image")
+OG_RENDERS = rate_limit.Limit("og_render", max_hits=60, window_seconds=60)
+SITEMAP_LIMIT = 50_000  # one sitemap file holds at most 50 000 addresses
+
+
+def _og_image_url(nick: str, draft_version: int) -> str:
+    """Versioned by the published draft, so messengers fetch a new card after a change."""
+    base = get_settings().public_base_url
+    return f"{base}/api/v1/public/profiles/{nick}/og-image.jpg?v={draft_version}"
+
+
+@dataclass(frozen=True)
+class _Visible:
+    profile_id: uuid.UUID
+    account_id: uuid.UUID
+    nick: str
+    snapshot: PublishedProfile
+
+
+async def _visible(session: AsyncSession, nick: str) -> _Visible:
     row = (
         await session.execute(
-            select(Profile.nick, PublishedProfile)
+            select(Profile.id, Profile.account_id, Profile.nick, PublishedProfile)
             .join(PublishedProfile, PublishedProfile.profile_id == Profile.id)
             .where(
                 Profile.nick == nick,
@@ -407,12 +449,72 @@ async def get_public_profile(session: AsyncSession, nick: str) -> PublicProfileO
     ).one_or_none()
     if row is None:
         raise ProblemError(404, "not_found", headers={"Cache-Control": "no-store"})
-    public_nick, snapshot = str(row[0]), row[1]  # nick is set: the query matched it
-    return PublicProfileOut(
-        nick=public_nick,
-        canonical_url=_public_url(public_nick),
-        published_at=snapshot.published_at,
-        content=ProfileContentOut.model_validate(snapshot.content),
+    return _Visible(row[0], row[1], str(row[2]), row[3])
+
+
+async def _cache_get(key: str) -> bytes | None:
+    try:
+        cached = await get_valkey().get(key)
+    except Exception as exc:  # a cache outage only costs a render
+        log.error("og_cache_unavailable", error=type(exc).__name__)
+        return None
+    return cached if isinstance(cached, bytes) else None
+
+
+async def _cache_set(key: str, value: bytes) -> None:
+    try:
+        await get_valkey().set(key, value, ex=_OG_CACHE_SECONDS)
+    except Exception as exc:
+        log.error("og_cache_unavailable", error=type(exc).__name__)
+
+
+async def og_card(session: AsyncSession, nick: str, client_ip: str) -> bytes:
+    """The Open Graph card of a visible published page as JPEG; the same 404 as the page
+    otherwise. Cached per published draft version, so crawlers do not cost a render each."""
+    page = await _visible(session, nick)  # before the cache: hidden pages never get a card
+    content = ProfileContentOut.model_validate(page.snapshot.content)
+    # A draft version always has the same content and the images never change; the renderer
+    # version changes the key when the card design changes.
+    key = f"og:{og_image.VERSION}:{page.profile_id}:{page.snapshot.draft_version}"
+    if (cached := await _cache_get(key)) is not None:
+        return cached
+    await rate_limit.hit(OG_RENDERS, client_ip)  # only renders cost CPU
+    avatar: bytes | None = None
+    if content.avatar:
+        image = await media.get_image(session, content.avatar.id)
+        if image is not None and image.account_id == page.account_id:
+            avatar = await media.read_variant(image, 512)
+    # Nothing more to read: give the connection back before queueing for a render thread.
+    await session.commit()
+    base = urlsplit(get_settings().public_base_url)
+    card = await asyncio.get_running_loop().run_in_executor(
+        _RENDERING,
+        lambda: og_image.render(
+            name=content.display_name,
+            headline=content.headline,
+            address=f"{base.netloc}{base.path.rstrip('/')}/user/{page.nick}",
+            accent=content.accent,
+            avatar=avatar,
+        ),
+    )
+    await _cache_set(key, card)
+    return card
+
+
+async def sitemap(session: AsyncSession) -> SitemapOut:
+    """Addresses of the visible published pages, newest publication first (PUB-BR-7)."""
+    rows = await session.execute(
+        select(Profile.nick, PublishedProfile.published_at)
+        .join(PublishedProfile, PublishedProfile.profile_id == Profile.id)
+        .where(Profile.status == "published", Profile.blocked_at.is_(None))
+        .order_by(PublishedProfile.published_at.desc(), Profile.nick)
+        .limit(SITEMAP_LIMIT)
+    )
+    return SitemapOut(
+        items=[
+            SitemapEntryOut(url=_public_url(str(nick)), last_modified=published_at)
+            for nick, published_at in rows
+        ]
     )
 
 

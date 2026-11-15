@@ -14,13 +14,15 @@ const params = (nick: string) => ({ params: Promise.resolve({ nick }) });
 afterEach(() => getPublicProfile.mockReset());
 
 describe('/user/[nick]', () => {
-  it('renders the published page', async () => {
+  it('renders the published page with its structured data', async () => {
     getPublicProfile.mockResolvedValue(publicProfile());
 
-    render(await PublicPage(params('anna-wisniewska')));
+    const { container } = render(await PublicPage(params('anna-wisniewska')));
 
     expect(screen.getByRole('heading', { name: 'Anna Wiśniewska' })).toBeVisible();
     expect(getPublicProfile).toHaveBeenCalledWith('anna-wisniewska');
+    const data = container.querySelector('script[type="application/ld+json"]')!.textContent!;
+    expect(JSON.parse(data)).toMatchObject({ mainEntity: { name: 'Anna Wiśniewska' } });
   });
 
   it('shows the 404 page for a hidden or unknown nick', async () => {
@@ -49,6 +51,17 @@ describe('/user/[nick]', () => {
     getPublicProfile.mockResolvedValue(publicProfile({ headline }));
 
     expect((await generateMetadata(params('anna-wisniewska'))).title).toBe(title);
+  });
+
+  it('has the preview card and canonical address', async () => {
+    getPublicProfile.mockResolvedValue(publicProfile());
+
+    const metadata = await generateMetadata(params('anna-wisniewska'));
+
+    expect(metadata.alternates?.canonical).toBe('https://profilo.pl/user/anna-wisniewska');
+    expect(metadata.openGraph?.images).toEqual([
+      expect.objectContaining({ url: expect.stringContaining('/og-image.jpg?v=3') }),
+    ]);
   });
 
   it('uses the 404 title for a hidden page', async () => {

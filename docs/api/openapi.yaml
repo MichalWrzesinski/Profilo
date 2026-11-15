@@ -464,6 +464,30 @@ paths:
           content: { application/json: { schema: { $ref: '#/components/schemas/PublicProfile' } } }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /api/v1/public/profiles/{nick}/og-image.jpg:
+    get:
+      tags: [public]
+      operationId: getOgImage
+      summary: Link preview card, 1200 × 630 JPEG with photo, name and headline (PUB-BR-7)
+      security: []
+      parameters:
+        - { name: nick, in: path, required: true, schema: { type: string, maxLength: 60 } }
+        - { name: v, in: query, required: false, description: 'Publication version from `ogImageUrl`; only busts caches.', schema: { type: string } }
+      responses:
+        '200': { description: 'Card. `Cache-Control: public, max-age=86400`.', content: { image/jpeg: { schema: { type: string, contentMediaType: image/jpeg } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/public/sitemap:
+    get:
+      tags: [public]
+      operationId: getSitemap
+      summary: Addresses of visible published pages for sitemap.xml, newest first, at most 50 000 (PUB-BR-7)
+      security: []
+      responses:
+        '200':
+          description: 'Entries. `Cache-Control: no-store`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/Sitemap' } } }
+
   /media/{imageId}/{size}.webp:
     get:
       tags: [public]
@@ -658,12 +682,26 @@ components:
         draft: { $ref: '#/components/schemas/ProfileContent' }
     PublicProfile:
       type: object
-      required: [nick, canonicalUrl, publishedAt, content]
+      required: [nick, canonicalUrl, ogImageUrl, publishedAt, content]
       properties:
         nick: { type: string }
         canonicalUrl: { type: string }
+        ogImageUrl: { type: string, description: 'Absolute link-preview card URL, versioned by the publication (PUB-BR-7).' }
         publishedAt: { type: string, format: date-time }
         content: { $ref: '#/components/schemas/ProfileContent' }
+    Sitemap:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 50000
+          items:
+            type: object
+            required: [url, lastModified]
+            properties:
+              url: { type: string }
+              lastModified: { type: string, format: date-time }
     NickAvailability:
       type: object
       required: [nick, available]

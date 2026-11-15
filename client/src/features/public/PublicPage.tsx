@@ -48,6 +48,7 @@ function Identity({ content }: { content: Content }) {
             alt={content.displayName}
             width={112}
             height={112}
+            fetchPriority="high"
           />
         </div>
       ) : (

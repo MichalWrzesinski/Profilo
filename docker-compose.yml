@@ -64,6 +64,7 @@ services:
     image: profilo-client:dev
     environment:
       API_INTERNAL_URL: http://api:8000
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
     volumes:
       - ./client:/repo/client
       - client_node_modules:/repo/client/node_modules

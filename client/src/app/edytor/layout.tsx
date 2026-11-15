@@ -1,16 +1,6 @@
-'use client';
+import type { Metadata } from 'next';
+import { PRIVATE_PAGE } from '@/lib/site';
 
-import type { ReactNode } from 'react';
-import { useRequireSession } from '@/lib/useRequireSession';
-
-export default function EditorLayout({ children }: { children: ReactNode }) {
-  const { status } = useRequireSession();
-  if (status !== 'authenticated') {
-    return (
-      <p className="muted" role="status" style={{ padding: 'var(--space-8)' }}>
-        Wczytywanie…
-      </p>
-    );
-  }
-  return children;
-}
+// The shell is a client component (session guard); metadata needs a server module.
+export const metadata: Metadata = PRIVATE_PAGE;
+export { default } from './Shell';

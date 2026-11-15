@@ -143,8 +143,9 @@ Public read path: `GET /api/v1/public/profiles/{nick}` → `profiles` by nick wh
 
 ## Media
 
-- Upload: `multipart/form-data` to the API, max 10 MB (Caddy limits the body to 11 MB, the API checks `Content-Length` before parsing), type detected from content (Pillow, JPEG/PNG/WebP only), 24 Mpx limit against decompression bombs, at most two images decoded at a time, EXIF orientation applied and all metadata dropped, converted to WebP (the JPEG fallback for Open Graph comes with TASK-013).
+- Upload: `multipart/form-data` to the API, max 10 MB (Caddy limits the body to 11 MB, the API checks `Content-Length` before parsing), type detected from content (Pillow, JPEG/PNG/WebP only), 24 Mpx limit against decompression bombs, at most two images decoded at a time, EXIF orientation applied and all metadata dropped, converted to WebP.
 - Sizes: avatar 128/256/512 px square; background 960/1600/2400 px wide.
+- Link previews (PUB-BR-7): `GET /api/v1/public/profiles/{nick}/og-image.jpg` draws a 1200 × 630 JPEG card (accent background, the 512 px avatar or initials, name, headline, page address, wordmark) with Pillow and the bundled Plus Jakarta Sans (`api/app/assets/fonts/`, OFL). One card for every page instead of the bare avatar: messengers crop a square photo badly and some show no text. Rendered in its own two-thread pool after the request has given back its database connection, at most 60 renders per minute per IP (cached cards are not counted), cached in Valkey per renderer and published draft version (`og:{VERSION}:{profileId}:{draftVersion}`, 7 days, fails open), served with `public, max-age=86400`; the page links it as `?v={draftVersion}` so a republish gets a fresh preview. Hidden pages get the page's 404.
 - Served by `GET /media/{imageId}/{size}.webp` through the API: allowed when the image belongs to the owner (draft preview, authenticated) or is referenced by a visible published snapshot. URLs never change content (new upload = new id); published images are cached for a day (`public, max-age=86400`) so unpublishing or blocking takes effect soon, drafts are `private, no-store`.
 
 ## Authentication
@@ -221,6 +222,9 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | `e2e/` | Playwright main flow (`make e2e`, CI job `e2e`): register → nick → content → preview → confirm via Mailpit → publish → public page equals the preview | TASK-011 |
 | `client/src/features/appearance/`, `client/src/app/kreator/wyglad/`, `client/src/features/wizard/AppearanceStep.tsx` | Layout and accent pickers (radio groups with arrow keys), wizard step 2 and the editor's „Wygląd” section; layout and accent are autosaved draft fields | TASK-012 |
 | `e2e/tests/layouts.spec.ts`, `e2e/tests/helpers.ts` | Every layout × accent: axe (WCAG 2.1 AA) at 1440 px, no horizontal scroll at 320/1440 px; text contrast ≥ 4.5:1 on a very light background image by pixel sampling | TASK-012 |
+| `api/app/modules/profiles/og_image.py`, `service.og_card`, `service.sitemap`, `api/app/assets/fonts/` | Open Graph card renderer (pure, Pillow) and its cached endpoint; `GET /public/sitemap` (visible published pages, newest first, max 50 000); `PublicProfile.ogImageUrl` | TASK-013 |
+| `client/src/lib/seo.ts`, `client/src/lib/site.ts`, `client/src/app/robots.ts`, `client/src/app/sitemap.ts` | Public page title, description (bio or details), canonical URL, Open Graph, Twitter card and schema.org `ProfilePage` JSON-LD; `robots.txt` and `sitemap.xml` built per request from `PUBLIC_BASE_URL`; `PRIVATE_PAGE` (`noindex, nofollow`) on `/panel`, `/kreator`, `/edytor` via server `layout.tsx` + client `Shell.tsx` | TASK-013 |
+| `e2e/tests/seo.spec.ts` | Preview tags, og:image 200, sitemap entry; after unpublishing gone from the sitemap and 404; panel pages `noindex` | TASK-013 |
 | `infra/` | Local Caddy config, PostgreSQL init (test database) | TASK-001 |
 | `infra/server/` | Server bootstrap, staging/production Compose stack, Caddyfile with TLS and security headers, `deploy.sh` with rollback | TASK-003 |
 | `.github/workflows/` | `ci.yml` (check, publish), `deploy-staging.yml` | TASK-002, TASK-003 |

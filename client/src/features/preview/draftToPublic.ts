@@ -21,6 +21,7 @@ export function draftToPublic(profile: OwnerProfile, values?: Values): PublicPro
     canonicalUrl:
       profile.publicUrl ??
       (typeof window === 'undefined' ? '' : `${window.location.origin}/user/${nick}`),
+    ogImageUrl: '', // only page metadata uses it, never the page itself
     publishedAt: profile.publishedAt ?? new Date(0).toISOString(),
     content,
   };

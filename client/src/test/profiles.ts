@@ -4,6 +4,7 @@ export function publicProfile(content: Partial<PublicProfile['content']> = {}): 
   return {
     nick: 'anna-wisniewska',
     canonicalUrl: 'https://profilo.pl/user/anna-wisniewska',
+    ogImageUrl: 'https://profilo.pl/api/v1/public/profiles/anna-wisniewska/og-image.jpg?v=3',
     publishedAt: '2026-11-10T12:00:00Z',
     content: {
       displayName: 'Anna Wiśniewska',

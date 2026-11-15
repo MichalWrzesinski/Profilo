@@ -414,6 +414,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/profiles/{nick}/og-image.jpg": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Link preview card, 1200 × 630 JPEG with photo, name and headline (PUB-BR-7) */
+        get: operations["getOgImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/sitemap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Addresses of visible published pages for sitemap.xml, newest first, at most 50 000 (PUB-BR-7) */
+        get: operations["getSitemap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/media/{imageId}/{size}.webp": {
         parameters: {
             query?: never;
@@ -604,9 +638,18 @@ export interface components {
         PublicProfile: {
             nick: string;
             canonicalUrl: string;
+            /** @description Absolute link-preview card URL, versioned by the publication (PUB-BR-7). */
+            ogImageUrl: string;
             /** Format: date-time */
             publishedAt: string;
             content: components["schemas"]["ProfileContent"];
+        };
+        Sitemap: {
+            items: {
+                url: string;
+                /** Format: date-time */
+                lastModified: string;
+            }[];
         };
         NickAvailability: {
             /** @description Normalised value. */
@@ -1618,6 +1661,52 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    getOgImage: {
+        parameters: {
+            query?: {
+                /** @description Publication version from `ogImageUrl`; only busts caches. */
+                v?: string;
+            };
+            header?: never;
+            path: {
+                nick: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Card. `Cache-Control: public, max-age=86400`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getSitemap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entries. `Cache-Control: no-store`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Sitemap"];
+                };
+            };
         };
     };
     getImage: {
