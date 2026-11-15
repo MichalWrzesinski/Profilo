@@ -51,7 +51,9 @@ def ip_subject(client_ip: str) -> str:
         address = ipaddress.ip_address(client_ip)
     except ValueError:
         return client_ip
-    if address.version == 6:
+    if isinstance(address, ipaddress.IPv6Address):
+        if address.ipv4_mapped:  # ::ffff:a.b.c.d is one IPv4 client, not a /64
+            return str(address.ipv4_mapped)
         return str(ipaddress.ip_network(f"{address}/64", strict=False))
     return client_ip
 

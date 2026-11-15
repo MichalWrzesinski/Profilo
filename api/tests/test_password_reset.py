@@ -298,6 +298,8 @@ async def test_reset_requests_count_an_ipv6_network_as_one_address() -> None:
     assert ip("2001:db8:1:3::1") != ip("2001:db8:1:2::1")
     assert ip("203.0.113.9") == "203.0.113.9"
     assert ip("unknown") == "unknown"
+    assert ip("::ffff:203.0.113.9") == "203.0.113.9"
+    assert ip("::ffff:203.0.113.9") != ip("::ffff:203.0.113.10")
 
 
 async def test_reset_mails_have_a_daily_cap(
