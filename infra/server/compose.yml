@@ -1,6 +1,6 @@
 # Staging and production stack (one server per environment, ADR 0004).
 # Started by deploy.sh from $APP_DIR/releases/<sha>/ with IMAGE_TAG=<sha> and the
-# variables of /srv/profilo/.env exported (bootstrap.sh; server-only, never committed).
+# variables of $APP_DIR/.env exported (bootstrap.sh; server-only, never committed).
 # Only the application containers read the whole .env; Caddy and PostgreSQL get the
 # few variables they need (least privilege).
 name: profilo
@@ -55,14 +55,19 @@ services:
     networks:
       internal:
         ipv4_address: ${CADDY_IP:-172.28.0.10}
-    depends_on:
-      api: { condition: service_healthy }
-      client: { condition: service_healthy }
 
-  api:
+  # Blue-green (deploy.sh): the release being deployed starts in the idle colour beside the
+  # live one; Caddy switches to it (caddy/upstreams.caddy) after it is ready. Profiles keep
+  # a plain `up` from starting both.
+  api-blue: &api_service
     <<: *api
+    profiles: [blue]
     # Image decoding is bounded (24 Mpx, two at a time); this caps anything unforeseen.
     mem_limit: 1536m
+
+  api-green:
+    <<: *api_service
+    profiles: [green]
 
   worker:
     <<: *api
@@ -92,16 +97,25 @@ services:
     healthcheck:
       disable: true
 
-  client:
+  client-blue: &client
     image: ghcr.io/michalwrzesinski/profilo-client:${IMAGE_TAG:?IMAGE_TAG is required}
+    profiles: [blue]
     restart: unless-stopped
-    environment:
-      API_INTERNAL_URL: http://api:8000
+    environment: &client_env
+      # The API of the same colour (same release).
+      API_INTERNAL_URL: http://api-blue:8000
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required}
       # Operator address for abuse reports (PUB-BR-10); empty shows the placeholder.
       ABUSE_EMAIL: ${ABUSE_EMAIL:-}
     logging: *logging
     networks: [internal]
+
+  client-green:
+    <<: *client
+    profiles: [green]
+    environment:
+      <<: *client_env
+      API_INTERNAL_URL: http://api-green:8000
 
   db:
     image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395

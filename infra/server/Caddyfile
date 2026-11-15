@@ -15,6 +15,9 @@
 	}
 }
 
+# Snippets api_upstream and client_upstream (deploy.sh).
+import upstreams.caddy
+
 (tls_acme) {
 }
 
@@ -60,21 +63,14 @@
 	}
 
 	@api path /api/* /media/* /health /ready
-	# During a release switch (deploy.sh) two containers answer to a name for a moment and the
-	# old one then stops: a request whose connection fails is retried for up to 10 s, on the
-	# address Docker's DNS gives at that time.
+	# The live colour (api-blue/api-green, client-…) comes from upstreams.caddy, written by
+	# deploy.sh next to this file; a release switch is a graceful reload.
 	handle @api {
-		reverse_proxy api:8000 {
-			lb_try_duration 10s
-			lb_try_interval 250ms
-		}
+		import api_upstream
 	}
 
 	handle {
-		reverse_proxy client:3000 {
-			lb_try_duration 10s
-			lb_try_interval 250ms
-		}
+		import client_upstream
 	}
 
 	log {

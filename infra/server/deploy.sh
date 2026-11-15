@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
-# Deploys one release on this server without downtime and verifies it; on failure restores
-# the previous release. Same script for staging and production. Layout in $APP_DIR:
+# Deploys one release on this server without downtime (blue-green) and verifies it; on
+# failure switches back to the previous release. Same script for staging and production.
+# Layout in $APP_DIR:
 #   .env                     server-only settings and secrets (bootstrap / setup script)
 #   .env.secrets             runtime secrets written by the deploy workflow
 #   releases/<sha>/          compose.yml (+ compose.proxied.yml), Caddyfile, deploy.sh
 #                            uploaded by the workflow
 #   current -> releases/<sha>  last successful release
 #   caddy/Caddyfile          the live Caddy configuration (copied from the release)
+#   caddy/upstreams.caddy    which colour serves: api-<colour> and client-<colour>
 #   backups/                 database dumps taken before migrations (last KEEP_DUMPS)
 #   .deployed-history        every commit that passed verification here, oldest first
 # Run as the deploy user:  $APP_DIR/releases/<sha>/deploy.sh <sha> [--rollback]
-#   --rollback  only a commit from .deployed-history; no dump, no migrations
-# A commit deployed here before never runs its migrations again: the database may be ahead
-# of it, and an older Alembic would not know the newer revision.
+#   --rollback  only a commit from .deployed-history; no dump
+# Migrations run only when the database is not ahead of the release: an older release
+# (rollback) never meets a revision its Alembic does not know.
 # DEPLOY_SKIP_PULL=1 skips pulling (local tests with preloaded images only).
 set -euo pipefail
 
@@ -26,6 +28,8 @@ MODE="${2:-deploy}"
 NEW_DIR="$APP_DIR/releases/$NEW_TAG"
 [[ -f "$NEW_DIR/compose.yml" && -f "$NEW_DIR/Caddyfile" ]] || { echo "release files missing in $NEW_DIR" >&2; exit 2; }
 HISTORY="$APP_DIR/.deployed-history"
+LOCK="$APP_DIR/.deploy.lock"
+UPSTREAMS="$APP_DIR/caddy/upstreams.caddy"
 
 log() { echo "[deploy $(date -u +%H:%M:%S)] $*"; }
 
@@ -33,6 +37,8 @@ log() { echo "[deploy $(date -u +%H:%M:%S)] $*"; }
 # the caller (SSH from the workflow) only follows the log. A dropped SSH connection then
 # kills just the follower (SIGPIPE/SIGHUP), never the deployment itself.
 if [[ "${DEPLOY_DETACHED:-0}" != 1 ]]; then
+  # A second run must not truncate the log of a deployment that is still running.
+  flock -n "$LOCK" true || { echo "another deployment is running"; exit 3; }
   log_file="$NEW_DIR/deploy.log"
   : > "$log_file"
   DEPLOY_DETACHED=1 setsid bash "$0" "$@" >>"$log_file" 2>&1 </dev/null &
@@ -43,7 +49,7 @@ if [[ "${DEPLOY_DETACHED:-0}" != 1 ]]; then
 fi
 
 # One deployment at a time.
-exec 9>"$APP_DIR/.deploy.lock"
+exec 9>"$LOCK"
 flock -n 9 || { echo "another deployment is running"; exit 3; }
 trap '' HUP PIPE
 
@@ -62,9 +68,7 @@ CURL_TLS=()
 
 # Servers deployed before the history existed: the running release counts as deployed.
 [[ ! -f "$HISTORY" && -n "$PREV_TAG" ]] && echo "$PREV_TAG" > "$HISTORY"
-DEPLOYED_BEFORE=0
-[[ -f "$HISTORY" ]] && grep -qxF "$NEW_TAG" "$HISTORY" && DEPLOYED_BEFORE=1
-if [[ "$MODE" == --rollback && "$DEPLOYED_BEFORE" != 1 ]]; then
+if [[ "$MODE" == --rollback ]] && ! grep -qxF "$NEW_TAG" "$HISTORY" 2>/dev/null; then
   log "refused: $NEW_TAG was never deployed on this server (only earlier releases can be restored)"
   exit 4
 fi
@@ -80,10 +84,13 @@ compose() {
   IMAGE_TAG="$tag" docker compose --project-directory "$APP_DIR/releases/$tag" "${files[@]}" "$@"
 }
 
-# Container ids of one service (all states), whichever release started them.
+# Container ids of services (all states), whichever release started them.
 containers_of() {
-  docker ps -aq --filter label=com.docker.compose.project=profilo \
-    --filter "label=com.docker.compose.service=$1"
+  local svc
+  for svc in "$@"; do
+    docker ps -aq --filter label=com.docker.compose.project=profilo \
+      --filter "label=com.docker.compose.service=$svc"
+  done
 }
 
 running() {
@@ -116,87 +123,120 @@ smoke() {
   log "smoke tests passed (/ready, /)"
 }
 
-# Caddy reads its configuration from $APP_DIR/caddy (not from the release directory), so the
-# container stays the same across releases and keeps serving while a release is switched.
-install_caddyfile() {
+# The colour Caddy sends traffic to: blue, green, legacy (services api/client of releases
+# before blue-green) or none (first deployment).
+live_colour() {
+  if [[ -f "$UPSTREAMS" ]]; then
+    grep -oE 'api-(blue|green)' "$UPSTREAMS" | head -n1 | cut -d- -f2
+  elif running api; then
+    echo legacy
+  else
+    echo none
+  fi
+}
+
+app_services() {  # app_services <colour>
+  case "$1" in
+    blue|green) echo "api-$1 client-$1" ;;
+    legacy) echo "api client" ;;
+  esac
+}
+
+write_upstreams() {  # write_upstreams <colour>
+  local api=api client=client
+  [[ "$1" != legacy ]] && { api="api-$1"; client="client-$1"; }
+  install -d -m 755 "$APP_DIR/caddy"
+  cat > "$UPSTREAMS.new" <<CADDY
+# Written by deploy.sh: the colour that serves traffic.
+(api_upstream) {
+	reverse_proxy $api:8000 {
+		lb_try_duration 10s
+		lb_try_interval 250ms
+	}
+}
+(client_upstream) {
+	reverse_proxy $client:3000 {
+		lb_try_duration 10s
+		lb_try_interval 250ms
+	}
+}
+CADDY
+  mv -f "$UPSTREAMS.new" "$UPSTREAMS"
+}
+
+# Points Caddy at <colour> with the Caddyfile of <tag>. Caddy keeps running: a reload is
+# graceful (requests in flight finish on the old configuration). Caddy reads $APP_DIR/caddy,
+# not the release directory, so a new release does not recreate the container.
+route() {  # route <tag> <colour>
   install -d -m 755 "$APP_DIR/caddy"
   install -m 644 "$APP_DIR/releases/$1/Caddyfile" "$APP_DIR/caddy/Caddyfile.new"
   mv -f "$APP_DIR/caddy/Caddyfile.new" "$APP_DIR/caddy/Caddyfile"
-}
-
-reload_caddy() {
-  install_caddyfile "$1"
-  # `up` recreates Caddy only when its own settings changed (image, ports, variables).
+  write_upstreams "$2"
+  # `up` recreates Caddy only when its own settings changed (image, ports, variables, mounts).
   compose "$1" up -d --no-deps --wait --wait-timeout 60 caddy || return 1
-  compose "$1" exec -T caddy caddy reload --config /etc/caddy/Caddyfile --force >/dev/null
+  compose "$1" exec -T caddy caddy reload --config /etc/caddy/Caddyfile --force >/dev/null || return 1
 }
 
-wait_healthy() {
-  local id="$1" deadline=$((SECONDS + 180)) status
-  while true; do
-    status="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id" 2>/dev/null || echo gone)"
-    case "$status" in
-      healthy) return 0 ;;
-      unhealthy|exited|dead|gone) log "container ${id:0:12} is $status"; return 1 ;;
-    esac
-    (( SECONDS >= deadline )) && { log "container ${id:0:12} not healthy after 180 s"; return 1; }
-    sleep 2
-  done
+remove() {  # remove <services…>: stops gracefully (30 s for running requests), then removes
+  local ids
+  ids="$(containers_of "$@")"
+  [[ -z "$ids" ]] && return 0
+  # shellcheck disable=SC2086  # one id per word
+  docker stop -t 30 $ids >/dev/null && docker rm $ids >/dev/null
 }
 
-# Blue-green for one service behind Caddy: a container of the new release starts next to the
-# running one and joins the service's DNS name; the old one is stopped (gracefully, in-flight
-# requests finish) only after the new one is healthy. Caddy retries a request whose
-# connection fails, so the switch does not drop requests.
-swap() {
-  local tag="$1" svc="$2" old new id count
-  old="$(containers_of "$svc")"
-  count="$(wc -w <<<"$old")"
-  compose "$tag" up -d --no-deps --no-recreate --scale "$svc=$((count + 1))" "$svc" || return 1
-  new="$(comm -13 <(sort <<<"$old") <(containers_of "$svc" | sort))"
-  [[ -n "$new" ]] || { log "$svc: no new container was started"; return 1; }
-  for id in $new; do
-    if ! wait_healthy "$id"; then
-      # shellcheck disable=SC2086  # one id per word
-      docker rm -f $new >/dev/null 2>&1 || true
-      log "$svc: the new container did not become healthy; the running one keeps serving"
-      return 1
-    fi
-  done
-  if [[ "$svc" == api ]] && ! docker exec "$(head -n1 <<<"$new")" python -c \
+# Starts <tag> in the idle colour beside the live one; traffic switches only after the new
+# API is ready. Sets TARGET; SWITCHED=1 once Caddy routes to it.
+SWITCHED=0
+TARGET=""
+LIVE=""
+switch_to() {
+  local tag="$1" api_id
+  LIVE="$(live_colour)"
+  if [[ "$LIVE" == blue ]]; then TARGET=green; else TARGET=blue; fi
+  log "live: $LIVE; starting $tag as $TARGET"
+  # Leftovers of an interrupted run in the idle colour never serve: remove them first.
+  # shellcheck disable=SC2046  # service names
+  remove $(app_services "$TARGET") || return 1
+  compose "$tag" up -d --no-deps --wait --wait-timeout 60 db valkey || return 1
+  # shellcheck disable=SC2046
+  if ! compose "$tag" up -d --no-deps --wait --wait-timeout 180 $(app_services "$TARGET"); then
+    log "$TARGET did not become healthy; the live release keeps serving"
+    # shellcheck disable=SC2046
+    remove $(app_services "$TARGET") || true
+    return 1
+  fi
+  api_id="$(containers_of "api-$TARGET" | head -n1)"
+  if ! docker exec "$api_id" python -c \
       "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=5).status == 200 else 1)"; then
-    # shellcheck disable=SC2086  # one id per word
-    docker rm -f $new >/dev/null 2>&1 || true
-    log "api: the new container is not ready (database or Valkey); the running one keeps serving"
+    log "api-$TARGET is not ready (database or Valkey); the live release keeps serving"
+    # shellcheck disable=SC2046
+    remove $(app_services "$TARGET") || true
     return 1
   fi
   SWITCHED=1
-  if [[ -n "$old" ]]; then
-    # shellcheck disable=SC2086  # one id per word
-    docker stop -t 30 $old >/dev/null && docker rm $old >/dev/null
+  if ! route "$tag" "$TARGET"; then
+    log "Caddy did not take the new configuration"
+    return 1
   fi
-  log "$svc: switched to $tag"
+  log "traffic switched to $TARGET ($tag)"
 }
 
-# Starts or switches the whole stack to <tag>. SWITCHED=1 once any running service changed.
-SWITCHED=0
-start() {
-  local tag="$1"
-  if ! running api || ! running client || ! running caddy; then
-    SWITCHED=1
-    # First deployment (or the stack was stopped): nothing serves traffic yet.
-    install_caddyfile "$tag"
-    compose "$tag" up -d --wait --wait-timeout 180 --remove-orphans || return 1
-    compose "$tag" exec -T caddy caddy reload --config /etc/caddy/Caddyfile --force >/dev/null
-    return 0
+# After a failed verification: Caddy back to the colour that served before (still running),
+# the new colour removed. Instant; no image is started.
+switch_back() {
+  if [[ "$LIVE" == none || -z "$PREV_TAG" ]]; then
+    log "no previous release to switch back to — see docs/runbook.md (Recovery)"
+    return 1
   fi
-  compose "$tag" up -d --no-deps --wait --wait-timeout 60 db valkey || return 1
-  swap "$tag" api || return 1
-  swap "$tag" client || return 1
-  # Background services take no requests: replaced in place (Celery finishes running tasks;
-  # exactly one beat must run).
-  compose "$tag" up -d --no-deps --wait --wait-timeout 180 worker beat || return 1
-  reload_caddy "$tag"
+  log "switching back to $LIVE ($PREV_TAG)"
+  route "$PREV_TAG" "$LIVE" || return 1
+  # shellcheck disable=SC2046
+  remove $(app_services "$TARGET") || true
+  if [[ "$BACKGROUND_SWITCHED" == 1 ]]; then
+    compose "$PREV_TAG" up -d --no-deps --wait --wait-timeout 180 worker beat || return 1
+  fi
+  smoke && touch "$APP_DIR/releases/$PREV_TAG" && log "previous release $PREV_TAG serves again"
 }
 
 # pg_dump of the running database before migrations (deployment standard). The newest
@@ -218,13 +258,42 @@ dump_database() {
     | awk -v keep="$KEEP_DUMPS" 'NR > keep {print $2}' | xargs -r rm -f
 }
 
-rollback() {
-  if [[ -z "$PREV_TAG" || "$PREV_TAG" == "$NEW_TAG" ]]; then
-    log "no previous release to restore — see docs/runbook.md (Recovery)"
-    return 1
+# Upgrades the database to the release's head unless the database is already at a revision
+# this release does not know (it is ahead: a rollback, or a redeploy of an older commit).
+# Decided by the database itself, so it is also right after a dump was restored. Any other
+# error (database down, broken migration) fails the deployment.
+KNOWN_REVISION='
+import sys
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from alembic.script.revision import ResolutionError
+from alembic.util import CommandError
+try:
+    ScriptDirectory.from_config(Config("alembic.ini")).get_revision(sys.argv[1])
+except (ResolutionError, CommandError):
+    sys.exit(3)
+'
+migrate() {
+  local revision known=0
+  if running db; then
+    revision="$(compose "$NEW_TAG" exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAq -c \
+      "select case when to_regclass('public.alembic_version') is null then '' else (select version_num from alembic_version limit 1) end")" \
+      || { log "could not read the database revision"; return 1; }
   fi
-  log "restoring previous release $PREV_TAG"
-  start "$PREV_TAG" && smoke && touch "$APP_DIR/releases/$PREV_TAG" && log "previous release $PREV_TAG restored"
+  if [[ -n "${revision:-}" ]]; then
+    [[ "$revision" =~ ^[A-Za-z0-9_]+$ ]] || { log "unexpected database revision: $revision"; return 1; }
+    # Exit 3: the release's migrations do not contain this revision.
+    compose "$NEW_TAG" --profile tools run --rm --no-deps migrate python -c "$KNOWN_REVISION" "$revision" \
+      || known=$?
+    if [[ "$known" == 3 ]]; then
+      log "database revision $revision is newer than this release: migrations skipped"
+      return 0
+    elif [[ "$known" != 0 ]]; then
+      log "could not check the database revision against the release"
+      return 1
+    fi
+  fi
+  compose "$NEW_TAG" --profile tools run --rm migrate
 }
 
 cleanup_old_releases() {
@@ -245,35 +314,42 @@ else
   log "deploying $NEW_TAG (previous: ${PREV_TAG:-none})"
 fi
 if [[ "${DEPLOY_SKIP_PULL:-0}" != 1 ]]; then
-  if ! compose "$NEW_TAG" pull --quiet api client; then
+  if ! compose "$NEW_TAG" pull --quiet api-blue client-blue; then
     log "pulling images failed; the running release was not changed"
     exit 1
   fi
 fi
 
-if [[ "$DEPLOYED_BEFORE" == 1 ]]; then
-  log "$NEW_TAG was deployed here before: its migrations are already applied, skipping them"
-else
-  if ! dump_database; then
-    log "database dump failed; the running release was not changed"
-    exit 1
-  fi
-  # Migrations are backward compatible (backend standard), so the running release keeps working.
-  log "running migrations"
-  if ! compose "$NEW_TAG" --profile tools run --rm migrate; then
-    log "migration failed; the running release was not changed"
-    exit 1
-  fi
+if [[ "$MODE" != --rollback ]] && ! dump_database; then
+  log "database dump failed; the running release was not changed"
+  exit 1
+fi
+# Migrations are backward compatible (backend standard), so the running release keeps working.
+if ! migrate; then
+  log "migration failed; the running release was not changed"
+  exit 1
 fi
 
-if start "$NEW_TAG" && smoke; then
+# Background services take no requests: replaced in place once the site is verified
+# (Celery finishes running tasks; exactly one beat must run).
+BACKGROUND_SWITCHED=0
+background() {
+  BACKGROUND_SWITCHED=1
+  compose "$NEW_TAG" up -d --no-deps --wait --wait-timeout 180 worker beat \
+    || { log "worker or beat of $NEW_TAG did not become healthy"; return 1; }
+}
+
+if switch_to "$NEW_TAG" && smoke && background; then
+  # Verified: the colour that served before stops.
+  # shellcheck disable=SC2046
+  remove $(app_services "$LIVE") || log "warning: could not remove the previous colour ($LIVE)"
   ln -sfn "releases/$NEW_TAG" "$APP_DIR/current"
   touch "$NEW_DIR"  # release order for cleanup = last time it became current
   grep -qxF "$NEW_TAG" "$HISTORY" 2>/dev/null || echo "$NEW_TAG" >> "$HISTORY"
   cleanup_old_releases
   # Dangling layers of Profilo's own images only (the server may host other projects).
   docker image prune -f --filter "label=org.opencontainers.image.source=https://github.com/MichalWrzesinski/Profilo" >/dev/null || true
-  log "deployed $NEW_TAG"
+  log "deployed $NEW_TAG ($TARGET)"
   exit 0
 fi
 
@@ -282,5 +358,5 @@ if [[ "$SWITCHED" == 0 ]]; then
   exit 1
 fi
 log "new release $NEW_TAG failed"
-rollback || log "rollback failed — manual action needed (docs/runbook.md, Recovery)"
+switch_back || log "switching back failed — manual action needed (docs/runbook.md, Recovery)"
 exit 1
