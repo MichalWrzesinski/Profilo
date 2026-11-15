@@ -58,6 +58,7 @@
 	log {
 		# Access log with IP addresses: kept 14 days (privacy policy), in the caddy_data volume.
 		output file /data/logs/access.log {
+			roll_interval 24h
 			roll_size 50MiB
 			roll_keep_for 336h
 		}
