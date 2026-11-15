@@ -1,7 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { tokenStore } from '@/lib/api/client';
+import { markDeleted } from '@/features/account/SignOutAfterDeletion';
 import { mockFetch } from '@/test/fetch';
-import '@/test/navigation';
+import { router } from '@/test/navigation';
 import { SessionProvider } from '@/lib/session';
 import AccountDeletedPage from './konto-usuniete/page';
 import LoginPage from './logowanie/page';
@@ -67,7 +68,20 @@ describe('public pages', () => {
     expect(screen.getByRole('heading', { name: 'Ustaw nowe hasło' })).toBeInTheDocument();
   });
 
+  it('sends a visitor who did not delete an account home', async () => {
+    tokenStore.set('access-1');
+    render(
+      <SessionProvider>
+        <AccountDeletedPage />
+      </SessionProvider>,
+    );
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/'));
+    expect(tokenStore.get()).toBe('access-1');
+    tokenStore.set(null);
+  });
+
   it('renders the goodbye page after deletion and signs out', async () => {
+    markDeleted();
     tokenStore.set('access-1');
     const fetch = mockFetch(() => new Response(null, { status: 204 }));
     render(

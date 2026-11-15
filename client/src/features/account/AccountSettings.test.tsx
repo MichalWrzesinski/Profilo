@@ -50,11 +50,7 @@ const bodyOf = async (fetch: ReturnType<typeof mockFetch>, path: string) => {
 };
 
 describe('change password', () => {
-  async function change(
-    user: ReturnType<typeof userEvent.setup>,
-    current = 'stare-haslo-123',
-    next = 'nowe-haslo-12345',
-  ) {
+  async function change(user: ReturnType<typeof userEvent.setup>, current = CURRENT, next = NEXT) {
     await user.type(await screen.findByLabelText('Obecne hasło'), current);
     await user.type(screen.getByLabelText('Nowe hasło'), next);
     await user.click(screen.getByRole('button', { name: 'Zmień hasło' }));
@@ -160,6 +156,8 @@ describe('delete account', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Usuń konto' }));
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/konto-usuniete'));
+    expect(sessionStorage.getItem('profilo:account-deleted')).toBe('1');
+    sessionStorage.clear();
     expect(await bodyOf(fetch, '/me/deletion')).toEqual({ password: TYPED });
   });
 
@@ -172,6 +170,24 @@ describe('delete account', () => {
 
     expect(await within(dialog).findByText('Hasło jest nieprawidłowe.')).toBeVisible();
     expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('sends once even if submitted twice quickly', async () => {
+    let finish: (response: Response) => void = () => undefined;
+    const { fetch, user } = setup(() => new Promise<Response>((resolve) => (finish = resolve)));
+    const dialog = await openDialog(user);
+    await user.type(within(dialog).getByLabelText('Wpisz hasło, aby potwierdzić'), TYPED);
+
+    await user.keyboard('{Enter}');
+    await user.keyboard('{Enter}');
+    finish(new Response(null, { status: 204 }));
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/konto-usuniete'));
+    const deletions = fetch.mock.calls.filter(([input]) =>
+      String((input as Request).url ?? input).endsWith('/me/deletion'),
+    );
+    expect(deletions).toHaveLength(1);
+    sessionStorage.clear();
   });
 
   it('asks for the password before sending', async () => {

@@ -8,6 +8,7 @@ import { Modal } from '@/components/Modal';
 import { problemMessage } from '@/features/auth/messages';
 import { api, type Problem } from '@/lib/api/client';
 import styles from './AccountSettings.module.css';
+import { markDeleted } from './SignOutAfterDeletion';
 
 type Props = { publicUrl: string | null };
 
@@ -30,6 +31,7 @@ export function DeleteAccount({ publicUrl }: Props) {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (busy) return; // a second Enter while the first request runs
     if (!password) return setError('Wpisz hasło, aby potwierdzić.');
     setBusy(true);
     setError(null);
@@ -40,7 +42,8 @@ export function DeleteAccount({ publicUrl }: Props) {
       });
       if (response.status === 204) {
         // The goodbye page signs out (outside the panel, whose guard would send an
-        // anonymous visitor to the login page first).
+        // anonymous visitor to the login page first); the flag tells it this is real.
+        markDeleted();
         router.replace('/konto-usuniete');
         return;
       }
