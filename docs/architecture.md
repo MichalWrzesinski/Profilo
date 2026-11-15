@@ -179,7 +179,7 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | Image upload | Malicious files, metadata leaks | Content sniffing, size and pixel limits, re-encoding, EXIF removal, random keys, no direct file serving |
 | Nick | Takeover of shared addresses, impersonation | Nick locked after first publication; 30-day quarantine after deletion; reserved list |
 | Unpublish / block | Stale content visible | No caching of public pages; snapshot visibility checked on every request |
-| Account deletion | Accidental or hostile deletion | Password required; confirmation e-mail; cascade in one transaction |
+| Account deletion | Accidental or hostile deletion, data left behind | Password required (5 wrong passwords per account per 15 min, shared with the password change; like login, the limit fails open when Valkey is down); confirmation e-mail; cascade in one transaction; files removed by a task (directly when the queue is down); cached preview cards dropped |
 
 ## Code map
 

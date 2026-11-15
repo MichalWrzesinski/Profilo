@@ -49,6 +49,8 @@ Acceptance criteria:
 - S3 wrong password — met: 403 `invalid_password` for the change (API) and for deletion (API and E2E: the page still answers 200).
 - S4 unconfirmed — met: change → 403 `email_not_confirmed`, deletion → 204 (API tests); the UI shows a hint instead of the form.
 
-Checks: api 359 tests, 99 %; client 409 tests, 95.9 % branches; contract 28 paths; E2E 9 tests pass locally.
+Checks: api 365 tests, 99 %; client 411 tests, 95.9 % branches; contract 28 paths; E2E 9 tests pass locally.
 
-Decisions: the change returns a new session (like the reset) instead of 204; the nick is quarantined whenever the account had one (ACC-BR-10 has no condition), the automatic deletion of unconfirmed accounts (TASK-017) releases it instead (ACC-BR-6); reusing the current password is refused; the goodbye page signs out (signing out in the panel raced with the panel's guard, which sent the browser to the login page — found by E2E); if the file task cannot be queued the files stay as orphans for the cleanup job of TASK-017 (logged as an error).
+Decisions: the change returns a new session (like the reset) instead of 204; the nick is quarantined whenever the account had one (ACC-BR-10 has no condition), the automatic deletion of unconfirmed accounts (TASK-017) releases it instead (ACC-BR-6); reusing the current password is refused; the goodbye page signs out (signing out in the panel raced with the panel's guard, which sent the browser to the login page — found by E2E); if the file task cannot be queued the files are removed directly in the request.
+
+Security review round 1 fixes: cached Open Graph cards of the deleted profile are dropped from Valkey (they hold the name and photo); files are removed directly when the queue is down; confirmation and reset links lock the account before their token (the same order as deletion — before, a link clicked during a deletion could deadlock into a 500); the deletion dialog cannot be sent twice; `/konto-usuniete` signs out only after a real deletion (a one-shot flag), otherwise it goes home; a password change also cancels open reset links; the fail-open password limit is noted in the higher-risk flows table.
