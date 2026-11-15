@@ -63,7 +63,7 @@ export function PreviewStep() {
         body: { version: profile.version },
       });
       if (data) {
-        router.push('/edytor?opublikowano=1');
+        router.push('/opublikowano');
         return;
       }
       const details = problem as (Problem & { current?: OwnerProfile }) | undefined;

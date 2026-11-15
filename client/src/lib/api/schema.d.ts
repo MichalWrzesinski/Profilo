@@ -387,7 +387,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** QR code of the canonical page address (PUB-US-6, PUB-BR-12) */
+        /** QR code of the canonical page address — SVG or PNG 1024 × 1024, 4-module quiet zone (PUB-US-6, PUB-BR-12) */
         get: operations["getQrCode"];
         put?: never;
         post?: never;
@@ -1618,7 +1618,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description QR image as attachment `profilo-{nick}.{format}`. */
+            /** @description QR image as attachment `profilo-{nick}.{format}`, `Cache-Control: private, no-store`. Available from the first publication on, also while the page is hidden. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1638,6 +1638,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     getPublicProfile: {

@@ -90,7 +90,7 @@ describe('PreviewStep', () => {
     await user.click(screen.getByRole('button', { name: 'Telefon' }));
     await user.click(screen.getByRole('button', { name: 'Opublikuj stronę' }));
 
-    expect(router.push).toHaveBeenCalledWith('/edytor?opublikowano=1');
+    expect(router.push).toHaveBeenCalledWith('/opublikowano');
     const body = await (fetch.mock.calls.at(-1)![0] as Request).json();
     expect(body).toEqual({ version: 7 });
   });

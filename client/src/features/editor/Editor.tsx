@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ChevronUp, CircleAlert } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleAlert, LayoutGrid, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -8,6 +8,7 @@ import { Alert } from '@/components/Alert';
 import { Brand } from '@/components/Brand';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
 import { draftToPublic } from '@/features/preview/draftToPublic';
+import { ShareDialog } from '@/features/share/ShareDialog';
 import { DeviceToggle, LivePreview, type Device } from '@/features/preview/LivePreview';
 import {
   AccentPicker,
@@ -72,7 +73,7 @@ function EditorLoading({ topbar }: { topbar: boolean }) {
   return (
     <>
       {topbar ? (
-        <header className="topbar">
+        <header className={`topbar ${styles.bar}`}>
           <Brand withName={false} />
           <span className="save-state" role="status">
             <span className="spinner" aria-hidden="true" />
@@ -124,7 +125,9 @@ function SaveState({ status, invalid }: { status: SaveStatus; invalid: boolean }
       ) : (
         <span className="dot" aria-hidden="true" />
       )}
-      {invalid && status === 'saved' ? 'Nie zapisano' : STATUS_LABEL[status]}
+      <span className={styles.saveLabel}>
+        {invalid && status === 'saved' ? 'Nie zapisano' : STATUS_LABEL[status]}
+      </span>
     </span>
   );
 }
@@ -154,14 +157,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
   const [publishError, setPublishError] = useState<string | null>(null);
   const [device, setDevice] = useState<Device>('desktop');
   const [appearanceOpen, setAppearanceOpen] = useState(false);
-  // Coming from the wizard's „Opublikuj stronę” (/edytor?opublikowano=1); the editor view
-  // mounts only in the browser, after the draft has loaded.
-  const [justPublished] = useState(() =>
-    new URLSearchParams(window.location.search).has('opublikowano'),
-  );
-  useEffect(() => {
-    if (justPublished) window.history.replaceState(null, '', window.location.pathname);
-  }, [justPublished]);
+  const [sharing, setSharing] = useState(false);
   const preview = useMemo(() => draftToPublic(profile, values), [profile, values]);
   const wizard = variant === 'wizard';
 
@@ -205,8 +201,12 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
       const { data, error } = await api.POST('/api/v1/me/profile/publish', {
         body: { version: profile.version },
       });
-      if (data) draft.applyPublished(data);
-      else setPublishError((error as Problem | undefined)?.detail ?? 'Nie udało się opublikować.');
+      if (data) {
+        draft.applyPublished(data);
+        // First publication: the „Opublikowano” screen with the address and the QR code.
+        if (!profile.nickLocked) router.push('/opublikowano');
+      } else
+        setPublishError((error as Problem | undefined)?.detail ?? 'Nie udało się opublikować.');
     } catch {
       setPublishError('Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie.');
     } finally {
@@ -242,7 +242,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
   return (
     <>
       {!wizard && (
-        <header className="topbar">
+        <header className={`topbar ${styles.bar}`}>
           <Brand withName={false} />
           <SaveState status={draft.shownStatus} invalid={draft.invalid} />
           <span className="spacer" />
@@ -250,6 +250,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
           <Link
             className="btn btn-ghost btn-sm"
             href="/panel"
+            aria-label="Panel"
             onClick={(event) => {
               // Opening the panel in a new tab (Cmd/Ctrl/Shift or middle click) leaves this one.
               if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
@@ -259,8 +260,21 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
               void leaveTo('/panel');
             }}
           >
-            Panel
+            <LayoutGrid className={`i sm ${styles.showM}`} aria-hidden="true" />
+            <span className="hide-m">Panel</span>
           </Link>
+          {profile.publicUrl && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              aria-haspopup="dialog"
+              aria-label="Udostępnij: adres i kod QR"
+              onClick={() => setSharing(true)}
+            >
+              <Share2 className="i sm" aria-hidden="true" />
+              <span className="hide-m">Udostępnij</span>
+            </button>
+          )}
           <button
             type="button"
             className={`btn btn-primary btn-sm${publishing ? ' is-loading' : ''}`}
@@ -269,7 +283,13 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
             aria-describedby={publishHint ? 'ed-publish-hint' : undefined}
             onClick={() => void publish()}
           >
-            {published ? 'Opublikuj zmiany' : 'Opublikuj'}
+            {published ? (
+              <>
+                Opublikuj<span className="hide-m"> zmiany</span>
+              </>
+            ) : (
+              'Opublikuj'
+            )}
           </button>
           {publishHint && (
             <span id="ed-publish-hint" className="sr-only">
@@ -323,15 +343,12 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
         </div>
       )}
       {!wizard && <ConfirmEmailBanner />}
-      {justPublished && profile.publicUrl && (
-        <div className="alert alert-success banner" role="status">
-          <span className="grow">
-            <b>Strona jest opublikowana.</b> Twój adres:{' '}
-            <a href={profile.publicUrl} target="_blank" rel="noopener">
-              {profile.publicUrl.replace(/^https?:\/\//, '')}
-            </a>
-          </span>
-        </div>
+      {sharing && profile.publicUrl && profile.nick && (
+        <ShareDialog
+          publicUrl={profile.publicUrl}
+          nick={profile.nick}
+          onClose={() => setSharing(false)}
+        />
       )}
 
       <div className={`${styles.ed}${wizard ? ` ${styles.wizard}` : ''}`} data-tab={tab}>
