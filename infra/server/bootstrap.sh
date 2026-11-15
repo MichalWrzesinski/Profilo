@@ -109,6 +109,8 @@ TLS_MODE=$TLS_MODE
 ACME_EMAIL=$ACME_EMAIL
 ROBOTS_TAG="$robots"
 PUBLIC_BASE_URL=https://$DOMAIN
+# Operator address for abuse reports on public pages (PUB-BR-10); empty shows a placeholder.
+ABUSE_EMAIL=
 POSTGRES_USER=profilo
 POSTGRES_PASSWORD=$db_password
 POSTGRES_DB=profilo
