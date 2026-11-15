@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { open, registerAccount, TEST_PASSWORD } from './helpers';
+import { open, TEST_PASSWORD } from './helpers';
 
 test('many registrations from one network must solve a challenge first', async ({
   page,
@@ -32,5 +32,4 @@ test('many registrations from one network must solve a challenge first', async (
   await page.getByRole('button', { name: 'Załóż konto' }).click();
   await answer;
   await expect(page).toHaveURL(/\/kreator$/);
-  expect(registerAccount).toBeDefined();
 });
