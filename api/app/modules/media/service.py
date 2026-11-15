@@ -6,12 +6,14 @@ import uuid
 from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import rate_limit
+from app.core.db import get_sessionmaker
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.valkey import get_valkey
@@ -171,3 +173,25 @@ async def delete_files_of(account_id: uuid.UUID) -> bool:
             log.error("media_delete_failed", error=type(inner).__name__)
         return False
     return True
+
+
+# Files are written before their row is committed (store_upload): younger ones may belong
+# to an upload in progress.
+ORPHAN_AGE = timedelta(hours=1)
+
+
+async def remove_orphaned_files(now: datetime | None = None) -> dict[str, int]:
+    """Delete stored images no row points at: left over when a deletion could not remove
+    the files, or after a crash between writing files and saving the row."""
+    cutoff = ((now or datetime.now(UTC)) - ORPHAN_AGE).timestamp()
+    stored = await storage.stored_keys()
+    async with get_sessionmaker()() as session:
+        known = set(await session.scalars(select(Image.storage_key)))
+    removed = 0
+    for key, changed in stored.items():
+        if key in known or changed > cutoff:
+            continue
+        await storage.delete_prefix(key)
+        removed += 1
+    folders = await storage.remove_empty_folders(older_than=cutoff)
+    return {"removed": removed, "kept": len(stored) - removed, "empty_folders": folders}
