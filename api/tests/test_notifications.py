@@ -100,7 +100,8 @@ def test_message_has_text_and_html_parts() -> None:
 class FakeSMTP:
     instances: ClassVar[list[FakeSMTP]] = []
 
-    def __init__(self, host: str, port: int, timeout: float) -> None:
+    def __init__(self, host: str, port: int, timeout: float, context: Any = None) -> None:
+        self.context = context
         self.host, self.port, self.timeout = host, port, timeout
         self.sent: list[EmailMessage] = []
         self.tls = False
@@ -154,6 +155,29 @@ def test_send_with_starttls_and_credentials(monkeypatch: pytest.MonkeyPatch) -> 
 
     assert FakeSMTP.instances[0].tls is True
     assert FakeSMTP.instances[0].login_args == ("user", "secret")
+
+
+def test_send_over_implicit_tls(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Port 465 mailboxes: TLS from the first byte, no STARTTLS on top."""
+    from app.core.settings import get_settings
+
+    FakeSMTP.instances.clear()
+    monkeypatch.setattr(smtplib, "SMTP_SSL", FakeSMTP)
+    monkeypatch.setattr(smtplib, "SMTP", None)  # must not be used
+    settings = get_settings()
+    monkeypatch.setattr(settings, "smtp_ssl", True)
+    monkeypatch.setattr(settings, "smtp_starttls", True)
+    monkeypatch.setattr(settings, "smtp_port", 465)
+
+    mailer.send(
+        mailer.build_message("a@b.pl", templates.render("email_confirmation", {"link": "L"}))
+    )
+
+    smtp = FakeSMTP.instances[0]
+    assert smtp.port == 465
+    assert smtp.context is not None
+    assert smtp.tls is False
+    assert len(smtp.sent) == 1
 
 
 def test_task_retries_only_transient_errors_with_backoff() -> None:

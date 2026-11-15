@@ -28,7 +28,8 @@ class Settings(BaseSettings):
     smtp_port: int = 1025
     smtp_username: str | None = None
     smtp_password: SecretStr | None = None
-    smtp_starttls: bool = False
+    smtp_starttls: bool = False  # upgrade a plain connection (usually port 587)
+    smtp_ssl: bool = False  # TLS from the start (usually port 465); wins over smtp_starttls
     smtp_timeout_seconds: float = 10.0
     mail_from: str = "Profilo <no-reply@profilo.pl>"
 

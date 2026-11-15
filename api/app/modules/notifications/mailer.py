@@ -23,12 +23,24 @@ def build_message(to: str, email: RenderedEmail) -> EmailMessage:
     return message
 
 
+def _connect() -> smtplib.SMTP:
+    settings = get_settings()
+    if settings.smtp_ssl:  # implicit TLS from the first byte (usually port 465)
+        return smtplib.SMTP_SSL(
+            settings.smtp_host,
+            settings.smtp_port,
+            timeout=settings.smtp_timeout_seconds,
+            context=ssl.create_default_context(),
+        )
+    return smtplib.SMTP(
+        settings.smtp_host, settings.smtp_port, timeout=settings.smtp_timeout_seconds
+    )
+
+
 def send(message: EmailMessage) -> None:
     settings = get_settings()
-    with smtplib.SMTP(
-        settings.smtp_host, settings.smtp_port, timeout=settings.smtp_timeout_seconds
-    ) as smtp:
-        if settings.smtp_starttls:
+    with _connect() as smtp:
+        if settings.smtp_starttls and not settings.smtp_ssl:
             smtp.starttls(context=ssl.create_default_context())
         if settings.smtp_username and settings.smtp_password:
             smtp.login(settings.smtp_username, settings.smtp_password.get_secret_value())
