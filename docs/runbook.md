@@ -1,6 +1,6 @@
 # Runbook
 
-Operations for staging (and production from TASK-021). Files: `infra/server/` (`compose.yml`, `Caddyfile`, `bootstrap.sh`, `deploy.sh`), workflow `.github/workflows/deploy-staging.yml`.
+Operations for staging and production. Files: `infra/server/` (`compose.yml`, `Caddyfile`, `bootstrap.sh`, `setup-shared-host.sh`, `deploy.sh`), `infra/ci/deploy-remote.sh` (the runner side shared by the workflows), workflows `deploy-staging.yml`, `deploy-production.yml`, `rollback-production.yml`.
 
 ## Provision a staging server (once)
 
@@ -99,20 +99,48 @@ On the server the Compose helper of „Manual operations” works with `/srv/Pro
 
 ## How a deployment works
 
-After the CI workflow succeeds on `main` (its `publish` job pushed `ghcr.io/michalwrzesinski/profilo-{api,client}:<sha>`), *Deploy staging* runs:
+Staging: after the CI workflow succeeds on `main` (its `publish` job pushed `ghcr.io/michalwrzesinski/profilo-{api,client}:<sha>`), *Deploy staging* runs. Production: the user starts *Deploy production* (below). Both run `infra/ci/deploy-remote.sh` (from `main`) with the stack files of the deployed commit:
 
-1. checks that the commit is on `main`; after CI it skips commits that are no longer the head of `main` (the newer commit deploys);
-2. uploads `compose.yml`, `Caddyfile`, `deploy.sh` to `/srv/profilo/releases/<sha>/` and writes runtime secrets (SMTP) to `/srv/profilo/.env.secrets` (mode 600);
+1. checks that the commit is on `main` (staging: after CI it skips commits that are no longer the head of `main`; production: the commit must carry the status `deploy/staging = success`, which *Deploy staging* sets after a verified deployment);
+2. uploads `compose.yml`, `compose.proxied.yml`, `Caddyfile`, `deploy.sh` to `$APP_DIR/releases/<sha>/` and writes runtime secrets (SMTP) to `$APP_DIR/.env.secrets` (mode 600);
 3. logs the server in to GHCR with the workflow's short-lived token (logged out at the end);
-4. `releases/<sha>/deploy.sh <sha>` (one at a time, lock file): pull images → migrations (`migrate` service) → `docker compose up --wait` (health checks) → Caddy reload → smoke tests `/ready` and `/` through Caddy (retried up to 90 s) → `current` symlink to the release; old releases beyond the last 5 are removed with their images;
-5. if start or smoke tests fail, the previous release (its images and its stack files) is restored and the workflow fails; a failed pull or migration leaves the running release untouched;
-6. external smoke tests: `/ready`, `/`, HTTP → HTTPS redirect, security headers.
+4. `releases/<sha>/deploy.sh <sha>` (one at a time, lock file):
+   1. pull images;
+   2. `pg_dump` of the running database to `backups/before-<sha>-<time>.dump` (checked with `pg_restore --list`; the newest 5 stay) and migrations — both skipped for a commit already in `.deployed-history` (its migrations ran then; the database may be ahead of it);
+   3. **switch without downtime**: for `api`, then `client`, a container of the new release starts next to the running one; only when it is healthy (and the API's `/ready` passes) the old one stops gracefully (30 s for running requests). Caddy retries a request whose connection fails for up to 10 s, so no request is lost. `worker` and `beat` are replaced in place (no traffic). Caddy itself stays running: the release's `Caddyfile` is copied to `$APP_DIR/caddy/` and reloaded;
+   4. smoke tests `/ready` and `/` through Caddy (retried up to 90 s) → `current` symlink, the commit appended to `.deployed-history`; old releases beyond the last 5 are removed with their images;
+5. if the new containers never become healthy, they are removed and the running release keeps serving (nothing switched); if the smoke tests fail after the switch, the previous release (images, stack files, Caddyfile) is switched back the same way; the workflow fails in both cases. A failed pull, dump or migration leaves the running release untouched;
+6. external smoke tests: `/ready`, `/`, HTTP → HTTPS redirect, security headers (a failure here does not roll back: the release passed on the server, the problem is in front of it — DNS, the host's nginx, certificates).
 
-Layout of `/srv/profilo`: `.env` (server-only), `releases/<sha>/` (stack files and `deploy.log` of each release), `current` → last successful release.
+Layout of `$APP_DIR` (`/srv/profilo`, `/srv/Profilo` on the shared host): `.env` (server-only), `.env.secrets` (from the workflow), `releases/<sha>/` (stack files and `deploy.log` of each release), `current` → last successful release, `caddy/Caddyfile` (live Caddy configuration), `backups/` (pre-migration dumps, mode 700), `.deployed-history` (commits that passed verification, oldest first).
 
 The deployment runs detached on the server (own session, log in `releases/<sha>/deploy.log`); the workflow only follows the log, so a dropped SSH connection does not interrupt it — check the log and `current` afterwards.
 
 If the newest commit on `main` fails CI, older green commits are skipped and staging stays on the last deployed release until `main` is green again (deploy an older commit manually if needed).
+
+## Production
+
+Only the user starts *Deploy production* (AGENTS.md). Both production workflows run only from `main` and only for the account `MichalWrzesinski` (also on re-runs); otherwise the job is skipped before any secret is read.
+
+**Provision (once)** — as *Provision a staging server* with production values: CX33, the production domain (e.g. `profilo.pl`), deploy key `profilo-production-deploy`, and `bootstrap.sh production …` (writes `ROBOTS_TAG="all"`). On a shared host: `setup-shared-host.sh production …` and the *Shared host* steps. Then the GitHub settings:
+
+| Kind | Name | Value |
+|---|---|---|
+| Secret | `PROD_SSH_HOST` | server IP or hostname |
+| Secret | `PROD_SSH_KEY` | content of `profilo-production-deploy` (private key) |
+| Secret | `PROD_SSH_KNOWN_HOSTS` | `ssh-keyscan -t ed25519 SERVER` (verify the fingerprint) |
+| Secret | `PROD_SMTP_USERNAME`, `PROD_SMTP_PASSWORD` | the production mailbox or Brevo key |
+| Variable | `PROD_DOMAIN` | e.g. `profilo.pl` |
+| Variable | `PROD_MAIL_FROM` | e.g. `Profilo <no-reply@profilo.pl>` — an address the SMTP account may send as (SPF, DKIM) |
+| Variable (optional) | `PROD_SSH_USER`, `PROD_APP_DIR`, `PROD_SMTP_HOST`, `PROD_SMTP_PORT`, `PROD_SMTP_SECURITY` | defaults `deploy`, `/srv/profilo`, Brevo, `587`, `starttls` |
+
+Check that the server can reach the SMTP port (*Shared host* step 9) before the first deployment.
+
+**Readiness report** (the agent, when staging is green): PRs since the last `production-*` tag, the commit SHA, migrations in the release (irreversible ones marked), product decisions and views to check on staging, new secrets or settings, and the link to *Deploy production*.
+
+**Deploy** — Actions → *Deploy production* → *Run workflow* (branch `main`) with the full SHA from the report. The workflow refuses a commit that staging has not verified. On success it creates the release `production-<UTC time>` on the commit, with the PRs merged since the previous one.
+
+**Later rollback** — Actions → *Rollback production* with the SHA of an earlier `production-*` release. No dump, no migrations (the database stays as it is; migrations are backward compatible, so the older release works with it). It is refused unless the commit has a `production-*` tag and appears in the server's `.deployed-history`. The agent may start it without consent and informs the user at once: cause, version restored, state of the application. Restoring the database from a dump loses data written since and needs the user's consent (deployment standard).
 
 ## Manual operations (as `deploy` on the server, in `/srv/profilo`)
 
@@ -123,7 +151,8 @@ Helper for the commands below: `dc() { set -a; . /srv/profilo/.env; set +a; t=$(
 | Current release | `readlink /srv/profilo/current` |
 | Status | `dc ps` |
 | Logs | `dc logs -f --tail=100 api`; the Caddy access log (with IPs, kept 14 days) is a file: `dc exec caddy tail -f /data/logs/access.log` |
-| Redeploy or roll back to a commit | GitHub Actions → *Deploy staging* → *Run workflow* with the SHA (any commit on `main` whose images exist) |
+| Redeploy or roll back to a commit | Staging: *Deploy staging* → *Run workflow* with the SHA (any commit on `main` whose images exist; one deployed before skips its migrations). Production: *Rollback production* (above) |
+| Pre-migration dumps | `ls -lt $APP_DIR/backups`; restore only with the user's consent: `dc stop api worker beat client`, `dc exec -T db pg_restore -U profilo -d profilo --clean --if-exists < backups/<file>.dump`, `dc start api worker beat client` |
 | Restart | `dc restart` |
 | Block a page reported as illegal (PUB-BR-10) | `dc exec api profilo block-profile <nick>` — the page, its images and its preview card return 404 at once (browsers and messenger previews may keep images and the card for up to a day), the owner sees „Strona zablokowana”; send the owner the statement of reasons by e-mail (terms §5). If the owner deletes the account, the nick stays reserved (`reserved_nicks`, reason `blocked`); to free it: `dc exec db psql -U profilo -c "delete from reserved_nicks where nick='<nick>' and reason='blocked'"`. Exit codes: 0 done, 1 unknown nick, 3 database or Valkey unavailable |
 | Unblock a page | `dc exec api profilo unblock-profile <nick>` — the last published version is visible again |
@@ -136,10 +165,12 @@ Helper for the commands below: `dc() { set -a; . /srv/profilo/.env; set +a; t=$(
 
 | Situation | What to do |
 |---|---|
-| Workflow failed, log says "previous release … restored" | Staging runs the previous release. Fix the cause in a new PR; nothing to do on the server. |
+| Workflow failed, log says "previous release … restored" or "failed before taking traffic" | The previous release serves (production: tell the user). Fix the cause in a new PR; nothing to do on the server. |
 | Pull or migration failed | The running release was not changed. Fix in a PR. A migration that failed half-way is rolled back by PostgreSQL's transactional DDL; check `dc --profile tools run --rm migrate alembic current`. |
 | First deployment failed (no previous release) | The stack may be up with an unhealthy service and `/ready` 502. Read `dc logs api`, fix in a PR, merge → the next deployment replaces it. |
-| "rollback failed — manual action needed" | Run *Deploy staging* manually with the last good SHA from `ls -t /srv/profilo/releases`. If that fails too, inform the user with the logs; do not change the server by hand. |
+| "rollback failed — manual action needed" | Staging: run *Deploy staging* with the last good SHA (`tail $APP_DIR/.deployed-history`). Production: *Rollback production* with the last good `production-*` release, and inform the user. If that fails too, inform the user with the logs; do not change the server by hand. |
+| Rollback refused: "never deployed" | Only commits in the server's `.deployed-history` (and, in production, with a `production-*` tag) can be restored. Choose one of those. |
+| Leftover containers after an interrupted switch (`dc ps` shows two `api` or `client`) | Harmless: both serve the same name. The next deployment replaces all of them; to tidy up now, rerun the workflow with the current SHA. |
 | "another deployment is running" | Wait for the other run to finish and rerun the workflow (the lock is released automatically when `deploy.sh` exits). |
 | Server lost | Create a new server and repeat *Provision*; staging data is not backed up (test data only). |
 
@@ -151,6 +182,7 @@ Never change code, configuration or data on the server by hand (deployment stand
 - Staging sends `X-Robots-Tag: noindex, nofollow`.
 - Container logs rotate at 10 MB × 14 files per service; Caddy logs contain visitor IPs, the API logs do not.
 - Docker-published ports bypass ufw; the stack publishes only 80 and 443.
-- User images live in the `media` volume (`/data/media` in api and worker). Caddy limits request bodies to 1 MB, 11 MB for image uploads. The volume is not backed up on staging; production backups come with TASK-021.
-- Caddy is recreated on every new release (its configuration directory is the release directory), causing a short gap; acceptable on staging, production needs zero downtime (TASK-021).
+- User images live in the `media` volume (`/data/media` in api and worker). Caddy limits request bodies to 1 MB, 11 MB for image uploads. The volume is not backed up on staging; production backups (database and media, off-site) come with TASK-022.
+- Releases switch without downtime (see *How a deployment works*). Caddy is recreated only when its own settings in `compose.yml` change (image, ports, variables), with a gap of about 2 s; the switch from the old layout (Caddy reading the release directory) did that once on staging.
+- During the switch old and new containers serve for a few seconds side by side: a page loaded from one version may fetch a script from the other. Migrations and API changes are backward compatible (backend standard), so only a reload may be needed in rare cases.
 - Secrets added later (Brevo, Sentry, Storage Box) are delivered by the deploy workflows (AGENTS.md).
