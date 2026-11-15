@@ -50,6 +50,6 @@ async def _forget_files_and_cards(ids: list[uuid.UUID], profiles: list[uuid.UUID
         try:
             await storage.delete_prefix(str(account_id))
         except Exception as exc:
-            log.error("media_delete_failed", error=type(exc).__name__)
+            log.error("media_delete_failed", account_id=str(account_id), error=type(exc).__name__)
     for profile_id in profiles:
         await forget_cards(profile_id)

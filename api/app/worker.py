@@ -27,14 +27,17 @@ celery_app.conf.update(
         "delete-unconfirmed-accounts": {
             "task": "accounts.delete_unconfirmed",
             "schedule": crontab(minute=5),
+            "options": {"expires": 50 * 60},  # after an outage, no backlog of hourly runs
         },
         "release-quarantined-nicks": {
             "task": "profiles.release_quarantined_nicks",
             "schedule": crontab(minute=15),
+            "options": {"expires": 50 * 60},  # after an outage, no backlog of hourly runs
         },
         "remove-orphaned-files": {
             "task": "media.remove_orphaned_files",
             "schedule": crontab(minute=25),
+            "options": {"expires": 50 * 60},  # after an outage, no backlog of hourly runs
         },
     },
 )

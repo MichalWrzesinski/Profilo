@@ -243,6 +243,89 @@ async def test_files_without_a_row_are_removed_after_an_hour(
         assert await session.scalar(select(func.count()).select_from(Image)) == 1
 
 
+@pytest.fixture
+def own_storage(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A storage root of its own (the memory:// storage is shared by the whole run)."""
+    import uuid
+
+    root = f"/test-{uuid.uuid4()}"
+    memory = fsspec.filesystem("memory")
+    monkeypatch.setattr(storage, "_fs", lambda: (memory, root))
+    yield memory
+    monkeypatch.undo()  # a test may have patched the file system itself
+    if memory.exists(root):
+        memory.rm(root, recursive=True)
+
+
+@pytest.mark.parametrize("rows", ["none", "few"])
+async def test_a_missing_or_partial_database_deletes_nothing(
+    client: AsyncClient, own_storage: Any, rows: str
+) -> None:
+    """Review: during a restore every file looks orphaned; the job must stop instead."""
+    for number in range(12):
+        await storage.put(f"01a1aaaa-0000-7000-8000-0000000000{number:02d}/k/256.webp", b"x")
+    if rows == "few":
+        await owner(client, "anna@example.pl", "anna", confirmed=True, age_days=1)
+        async with get_sessionmaker()() as session:
+            await session.execute(
+                update(Image).values(storage_key="01a1aaaa-0000-7000-8000-000000000000/k")
+            )
+            await session.commit()
+
+    before = len(await storage.stored_keys())
+
+    counts = await media.remove_orphaned_files(now=datetime.now(UTC) + timedelta(hours=2))
+
+    assert counts["aborted"] == 1
+    assert len(await storage.stored_keys()) == before
+
+
+async def test_removals_per_run_are_capped(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch, own_storage: Any
+) -> None:
+    await owner(client, "anna@example.pl", "anna", confirmed=True, age_days=1)
+    monkeypatch.setattr(media, "MAX_REMOVALS_PER_RUN", 1)
+    monkeypatch.setattr(media, "MAX_ORPHAN_SHARE", 1.0)
+    for number in range(2):
+        await storage.put(f"01a1cccc-0000-7000-8000-00000000000{number}/k/256.webp", b"x")
+
+    first = await media.remove_orphaned_files(now=datetime.now(UTC) + timedelta(hours=2))
+
+    assert first["removed"] == 1
+    assert len(await keys_of("01a1cccc")) == 1
+    await media.remove_orphaned_files(now=datetime.now(UTC) + timedelta(hours=2))
+    assert await keys_of("01a1cccc") == []
+
+
+async def test_a_failing_image_query_deletes_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    await storage.put("01a1dddd-0000-7000-8000-000000000000/k/256.webp", b"x")
+
+    def broken() -> Any:
+        raise ConnectionError
+
+    monkeypatch.setattr(media, "get_sessionmaker", broken)
+
+    with pytest.raises(ConnectionError):
+        await media.remove_orphaned_files(now=datetime.now(UTC) + timedelta(hours=2))
+    assert await keys_of("01a1dddd")
+
+
+async def test_a_folder_that_got_a_file_meanwhile_is_kept(
+    monkeypatch: pytest.MonkeyPatch, own_storage: Any
+) -> None:
+    folder = storage._path("01a1eeee-0000-7000-8000-000000000000")
+    own_storage.makedirs(folder, exist_ok=True)
+    monkeypatch.setattr(storage, "_stamp", lambda _: 0.0)
+
+    def rmdir_after_upload(path: str) -> None:  # the upload wins the race
+        raise OSError("Directory not empty")
+
+    monkeypatch.setattr(own_storage, "rmdir", rmdir_after_upload)
+
+    assert await storage.remove_empty_folders(older_than=1.0) == 0
+    assert own_storage.exists(folder)
+
+
 async def test_empty_storage_has_nothing_to_remove(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         storage, "_fs", lambda: (fsspec.filesystem("memory"), "/nie-ma-takiego-katalogu")
@@ -262,10 +345,11 @@ async def test_a_new_empty_folder_is_kept_for_an_upload_in_progress() -> None:
     fs.rm(folder, recursive=True)
 
 
-async def test_stray_files_outside_image_folders_are_ignored() -> None:
+async def test_stray_files_outside_image_folders_are_ignored(own_storage: Any) -> None:
     await storage.put("README.txt", b"x")
+    await storage.put("01a1ffff-0000-7000-8000-000000000000/plik.txt", b"x")
 
-    assert "README.txt" not in await storage.stored_keys()
+    assert await storage.stored_keys() == {}
 
 
 # --- one instance at a time -------------------------------------------------------------
@@ -378,3 +462,4 @@ def test_beat_runs_every_job_hourly() -> None:
         "media.remove_orphaned_files",
     }
     assert {str(entry["schedule"]._orig_minute) for entry in schedule.values()} == {"5", "15", "25"}
+    assert {entry["options"]["expires"] for entry in schedule.values()} == {3000}

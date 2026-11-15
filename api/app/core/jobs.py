@@ -7,8 +7,6 @@ database engine and the Valkey client, which belong to a loop, are disposed at t
 import asyncio
 from collections.abc import Awaitable, Callable
 
-from redis.exceptions import LockError
-
 from app.core.db import dispose_engine
 from app.core.logging import log
 from app.core.valkey import close_valkey, get_valkey
@@ -35,7 +33,7 @@ async def run_locked(name: str, job: Job, lock_seconds: int) -> dict[str, int] |
     finally:
         try:
             await lock.release()
-        except (LockError, Exception) as exc:  # expired or Valkey gone: it times out anyway
+        except Exception as exc:  # expired (LockError) or Valkey gone: it times out anyway
             log.warning("job_lock_release_failed", job=name, error=type(exc).__name__)
 
 
@@ -46,7 +44,9 @@ def run(name: str, job: Job, lock_seconds: int = 50 * 60) -> None:
         try:
             await run_locked(name, job, lock_seconds)
         finally:
-            await dispose_engine()
-            await close_valkey()
+            try:
+                await dispose_engine()
+            finally:
+                await close_valkey()
 
     asyncio.run(main())

@@ -43,25 +43,6 @@ async def delete_prefix(prefix: str) -> None:
         await asyncio.to_thread(fs.rm, path, recursive=True)
 
 
-async def stored_keys() -> dict[str, float]:
-    """Image keys (`{account}/{token}`) in storage → time of their newest file (Unix)."""
-    fs, root = _fs()
-
-    def scan() -> dict[str, float]:
-        if not fs.exists(root):
-            return {}
-        keys: dict[str, float] = {}
-        for path, info in fs.find(root, detail=True).items():
-            parts = path[len(root) :].strip("/").split("/")
-            if len(parts) < 3:  # not `{account}/{token}/{size}.webp`
-                continue
-            key = f"{parts[0]}/{parts[1]}"
-            keys[key] = max(keys.get(key, 0.0), _stamp(info))
-        return keys
-
-    return await asyncio.to_thread(scan)
-
-
 def _stamp(info: dict[str, object]) -> float:
     """Last change (Unix time); unknown counts as now, so nothing is removed on a guess."""
     changed = info.get("mtime") or info.get("created")
@@ -69,6 +50,29 @@ def _stamp(info: dict[str, object]) -> float:
         return float("inf")
     timestamp = getattr(changed, "timestamp", None)
     return float(timestamp()) if callable(timestamp) else float(changed)  # type: ignore[arg-type]
+
+
+async def stored_keys() -> dict[str, float]:
+    """Image keys (`{account}/{token}`) in storage → time of their newest file (Unix).
+    Walks one account folder at a time, so only one folder's file details are in memory."""
+    fs, root = _fs()
+
+    def scan() -> dict[str, float]:
+        if not fs.exists(root):
+            return {}
+        keys: dict[str, float] = {}
+        for entry in fs.ls(root, detail=True):
+            if entry["type"] != "directory":
+                continue  # not `{account}/{token}/{size}.webp`
+            for path, info in fs.find(entry["name"], detail=True).items():
+                parts = path[len(root) :].strip("/").split("/")
+                if len(parts) < 3:
+                    continue
+                key = f"{parts[0]}/{parts[1]}"
+                keys[key] = max(keys.get(key, 0.0), _stamp(info))
+        return keys
+
+    return await asyncio.to_thread(scan)
 
 
 async def remove_empty_folders(older_than: float) -> int:
@@ -86,7 +90,11 @@ async def remove_empty_folders(older_than: float) -> int:
                 and _stamp(entry) < older_than
                 and not fs.find(entry["name"])
             ):
-                fs.rm(entry["name"], recursive=True)
+                try:
+                    # Not recursive: an upload that has just put a file there wins.
+                    fs.rmdir(entry["name"])
+                except OSError:
+                    continue
                 removed += 1
         return removed
 

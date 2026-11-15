@@ -170,7 +170,7 @@ async def delete_files_of(account_id: uuid.UUID) -> bool:
         try:
             await storage.delete_prefix(str(account_id))
         except Exception as inner:
-            log.error("media_delete_failed", error=type(inner).__name__)
+            log.error("media_delete_failed", account_id=str(account_id), error=type(inner).__name__)
         return False
     return True
 
@@ -180,18 +180,27 @@ async def delete_files_of(account_id: uuid.UUID) -> bool:
 ORPHAN_AGE = timedelta(hours=1)
 
 
+# Safety valve: a database that is empty or only partly restored makes every file look
+# orphaned. Above this share the job stops and logs an error instead of deleting.
+MAX_ORPHAN_SHARE = 0.2
+MAX_REMOVALS_PER_RUN = 500
+
+
 async def remove_orphaned_files(now: datetime | None = None) -> dict[str, int]:
     """Delete stored images no row points at: left over when a deletion could not remove
     the files, or after a crash between writing files and saving the row."""
     cutoff = ((now or datetime.now(UTC)) - ORPHAN_AGE).timestamp()
-    stored = await storage.stored_keys()
+    stored = await storage.stored_keys()  # before the query: files of a new upload are young
     async with get_sessionmaker()() as session:
         known = set(await session.scalars(select(Image.storage_key)))
-    removed = 0
-    for key, changed in stored.items():
-        if key in known or changed > cutoff:
-            continue
+    orphans = [key for key, changed in stored.items() if key not in known and changed <= cutoff]
+    if orphans and (not known or len(orphans) > max(10, MAX_ORPHAN_SHARE * len(stored))):
+        log.error(
+            "orphan_cleanup_aborted", orphans=len(orphans), stored=len(stored), known=len(known)
+        )
+        return {"removed": 0, "kept": len(stored), "empty_folders": 0, "aborted": 1}
+    for key in orphans[:MAX_REMOVALS_PER_RUN]:
         await storage.delete_prefix(key)
-        removed += 1
+    removed = min(len(orphans), MAX_REMOVALS_PER_RUN)
     folders = await storage.remove_empty_folders(older_than=cutoff)
     return {"removed": removed, "kept": len(stored) - removed, "empty_folders": folders}
