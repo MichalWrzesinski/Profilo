@@ -25,6 +25,16 @@ class LoginRequest(ApiModel):
     password: Password = Field(max_length=128)  # no stored password can be longer
 
 
+class PasswordResetRequest(ApiModel):
+    email: EmailStr = Field(max_length=254)
+
+
+class PasswordResetConfirm(ApiModel):
+    token: str = Field(min_length=20, max_length=200)
+    # Length and common-password rules are checked by the service (ACC-BR-3).
+    new_password: Password = Field(max_length=1024)
+
+
 class TokenRequest(ApiModel):
     token: str = Field(min_length=20, max_length=200)
 

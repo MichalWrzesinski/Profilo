@@ -1,17 +1,19 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Depends, Header, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, Header, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import CurrentAccount
 from app.core.db import get_session
 from app.core.errors import ProblemError
 from app.core.settings import get_settings
-from app.modules.accounts import confirmation, service
+from app.modules.accounts import confirmation, password_reset, service
 from app.modules.accounts.models import Account
 from app.modules.accounts.schemas import (
     AccountOut,
     LoginRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
     RegisterRequest,
     SessionOut,
     TokenRequest,
@@ -135,6 +137,28 @@ async def resend_email_confirmation(
 async def confirm_email(payload: TokenRequest, request: Request, session: DbSession) -> Response:
     await confirmation.confirm(session, payload.token, _client_ip(request))
     return Response(status_code=204)
+
+
+@router.post("/auth/password-resets", status_code=202, tags=["auth"])
+async def request_password_reset(
+    payload: PasswordResetRequest, request: Request, background: BackgroundTasks
+) -> Response:
+    """Always 202, whether or not the account exists (ACC-BR-7); the lookup and the e-mail
+    run after the response, so its timing is the same too."""
+    if await password_reset.accept_request(payload.email, _client_ip(request)):
+        background.add_task(password_reset.send_link, payload.email)
+    return Response(status_code=202)
+
+
+@router.post("/auth/password-resets/confirm", tags=["auth"])
+async def confirm_password_reset(
+    payload: PasswordResetConfirm, request: Request, response: Response, session: DbSession
+) -> SessionOut:
+    """New password from the link; every other session ends and this one starts."""
+    issued = await service.reset_password(
+        session, payload.token, payload.new_password, _client_ip(request)
+    )
+    return _session_response(response, issued)
 
 
 @router.get("/me", tags=["account"])

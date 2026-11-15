@@ -156,7 +156,7 @@ paths:
           application/json:
             schema: { type: object, additionalProperties: false, required: [email], properties: { email: { $ref: '#/components/schemas/Email' } } }
       responses:
-        '202': { description: 'Always the same response, whether or not the account exists.' }
+        '202': { description: 'Always the same response, whether or not the account exists; the lookup and the e-mail happen after the response. More than 3 requests per address per hour are dropped silently. Link valid for 1 hour, once; a new request replaces earlier links.' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
@@ -176,11 +176,15 @@ paths:
               required: [token, newPassword]
               properties: { token: { type: string, minLength: 20, maxLength: 200 }, newPassword: { $ref: '#/components/schemas/Password' } }
       responses:
-        '204': { description: 'Password changed.' }
+        '200':
+          description: 'Password changed and logged in (TASK-015 S1). Every other session is ended: refresh tokens revoked, access tokens issued before the change refused. A security notice e-mail is sent; an unconfirmed e-mail counts as confirmed.'
+          headers: { Set-Cookie: { $ref: '#/components/headers/RefreshCookie' } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/Session' } } }
         '410':
-          description: Link expired or used (`token_expired`).
+          description: Link expired, used or replaced by a newer one (`token_expired`) — UI shows „Link wygasł” with a way to request a new one.
           content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   /api/v1/me:
     get:

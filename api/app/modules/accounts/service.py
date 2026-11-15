@@ -12,7 +12,7 @@ from app.core import rate_limit
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
-from app.modules.accounts import confirmation, passwords, tokens
+from app.modules.accounts import confirmation, password_reset, passwords, tokens
 from app.modules.accounts.models import Account, RefreshToken
 from app.modules.profiles.service import create_profile_for
 
@@ -167,3 +167,15 @@ async def _revoke_family(session: AsyncSession, family_id: uuid.UUID, now: datet
 
 async def get_account(session: AsyncSession, account_id: uuid.UUID) -> Account | None:
     return await session.get(Account, account_id)
+
+
+async def reset_password(
+    session: AsyncSession, raw_token: str, new_password: str, client_ip: str
+) -> IssuedSession:
+    """Set a new password from a reset link and log this browser in (ACC-BR-7)."""
+    account = await password_reset.confirm(session, raw_token, new_password, client_ip)
+    await rate_limit.reset(LOGIN_FAILURES, _key(account.email))
+    issued = await _new_session(session, account)
+    await session.commit()
+    await password_reset.send_notice(account)
+    return issued
