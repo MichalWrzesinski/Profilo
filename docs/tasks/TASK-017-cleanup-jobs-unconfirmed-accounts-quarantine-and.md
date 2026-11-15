@@ -1,7 +1,7 @@
 ---
 id: TASK-017
 title: Cleanup jobs: unconfirmed accounts, quarantine and orphaned images
-status: IN_PROGRESS
+status: DONE
 priority: medium
 iteration: ITER-04
 depends_on: [TASK-016]
@@ -34,7 +34,7 @@ The system deletes unconfirmed accounts after 7 days, releases quarantined nicks
 
 ## Report
 
-**Implemented, in review.** Three Celery Beat jobs, hourly at minutes 5, 15 and 25, each in its module:
+**Done.** Approved after 2 review rounds. Three Celery Beat jobs, hourly at minutes 5, 15 and 25, each in its module:
 - `accounts.delete_unconfirmed` deletes accounts unconfirmed for more than 7 days (ACC-BR-6) in batches of 100 (`FOR UPDATE SKIP LOCKED`, at most 5 000 per run), together with the draft by cascade; the nick is released at once (no quarantine), then the image files and cached preview cards are removed.
 - `profiles.release_quarantined_nicks` removes quarantines past their 30 days (ACC-BR-10). Nick checks already ignored expired rows, so this keeps the table small.
 - `media.remove_orphaned_files` removes stored images no row points at and empty account folders, both only when older than 1 hour (an upload writes the files before its row is committed).
@@ -52,4 +52,4 @@ Checks: api 389 tests, 99 %; client unchanged; contract unchanged.
 
 Decisions: the job lock fails closed (skip, retry next hour) — deletions should not run twice by accident, and `SKIP LOCKED` keeps even that safe; folders and files whose time is unknown are treated as new and kept; the account cleanup removes files directly in the worker (no extra task).
 
-Review round 1 fixes: a safety valve — the orphan cleanup stops with `orphan_cleanup_aborted` when the image table is empty or more than 20 % of the stored images (and more than 10) look orphaned, as during a database restore, and removes at most 500 per run; the runbook says to stop `beat` while restoring; empty folders are removed with a non-recursive `rmdir`, so an upload that has just put a file there wins; storage is scanned one account folder at a time (memory); Beat entries expire after 50 minutes (no backlog after an outage); `media_delete_failed` carries the account id; engine and Valkey disposal no longer hide each other's errors.
+Review round 1 fixes: a safety valve — the orphan cleanup stops with `orphan_cleanup_aborted` when the image table is empty or more than 20 % of the stored images (and more than 10) look orphaned, as during a database restore, and removes at most 500 per run; the runbook says to stop `beat` while restoring; empty folders are removed with a non-recursive `rmdir`, so an upload that has just put a file there wins; storage is scanned one account folder at a time (memory); Beat entries expire after 50 minutes (no backlog after an outage); `media_delete_failed` carries the account id; engine and Valkey disposal no longer hide each other's errors. Round 2: the runbook says how to clear a real orphan backlog that keeps tripping the valve. Known: an empty token folder left by a crash keeps its account folder (harmless, never cleaned).

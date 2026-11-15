@@ -60,6 +60,7 @@ Helper for the commands below: `dc() { set -a; . /srv/profilo/.env; set +a; t=$(
 | Redeploy or roll back to a commit | GitHub Actions → *Deploy staging* → *Run workflow* with the SHA (any commit on `main` whose images exist) |
 | Restart | `dc restart` |
 | Before restoring the database or the media volume | `dc stop beat` (no cleanup job runs against a half-restored database; the orphan cleanup also stops by itself when most files look orphaned, log `orphan_cleanup_aborted`); `dc start beat` once the restore is checked |
+| Log shows `orphan_cleanup_aborted` | First check the database is complete (`dc exec db psql -U profilo -c 'select count(*) from images'` against the folders in the media volume). If it is and the orphans are real (e.g. after an outage of the queue), raise the limit once: `dc exec worker python -c "import asyncio; from app.modules.media import service as m; m.MAX_ORPHAN_SHARE = 1.0; print(asyncio.run(m.remove_orphaned_files()))"` |
 | Run a cleanup job now | `dc exec worker celery -A app.worker call accounts.delete_unconfirmed` (or `profiles.release_quarantined_nicks`, `media.remove_orphaned_files`); result in `dc logs worker` as `job_done` with counts |
 
 ## Recovery
