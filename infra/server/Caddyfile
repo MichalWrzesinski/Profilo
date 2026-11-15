@@ -56,6 +56,14 @@
 
 	log {
 		output stdout
-		format json
+		# One-time tokens in links (/potwierdz-email, /nowe-haslo) never reach the logs.
+		format filter {
+			wrap json
+			fields {
+				request>uri query {
+					replace token REDACTED
+				}
+			}
+		}
 	}
 }
