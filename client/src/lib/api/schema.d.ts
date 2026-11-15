@@ -1021,7 +1021,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Always the same response, whether or not the account exists. */
+            /** @description Always the same response, whether or not the account exists; the lookup and the e-mail happen after the response. More than 3 requests per address per hour are dropped silently. Link valid for 1 hour, once; a new request replaces earlier links. */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -1048,14 +1048,17 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Password changed. */
-            204: {
+            /** @description Password changed and logged in (TASK-015 S1). Every other session is ended: refresh tokens revoked, access tokens issued before the change refused. A security notice e-mail is sent; an unconfirmed e-mail counts as confirmed. */
+            200: {
                 headers: {
+                    "Set-Cookie": components["headers"]["RefreshCookie"];
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Session"];
+                };
             };
-            /** @description Link expired or used (`token_expired`). */
+            /** @description Link expired, used or replaced by a newer one (`token_expired`) — UI shows „Link wygasł” with a way to request a new one. */
             410: {
                 headers: {
                     [name: string]: unknown;
@@ -1065,6 +1068,7 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getAccount: {

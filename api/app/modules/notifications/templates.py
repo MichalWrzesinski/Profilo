@@ -8,6 +8,8 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoes
 
 SUBJECTS = {
     "email_confirmation": "Potwierdź adres e-mail w Profilo",
+    "password_reset": "Ustaw nowe hasło w Profilo",
+    "password_changed": "Hasło do Profilo zostało zmienione",
 }
 
 _env = Environment(

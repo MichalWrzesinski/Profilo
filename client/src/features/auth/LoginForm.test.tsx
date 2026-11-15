@@ -25,6 +25,19 @@ afterEach(() => {
 });
 
 describe('LoginForm', () => {
+  it('links to the password reset', () => {
+    render(
+      <SessionProvider>
+        <LoginForm />
+      </SessionProvider>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Nie pamiętam hasła' })).toHaveAttribute(
+      'href',
+      '/nie-pamietam-hasla',
+    );
+  });
+
   it('signs in and opens the panel', async () => {
     mockFetch(() => json(200, SESSION));
 

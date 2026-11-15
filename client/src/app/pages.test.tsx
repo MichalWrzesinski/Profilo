@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react';
 import '@/test/navigation';
 import { SessionProvider } from '@/lib/session';
 import LoginPage from './logowanie/page';
+import ResetRequestPage from './nie-pamietam-hasla/page';
+import NewPasswordPage from './nowe-haslo/page';
 import ConfirmPage from './potwierdz-email/page';
 import PrivacyPage from './prywatnosc/page';
 import TermsPage from './regulamin/page';
@@ -49,5 +51,16 @@ describe('public pages', () => {
     expect(
       screen.getByRole('heading', { name: 'Potwierdzenie adresu e-mail' }),
     ).toBeInTheDocument();
+  });
+
+  it('renders the password reset pages', () => {
+    render(<ResetRequestPage />);
+    expect(screen.getByRole('heading', { name: 'Nie pamiętasz hasła?' })).toBeInTheDocument();
+    render(
+      <SessionProvider>
+        <NewPasswordPage />
+      </SessionProvider>,
+    );
+    expect(screen.getByRole('heading', { name: 'Ustaw nowe hasło' })).toBeInTheDocument();
   });
 });

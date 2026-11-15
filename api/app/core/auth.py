@@ -1,5 +1,6 @@
 """Authentication dependency: Bearer access token → current account."""
 
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import Depends
@@ -12,6 +13,21 @@ from app.modules.accounts import service, tokens
 from app.modules.accounts.models import Account
 
 _bearer = HTTPBearer(auto_error=False)
+_SLACK = timedelta(milliseconds=1)
+
+
+async def _account_for(session: AsyncSession, token: str) -> Account | None:
+    """The token's account, or None. Access tokens issued before the last password change
+    or reset are refused, so a reset ends every session at once, not only after their
+    15 minutes (ACC-BR-7). 1 ms of slack for float rounding of `iat`."""
+    try:
+        claims = tokens.read_access_token(token)
+    except tokens.InvalidTokenError:
+        return None
+    account = await service.get_account(session, claims.account_id)
+    if account is None or claims.issued_at < account.password_changed_at - _SLACK:
+        return None
+    return account
 
 
 async def current_account(
@@ -21,11 +37,7 @@ async def current_account(
     unauthorized = ProblemError(401, "unauthorized", headers={"WWW-Authenticate": "Bearer"})
     if credentials is None:
         raise unauthorized
-    try:
-        account_id = tokens.read_access_token(credentials.credentials)
-    except tokens.InvalidTokenError:
-        raise unauthorized from None
-    account = await service.get_account(session, account_id)
+    account = await _account_for(session, credentials.credentials)
     if account is None:
         raise unauthorized
     return account
@@ -41,11 +53,7 @@ async def optional_account(
     """The signed-in account, or None for anonymous requests and invalid tokens."""
     if credentials is None:
         return None
-    try:
-        account_id = tokens.read_access_token(credentials.credentials)
-    except tokens.InvalidTokenError:
-        return None
-    return await service.get_account(session, account_id)
+    return await _account_for(session, credentials.credentials)
 
 
 OptionalAccount = Annotated[Account | None, Depends(optional_account)]

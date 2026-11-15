@@ -12,7 +12,7 @@ from app.core import rate_limit
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
-from app.modules.accounts import confirmation, passwords, tokens
+from app.modules.accounts import confirmation, password_reset, passwords, tokens
 from app.modules.accounts.models import Account, RefreshToken
 from app.modules.profiles.service import create_profile_for
 
@@ -105,7 +105,12 @@ async def login(session: AsyncSession, email: str, password: str, client_ip: str
             "Za dużo nieudanych prób logowania. Spróbuj ponownie później.",
             headers={"Retry-After": str(retry_after)},
         )
-    account = await session.scalar(select(Account).where(Account.email == email))
+    # FOR SHARE: a password reset (FOR UPDATE on the account) waits for this login, or this
+    # login waits for the reset and then checks the new password (no session can slip past
+    # the reset's revocation, ACC-BR-7).
+    account = await session.scalar(
+        select(Account).where(Account.email == email).with_for_update(read=True)
+    )
     if not await passwords.verify_password(password, account.password_hash if account else None):
         await rate_limit.hit(LOGIN_FAILURES, _key(email))
         log.warning("login_failed", account_id=str(account.id) if account else None)
@@ -122,11 +127,20 @@ async def refresh(session: AsyncSession, raw_token: str | None) -> IssuedSession
     """Rotate a refresh token. Reusing an already used token revokes its whole family."""
     if not raw_token:
         raise _unauthorized()
+    digest = tokens.hash_refresh_token(raw_token)
+    account_id = await session.scalar(
+        select(RefreshToken.account_id).where(RefreshToken.token_hash == digest)
+    )
+    if account_id is None:
+        raise _unauthorized()
+    # Lock order account → token, as in a password reset: a reset either sees the rotated
+    # token (and revokes it) or runs first, and then this token is already revoked.
+    await session.scalar(
+        select(Account.id).where(Account.id == account_id).with_for_update(read=True)
+    )
     now = datetime.now(UTC)
     stored = await session.scalar(
-        select(RefreshToken)
-        .where(RefreshToken.token_hash == tokens.hash_refresh_token(raw_token))
-        .with_for_update()
+        select(RefreshToken).where(RefreshToken.token_hash == digest).with_for_update()
     )
     if stored is None or stored.revoked_at is not None or stored.expires_at <= now:
         raise _unauthorized()
@@ -167,3 +181,15 @@ async def _revoke_family(session: AsyncSession, family_id: uuid.UUID, now: datet
 
 async def get_account(session: AsyncSession, account_id: uuid.UUID) -> Account | None:
     return await session.get(Account, account_id)
+
+
+async def reset_password(
+    session: AsyncSession, raw_token: str, new_password: str, client_ip: str
+) -> IssuedSession:
+    """Set a new password from a reset link and log this browser in (ACC-BR-7)."""
+    account = await password_reset.confirm(session, raw_token, new_password, client_ip)
+    await rate_limit.reset(LOGIN_FAILURES, _key(account.email))
+    issued = await _new_session(session, account)
+    await session.commit()
+    await password_reset.send_notice(account)
+    return issued

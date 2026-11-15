@@ -73,7 +73,8 @@ export function RegisterForm() {
     <form method="post" onSubmit={onSubmit} noValidate>
       {alert?.kind === 'email_taken' && (
         <Alert variant="danger">
-          Konto z tym adresem już istnieje. <Link href="/logowanie">Zaloguj się</Link>.
+          Konto z tym adresem już istnieje. <Link href="/logowanie">Zaloguj się</Link> albo{' '}
+          <Link href="/nie-pamietam-hasla">zresetuj hasło</Link>.
         </Alert>
       )}
       {alert?.kind === 'error' && <Alert variant="danger">{alert.message}</Alert>}
