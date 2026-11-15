@@ -42,6 +42,8 @@ Acceptance criteria:
 - S1 share — met: E2E publishes from the wizard, lands on the screen, checks the address and the QR preview, downloads the PNG (`profilo-{nick}.png`, 1024 × 1024, light border on every side). In the browser both the PNG and the SVG were read with the browser's `BarcodeDetector` and decode to the canonical URL; API tests compare every module of the PNG with the symbol of the URL and check the quiet zone. Copy verified in the browser (the pane denies the Clipboard API, the fallback copied and showed the toast).
 - S2 never published — met: 409 `not_published` (API test and curl before the first publication).
 
-Checks: api 322 tests, 99 %; client 375 tests, 95.6 % branches; contract 24 paths; E2E 6 tests pass locally.
+Checks: api 323 tests, 99 %; client 379 tests, 95.7 % branches; contract 24 paths; E2E 6 tests pass locally.
 
 Decisions: the code stays available after unpublishing (the address does not change, PRF-BR-7), only „Udostępnij” in the editor is hidden while the page is not visible; SVG is the default format, as in the contract; copy falls back to `document.execCommand('copy')` and then to selecting the address with a Ctrl+C hint. The editor's top bar did not fit phones even before this task (~425 px of content at 375 px); with icons for Panel and Udostępnij and „Opublikuj” instead of „Opublikuj zmiany” it fits 320 px. The rest of the editor still overflows at 320 px (images section, the „Wygląd” header): a separate follow-up.
+
+Review round 1 fixes: a blocked page gets no QR code (409 `page_blocked`); the download buttons use `aria-disabled` so the focus stays on them while a file downloads, and after „Spróbuj ponownie” the focus moves to the code box; the dialog's focus trap pulls the focus back when it fell out, and a re-render with a new `onClose` no longer moves the focus; a repeated copy announces „Skopiowano link” again.
