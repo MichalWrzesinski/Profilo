@@ -1,7 +1,7 @@
 ---
 id: TASK-013
 title: Link previews and SEO for public pages
-status: READY
+status: IN_PROGRESS
 priority: medium
 iteration: ITER-03
 depends_on: [TASK-012]
@@ -34,4 +34,14 @@ Shared profile links show the name, headline and photo in messengers and social 
 - When the page is unpublished, then it is removed from the sitemap and its URL returns 404.
 
 ## Report
-Filled in by development after the task.
+
+**Implemented, in review.** Every published page has a server-rendered title „{name} — {headline}”, a meta description (the bio cut at a word boundary to 160 characters; without a bio a sentence from headline, position, company and city), the canonical URL, Open Graph (`profile`, `pl_PL`, 1200 × 630 image) and a `summary_large_image` Twitter card, plus schema.org `ProfilePage`/`Person` JSON-LD (name, headline, job, company, city, photo, links as `sameAs`; `<` escaped). The preview image is a card drawn by the API with Pillow: accent background, the photo (or initials) in a white ring, name, headline, page address and the wordmark, in the brand font (Plus Jakarta Sans, OFL, bundled). `robots.txt` allows everything except `/api/` (the cards stay allowed) and points at `sitemap.xml`, which lists home, terms, privacy and every visible published page with its publication date. `/panel`, `/kreator` and `/edytor` are `noindex, nofollow` (login, registration, confirmation and preview already were).
+
+Acceptance criteria:
+- S1 preview tags — met: E2E publishes a page and checks the title, description, Open Graph and Twitter tags and the canonical URL, then fetches the og:image URL: 200 `image/jpeg`. Checked with curl too (card 45 kB, `public, max-age=86400`); API tests check the card size, the accent and the photo by pixel sampling.
+- S2 performance — partly verified: staging does not exist yet (TASK-003 is blocked), so Lighthouse 13.6.0 (mobile preset, simulated throttling) ran locally against the production client image behind Caddy with the real API: LCP 0.6 s, CLS 0, performance 99–100, SEO 100, accessibility 100 on a page with a photo and on one with a background image. Repeat on staging when it exists. The avatar now loads with `fetchpriority="high"`.
+- S3 unpublished — met: E2E unpublishes the page and checks that it leaves `sitemap.xml`, the page returns 404 and so does its card; API tests cover unpublished, blocked, never published and unknown nicks.
+
+Checks: api 310 tests, 99 %; client 357 tests, 98 % statements / 95.8 % branches; contract 23 paths; E2E 6 tests pass locally.
+
+Decisions: one generated card for every page instead of the avatar's JPEG variant (the architecture had planned that): a square photo is cropped badly in 1.91:1 previews and the card carries the name and headline into previews that print no text; no JPEG variants or backfill of existing photos needed. The card URL is versioned by the published draft version, so a republish gets a fresh preview in messengers that cache by URL. The sitemap holds at most 50 000 pages (one file); a sitemap index is needed beyond that. New asset: Plus Jakarta Sans variable TTF from github.com/google/fonts with its OFL licence. The client needs `PUBLIC_BASE_URL` (local compose and the server stack pass it).
