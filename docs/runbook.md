@@ -31,6 +31,51 @@ Operations for staging (and production from TASK-021). Files: `infra/server/` (`
    Then delete the private key file from your computer.
 6. **First deployment** — Actions → *Deploy staging* → *Run workflow* with the latest `main` commit SHA, or merge any PR.
 
+## Shared host (the server's own nginx serves 80/443)
+
+Staging runs on a VPS shared with other projects (Debian 13, nginx with certbot, Docker already installed). `bootstrap.sh` must **not** run there: it changes the firewall and SSH for the whole server. Instead Profilo's Caddy listens only on `127.0.0.1:8090` without TLS (`TLS_MODE=proxied`, `compose.proxied.yml`), and the host's nginx terminates TLS for the domain and forwards to it. Caddy still sets HSTS, CSP and the other headers; it trusts `X-Forwarded-For` only from the Docker gateway nginx connects through, and nginx replaces (never appends) that header with the visitor's address.
+
+Once, on your computer and on the server (example values: `profilo.gitpush.app`, `/srv/Profilo`, user `profilo_deploy`, port 8090; `SERVER` = the server's address, `you` = your sudo account):
+
+1. **Deploy key** (on your computer):
+   ```bash
+   ssh-keygen -t ed25519 -N "" -C "github-actions-staging" -f profilo-staging-deploy
+   ```
+2. **Prepare the server** — creates the deploy user (key only, docker group), `/srv/Profilo` and its `.env`; changes nothing else:
+   ```bash
+   scp infra/server/setup-shared-host.sh infra/server/nginx-profilo.conf you@SERVER:/tmp/
+   ssh -t you@SERVER "sudo bash /tmp/setup-shared-host.sh staging profilo.gitpush.app \"$(cat profilo-staging-deploy.pub)\" /srv/Profilo profilo_deploy 8090"
+   ```
+   It stops with a message if port 8090 or the Docker subnet `172.28.0.0/24` is already taken (pass other values as the 6th and 7th argument).
+3. **Check the key login** (an `AllowUsers` line in `/etc/ssh/sshd_config` may need the new user):
+   ```bash
+   ssh -i profilo-staging-deploy profilo_deploy@SERVER 'docker ps --format "{{.Names}}" | head -3'
+   ```
+4. **nginx** — keep the old site file and put Profilo's in its place (the certificate paths are certbot's):
+   ```bash
+   ssh -t you@SERVER 'sudo cp /etc/nginx/sites-available/Profilo /etc/nginx/sites-available/Profilo.before-profilo && sudo cp /tmp/nginx-profilo.conf /etc/nginx/sites-available/Profilo && sudo nginx -t && sudo systemctl reload nginx'
+   ```
+   Until the first deployment the domain answers 502. To go back: copy `Profilo.before-profilo` over `Profilo` and reload.
+5. **GitHub secrets and variables** (from the repository folder on your computer, `gh` logged in):
+   ```bash
+   gh secret set STAGING_SSH_HOST --body "SERVER"
+   gh secret set STAGING_SSH_KEY < profilo-staging-deploy
+   ssh-keyscan -t ed25519 SERVER | gh secret set STAGING_SSH_KNOWN_HOSTS
+   gh variable set STAGING_DOMAIN --body "profilo.gitpush.app"
+   gh variable set STAGING_SSH_USER --body "profilo_deploy"
+   gh variable set STAGING_APP_DIR --body "/srv/Profilo"
+   gh variable set STAGING_SMTP_HOST --body "smtp.example.pl"     # your mailbox's SMTP server
+   gh variable set STAGING_SMTP_PORT --body "587"                 # or 465
+   gh variable set STAGING_SMTP_SECURITY --body "starttls"        # or ssl for port 465
+   gh variable set STAGING_MAIL_FROM --body "Profilo <adres@twojadomena.pl>"
+   gh secret set STAGING_SMTP_USERNAME                            # asks for the value
+   gh secret set STAGING_SMTP_PASSWORD                            # asks for the value
+   ```
+   Compare the `ssh-keyscan` fingerprint with the one the server shows (`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`), then delete `profilo-staging-deploy` from your computer. The sender in `STAGING_MAIL_FROM` must be an address that mailbox may send as, or mail lands in spam.
+6. **First deployment** — Actions → *Deploy staging* → *Run workflow* with the latest `main` SHA (afterwards every merge deploys).
+
+On the server the Compose helper of „Manual operations” works with `/srv/Profilo` in place of `/srv/profilo` and `-f …/compose.proxied.yml` added; `deploy.sh` adds it by itself when `TLS_MODE=proxied`.
+
 ## How a deployment works
 
 After the CI workflow succeeds on `main` (its `publish` job pushed `ghcr.io/michalwrzesinski/profilo-{api,client}:<sha>`), *Deploy staging* runs:
