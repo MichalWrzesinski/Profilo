@@ -6,7 +6,6 @@ password ends every session (refresh tokens revoked, older access tokens refused
 `password_changed_at`) and logs this browser in.
 """
 
-import ipaddress
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, update
@@ -44,21 +43,9 @@ def _key(email: str) -> str:
     return email.strip().lower()
 
 
-def ip_key(client_ip: str) -> str:
-    """The limit's subject: an IPv4 address, or the /64 network of an IPv6 address (one
-    connection usually gets a whole /64, so single IPv6 addresses are free to change)."""
-    try:
-        address = ipaddress.ip_address(client_ip)
-    except ValueError:
-        return client_ip
-    if address.version == 6:
-        return str(ipaddress.ip_network(f"{address}/64", strict=False))
-    return client_ip
-
-
 async def accept_request(email: str, client_ip: str) -> bool:
     """Rate limits of a reset request. False: drop it silently (still 202)."""
-    await rate_limit.hit(REQUEST_PER_IP, ip_key(client_ip))
+    await rate_limit.hit(REQUEST_PER_IP, rate_limit.ip_subject(client_ip))
     try:
         await rate_limit.hit(REQUEST_PER_EMAIL, _key(email))
     except ProblemError:

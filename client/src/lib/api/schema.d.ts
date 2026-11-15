@@ -684,8 +684,15 @@ export interface components {
             current: components["schemas"]["OwnerProfile"];
         };
         ChallengeProblem: components["schemas"]["Problem"] & {
-            /** @description ALTCHA challenge parameters. */
-            challenge: Record<string, never>;
+            /** @description ALTCHA challenge: find `number` (0…maxnumber) with SHA-256(salt + number) = challenge. Valid 10 minutes, once. */
+            challenge: {
+                /** @constant */
+                algorithm: "SHA-256";
+                challenge: string;
+                maxnumber: number;
+                salt: string;
+                signature: string;
+            };
         };
     };
     responses: {
@@ -833,7 +840,7 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
-            /** @description Proof-of-work challenge required (`challenge_required`) after the per-IP threshold; the response contains a new challenge. */
+            /** @description Proof-of-work challenge required (`challenge_required`): from the 4th attempt per IP within an hour, also for a missing, forged, expired or reused solution. The response contains a new challenge; send its solution in `challenge` (base64 JSON `{algorithm, challenge, number, salt, signature}`, ALTCHA format). */
             428: {
                 headers: {
                     [name: string]: unknown;

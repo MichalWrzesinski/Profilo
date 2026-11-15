@@ -5,6 +5,7 @@ or registration fail (backend standard: dependency failure is not an application
 This also suspends the failed-login lockout, so it is logged at error level for alerting.
 """
 
+import ipaddress
 from dataclasses import dataclass
 
 from app.core.errors import ProblemError
@@ -41,6 +42,20 @@ async def hit(limit: Limit, subject: str) -> int:
             headers={"Retry-After": str(retry_after)},
         )
     return count
+
+
+def ip_subject(client_ip: str) -> str:
+    """Subject of a per-IP limit: an IPv4 address, or the /64 network of an IPv6 address
+    (one connection usually gets a whole /64, so single IPv6 addresses are free to change)."""
+    try:
+        address = ipaddress.ip_address(client_ip)
+    except ValueError:
+        return client_ip
+    if isinstance(address, ipaddress.IPv6Address):
+        if address.ipv4_mapped:  # ::ffff:a.b.c.d is one IPv4 client, not a /64
+            return str(address.ipv4_mapped)
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return client_ip
 
 
 async def is_blocked(limit: Limit, subject: str) -> int | None:

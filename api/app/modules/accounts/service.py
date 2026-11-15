@@ -8,7 +8,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import rate_limit
+from app.core import proof_of_work, rate_limit
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
@@ -20,6 +20,10 @@ from app.modules.notifications import service as notifications
 from app.modules.profiles.service import create_profile_for, forget_cards, quarantine_nick_of
 
 REGISTER_PER_IP = rate_limit.Limit("register_ip", max_hits=10, window_seconds=3600)
+# Every attempt, counted atomically before anything else: from the 4th one per IP within
+# the hour a solved proof of work is required (only the counter, it never refuses itself).
+REGISTER_ATTEMPTS = rate_limit.Limit("register_attempt_ip", max_hits=2**31, window_seconds=3600)
+CHALLENGE_AFTER = 3  # registration attempts per IP per hour without a challenge
 REGISTER_PER_EMAIL = rate_limit.Limit("register_email", max_hits=5, window_seconds=3600)
 LOGIN_PER_IP = rate_limit.Limit("login_ip", max_hits=30, window_seconds=900)
 # 5 failed logins per account in 15 minutes; the 6th attempt is refused (429).
@@ -71,9 +75,27 @@ async def _new_session(session: AsyncSession, account: Account) -> IssuedSession
 
 
 async def register(
-    session: AsyncSession, display_name: str, email: str, password: str, client_ip: str
+    session: AsyncSession,
+    display_name: str,
+    email: str,
+    password: str,
+    client_ip: str,
+    challenge: str | None = None,
 ) -> IssuedSession:
-    await rate_limit.hit(REGISTER_PER_IP, client_ip)
+    # After CHALLENGE_AFTER attempts from one IP within the hour, each further attempt must
+    # carry a solved proof-of-work challenge (mass address checking, ACC edge cases).
+    subject = rate_limit.ip_subject(client_ip)
+    # INCR first and decide on its result: parallel requests cannot all see a low count.
+    attempt = await rate_limit.hit(REGISTER_ATTEMPTS, subject)
+    if attempt > CHALLENGE_AFTER and not await proof_of_work.verify(challenge):
+        log.warning("registration_challenge_required")
+        raise ProblemError(
+            428,
+            "challenge_required",
+            "Potwierdzamy, że nie jesteś automatem. To potrwa chwilę.",
+            challenge=proof_of_work.create_challenge(),
+        )
+    await rate_limit.hit(REGISTER_PER_IP, subject)
     await rate_limit.hit(REGISTER_PER_EMAIL, _key(email))
     if errors := passwords.policy_errors(password):
         raise ProblemError(422, "validation_error", errors=errors)
@@ -99,7 +121,7 @@ async def register(
 
 
 async def login(session: AsyncSession, email: str, password: str, client_ip: str) -> IssuedSession:
-    await rate_limit.hit(LOGIN_PER_IP, client_ip)
+    await rate_limit.hit(LOGIN_PER_IP, rate_limit.ip_subject(client_ip))
     if retry_after := await rate_limit.is_blocked(LOGIN_FAILURES, _key(email)):
         log.warning("login_locked")
         raise ProblemError(
