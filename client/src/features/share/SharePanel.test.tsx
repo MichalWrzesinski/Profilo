@@ -126,7 +126,10 @@ it('reports a failed download', async () => {
   await user.click(screen.getByRole('button', { name: 'Pobierz PNG' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Nie udało się pobrać pliku.');
-  expect(screen.getByRole('button', { name: 'Pobierz PNG' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Pobierz PNG' })).toHaveAttribute(
+    'aria-disabled',
+    'false',
+  );
 });
 
 it('offers a retry when the QR preview fails', async () => {
@@ -139,6 +142,40 @@ it('offers a retry when the QR preview fails', async () => {
   expect(screen.getByText(/Nie udało się wczytać kodu/)).toBeVisible();
   fail = false;
   await user.click(retry);
+  expect(document.activeElement).toHaveClass(/code/); // the button is gone, the focus is not lost
 
   expect(await screen.findByRole('img', { name: /Kod QR/ })).toBeInTheDocument();
+});
+
+it('keeps the focus on a download button while it works and ignores a second click', async () => {
+  let finish: (response: Response) => void = () => undefined;
+  const { user, fetch } = setup((request) =>
+    new URL(request.url).searchParams.get('format') === 'png'
+      ? new Promise<Response>((resolve) => (finish = resolve))
+      : qrResponse(request),
+  );
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+  await screen.findByRole('img');
+  const png = screen.getByRole('button', { name: 'Pobierz PNG' });
+
+  await user.click(png);
+  expect(png).toHaveFocus();
+  expect(png).toHaveAttribute('aria-disabled', 'true');
+  await user.click(screen.getByRole('button', { name: 'Pobierz SVG' }));
+  expect(fetch).toHaveBeenCalledTimes(2); // preview + PNG only
+
+  finish(new Response('png', { status: 200 }));
+  await waitFor(() => expect(png).toHaveAttribute('aria-disabled', 'false'));
+});
+
+it('announces a repeated copy again', async () => {
+  const { user } = setup();
+  vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+
+  await user.click(screen.getByRole('button', { name: 'Kopiuj link' }));
+  await screen.findByText('Skopiowano link');
+  await user.click(screen.getByRole('button', { name: 'Kopiuj link' }));
+
+  expect(screen.queryByText('Skopiowano link')).toBeNull(); // removed, then shown again
+  expect(await screen.findByText('Skopiowano link')).toBeVisible();
 });

@@ -1629,7 +1629,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description Profile never published (`not_published`). */
+            /** @description Profile never published (`not_published`) or blocked by the operator (`page_blocked`). */
             409: {
                 headers: {
                     [name: string]: unknown;

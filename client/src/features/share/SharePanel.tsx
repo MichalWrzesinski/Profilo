@@ -61,6 +61,7 @@ export function SharePanel({ publicUrl, nick }: Props) {
   const address = shortAddress(publicUrl);
   const qr = useQrPreview();
   const input = useRef<HTMLInputElement>(null);
+  const codeBox = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const [downloading, setDownloading] = useState<Format | null>(null);
@@ -72,11 +73,17 @@ export function SharePanel({ publicUrl, nick }: Props) {
     return () => clearTimeout(timer);
   }, [copied]);
 
+  /** Show the toast; a repeated copy shows it again, so screen readers announce it again. */
+  const confirmCopied = () => {
+    setCopyFailed(false);
+    setCopied(false);
+    requestAnimationFrame(() => setCopied(true));
+  };
+
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(publicUrl);
-      setCopyFailed(false);
-      setCopied(true);
+      confirmCopied();
     } catch {
       // No Clipboard API access (an older browser or a denied permission): select the full
       // address and try the legacy copy command; otherwise the owner copies it with Ctrl+C.
@@ -87,10 +94,8 @@ export function SharePanel({ publicUrl, nick }: Props) {
       }
       const legacy = typeof document.execCommand === 'function' && document.execCommand('copy');
       if (field) field.value = address;
-      if (legacy) {
-        setCopyFailed(false);
-        setCopied(true);
-      } else {
+      if (legacy) confirmCopied();
+      else {
         field?.select();
         setCopyFailed(true);
       }
@@ -98,6 +103,7 @@ export function SharePanel({ publicUrl, nick }: Props) {
   };
 
   const download = async (format: Format) => {
+    if (downloading) return; // aria-disabled, not disabled: the button keeps the focus
     setDownloading(format);
     setDownloadFailed(false);
     try {
@@ -155,14 +161,21 @@ export function SharePanel({ publicUrl, nick }: Props) {
         <h2 id="share-qr" className="label-caps">
           Kod QR do druku
         </h2>
-        <div className={styles.code}>
+        <div className={styles.code} ref={codeBox} tabIndex={-1}>
           {qr.src ? (
             // eslint-disable-next-line @next/next/no-img-element -- blob URL, not optimisable
             <img src={qr.src} alt={`Kod QR z adresem ${address}`} width={148} height={148} />
           ) : qr.failed ? (
             <p className="hint">
               Nie udało się wczytać kodu.{' '}
-              <button type="button" className="btn btn-ghost btn-sm" onClick={qr.retry}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  qr.retry();
+                  codeBox.current?.focus(); // the button disappears; keep the focus here
+                }}
+              >
                 Spróbuj ponownie
               </button>
             </p>
@@ -176,7 +189,7 @@ export function SharePanel({ publicUrl, nick }: Props) {
               key={format}
               type="button"
               className={`btn btn-secondary btn-sm${downloading === format ? ' is-loading' : ''}`}
-              disabled={downloading !== null}
+              aria-disabled={downloading !== null}
               onClick={() => void download(format)}
             >
               <Download className="i sm" aria-hidden="true" />
