@@ -69,7 +69,7 @@ describe('RegisterForm', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('shows the login link when the e-mail is already registered', async () => {
+  it('shows the login and reset links when the e-mail is already registered', async () => {
     mockFetch(() => json(409, { status: 409, code: 'email_taken' }));
     const user = setup();
     await fill(user);
@@ -79,6 +79,10 @@ describe('RegisterForm', () => {
     expect(await screen.findByRole('link', { name: 'Zaloguj się' })).toHaveAttribute(
       'href',
       '/logowanie',
+    );
+    expect(screen.getByRole('link', { name: 'zresetuj hasło' })).toHaveAttribute(
+      'href',
+      '/nie-pamietam-hasla',
     );
     expect(router.push).not.toHaveBeenCalled();
   });

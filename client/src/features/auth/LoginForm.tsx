@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -9,6 +10,7 @@ import { Alert } from '@/components/Alert';
 import { Field } from '@/components/Field';
 import { api, type Problem } from '@/lib/api/client';
 import { useSession } from '@/lib/session';
+import styles from './auth.module.css';
 import { problemMessage } from './messages';
 
 const schema = z.object({
@@ -56,6 +58,9 @@ export function LoginForm() {
         error={errors.password?.message}
         {...register('password')}
       />
+      <p className={styles.forgot}>
+        <Link href="/nie-pamietam-hasla">Nie pamiętam hasła</Link>
+      </p>
       <button
         type="submit"
         className={`btn btn-primary btn-block${isSubmitting ? ' is-loading' : ''}`}
