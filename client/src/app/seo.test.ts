@@ -12,7 +12,11 @@ describe('robots.txt', () => {
     vi.stubEnv('PUBLIC_BASE_URL', 'https://profilo.pl/');
 
     expect(robots()).toEqual({
-      rules: { userAgent: '*', allow: ['/', '/api/v1/public/profiles/'], disallow: ['/api/'] },
+      rules: {
+        userAgent: '*',
+        allow: ['/', '/api/v1/public/profiles/*/og-image.jpg'],
+        disallow: ['/api/'],
+      },
       sitemap: 'https://profilo.pl/sitemap.xml',
     });
   });
