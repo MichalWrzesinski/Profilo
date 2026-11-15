@@ -28,6 +28,17 @@ afterEach(() => {
 });
 
 describe('NewPasswordForm', () => {
+  it('removes the token from the address bar and keeps using it', async () => {
+    window.history.replaceState(null, '', `/nowe-haslo?token=${TOKEN}`);
+    const fetch = mockFetch(() => json(200, SESSION));
+
+    await submit();
+
+    expect(window.location.search).toBe('');
+    const request = fetch.mock.calls[0]![0] as Request;
+    expect(await request.json()).toMatchObject({ token: TOKEN });
+  });
+
   it('sets the password, signs in and offers the panel', async () => {
     const fetch = mockFetch(() => json(200, SESSION));
 

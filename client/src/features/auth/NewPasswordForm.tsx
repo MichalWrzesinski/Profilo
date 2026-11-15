@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Alert } from '@/components/Alert';
@@ -35,7 +35,12 @@ function Expired() {
 
 /** New password from the e-mail link (ACC-BR-7): logs in and ends every other session. */
 export function NewPasswordForm() {
-  const token = useSearchParams().get('token') ?? '';
+  const fromUrl = useSearchParams().get('token') ?? '';
+  // Read once and kept here: the token leaves the address bar and the history at once.
+  const [token] = useState(fromUrl);
+  useEffect(() => {
+    if (window.location.search) window.history.replaceState(null, '', window.location.pathname);
+  }, []);
   const { signIn } = useSession();
   const [state, setState] = useState<'form' | 'expired' | 'done'>(
     token.length < 20 ? 'expired' : 'form',
