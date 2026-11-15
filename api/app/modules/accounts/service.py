@@ -105,7 +105,12 @@ async def login(session: AsyncSession, email: str, password: str, client_ip: str
             "Za dużo nieudanych prób logowania. Spróbuj ponownie później.",
             headers={"Retry-After": str(retry_after)},
         )
-    account = await session.scalar(select(Account).where(Account.email == email))
+    # FOR SHARE: a password reset (FOR UPDATE on the account) waits for this login, or this
+    # login waits for the reset and then checks the new password (no session can slip past
+    # the reset's revocation, ACC-BR-7).
+    account = await session.scalar(
+        select(Account).where(Account.email == email).with_for_update(read=True)
+    )
     if not await passwords.verify_password(password, account.password_hash if account else None):
         await rate_limit.hit(LOGIN_FAILURES, _key(email))
         log.warning("login_failed", account_id=str(account.id) if account else None)
@@ -122,11 +127,20 @@ async def refresh(session: AsyncSession, raw_token: str | None) -> IssuedSession
     """Rotate a refresh token. Reusing an already used token revokes its whole family."""
     if not raw_token:
         raise _unauthorized()
+    digest = tokens.hash_refresh_token(raw_token)
+    account_id = await session.scalar(
+        select(RefreshToken.account_id).where(RefreshToken.token_hash == digest)
+    )
+    if account_id is None:
+        raise _unauthorized()
+    # Lock order account → token, as in a password reset: a reset either sees the rotated
+    # token (and revokes it) or runs first, and then this token is already revoked.
+    await session.scalar(
+        select(Account.id).where(Account.id == account_id).with_for_update(read=True)
+    )
     now = datetime.now(UTC)
     stored = await session.scalar(
-        select(RefreshToken)
-        .where(RefreshToken.token_hash == tokens.hash_refresh_token(raw_token))
-        .with_for_update()
+        select(RefreshToken).where(RefreshToken.token_hash == digest).with_for_update()
     )
     if stored is None or stored.revoked_at is not None or stored.expires_at <= now:
         raise _unauthorized()

@@ -247,3 +247,68 @@ async def test_old_access_tokens_are_refused_on_optional_endpoints_too(
         fresh = tokens.issue_access_token(account.id)
         credentials = type("C", (), {"credentials": fresh})()
         assert await optional_account(credentials, session) is not None
+
+
+async def test_a_refresh_running_during_the_reset_does_not_keep_its_session(
+    client: AsyncClient, sent_emails: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review B1: a rotation in flight (row locked, sibling token being written) must not
+    leave a token the reset's revocation cannot see."""
+    import asyncio
+
+    from app.modules.accounts import service
+
+    await register(client)
+    stolen = client.cookies.get("profilo_rt")
+    assert stolen
+    client.cookies.clear()
+    token = await requested_token(client, sent_emails)
+    real_issue = service._issue_refresh_token
+    refresh_holds_locks = asyncio.Event()
+
+    async def slow_issue(*args: Any, **kwargs: Any) -> str:
+        refresh_holds_locks.set()
+        await asyncio.sleep(0.3)  # the reset starts meanwhile
+        return await real_issue(*args, **kwargs)
+
+    monkeypatch.setattr(service, "_issue_refresh_token", slow_issue)
+
+    async def rotate() -> str:
+        async with get_sessionmaker()() as session:
+            return (await service.refresh(session, stolen)).refresh_token
+
+    async def reset() -> None:
+        await refresh_holds_locks.wait()
+        async with get_sessionmaker()() as session:
+            monkeypatch.setattr(service, "_issue_refresh_token", real_issue)
+            await service.reset_password(session, token, NEW, "203.0.113.9")
+
+    sibling, _ = await asyncio.gather(rotate(), reset())
+
+    async with get_sessionmaker()() as session:
+        with pytest.raises(Exception, match="unauthorized"):
+            await service.refresh(session, sibling)
+
+
+async def test_reset_requests_count_an_ipv6_network_as_one_address() -> None:
+    assert password_reset.ip_key("2001:db8:1:2:aaaa::1") == password_reset.ip_key(
+        "2001:db8:1:2:ffff::9"
+    )
+    assert password_reset.ip_key("2001:db8:1:3::1") != password_reset.ip_key("2001:db8:1:2::1")
+    assert password_reset.ip_key("203.0.113.9") == "203.0.113.9"
+    assert password_reset.ip_key("unknown") == "unknown"
+
+
+async def test_reset_mails_have_a_daily_cap(
+    client: AsyncClient, sent_emails: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await register(client)
+    monkeypatch.setattr(
+        password_reset, "MAILS_PER_DAY", rate_limit.Limit("reset_mail_day", 1, 86400)
+    )
+    await client.post(REQUEST, json={"email": EMAIL})
+
+    response = await client.post(REQUEST, json={"email": EMAIL})
+
+    assert response.status_code == 202
+    assert len(reset_emails(sent_emails)) == 1

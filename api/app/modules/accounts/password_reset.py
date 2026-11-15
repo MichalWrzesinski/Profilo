@@ -6,6 +6,7 @@ password ends every session (refresh tokens revoked, older access tokens refused
 `password_changed_at`) and logs this browser in.
 """
 
+import ipaddress
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, update
@@ -27,6 +28,8 @@ REQUEST_PER_IP = rate_limit.Limit("reset_request_ip", max_hits=5, window_seconds
 # Per address the extra requests are dropped silently (same 202): a 429 here would tell
 # whether someone asked for this address, and the mailbox is protected either way.
 REQUEST_PER_EMAIL = rate_limit.Limit("reset_request_email", max_hits=3, window_seconds=3600)
+# Protects the e-mail quota (Brevo free plan: 300/day) shared with confirmation e-mails.
+MAILS_PER_DAY = rate_limit.Limit("reset_mail_day", max_hits=150, window_seconds=86400)
 CONFIRM_PER_IP = rate_limit.Limit("reset_confirm_ip", max_hits=30, window_seconds=900)
 
 EXPIRED_DETAIL = "Link wygasł albo został już użyty."
@@ -40,11 +43,24 @@ def _key(email: str) -> str:
     return email.strip().lower()
 
 
+def ip_key(client_ip: str) -> str:
+    """The limit's subject: an IPv4 address, or the /64 network of an IPv6 address (one
+    connection usually gets a whole /64, so single IPv6 addresses are free to change)."""
+    try:
+        address = ipaddress.ip_address(client_ip)
+    except ValueError:
+        return client_ip
+    if address.version == 6:
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return client_ip
+
+
 async def accept_request(email: str, client_ip: str) -> bool:
     """Rate limits of a reset request. False: drop it silently (still 202)."""
-    await rate_limit.hit(REQUEST_PER_IP, client_ip)
+    await rate_limit.hit(REQUEST_PER_IP, ip_key(client_ip))
     try:
         await rate_limit.hit(REQUEST_PER_EMAIL, _key(email))
+        await rate_limit.hit(MAILS_PER_DAY, "all")
     except ProblemError:
         log.warning("password_reset_dropped")
         return False
@@ -120,6 +136,8 @@ async def confirm(
         raise ProblemError(410, "token_expired", EXPIRED_DETAIL)
 
     account.password_hash = await passwords.hash_password(new_password)
+    # Taken after hashing: tokens issued while the hash was computed are older than this.
+    now = datetime.now(UTC)
     account.password_changed_at = now
     # The link proves the owner reads this mailbox.
     if account.email_confirmed_at is None:
