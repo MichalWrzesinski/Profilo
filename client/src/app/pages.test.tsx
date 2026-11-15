@@ -14,6 +14,8 @@ import ExamplePage from './przyklad/page';
 import TermsPage from './regulamin/page';
 import RegisterPage from './rejestracja/page';
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe('public pages', () => {
   it.each([
     [TermsPage, 'Regulamin', 'zgloszenia'],
@@ -25,6 +27,13 @@ describe('public pages', () => {
     // Operator data still missing: clearly marked (TASK-019 scenario 2).
     expect(screen.getAllByText(/\[do uzupełnienia: nazwa operatora\]/)[0]).toBeInTheDocument();
     expect(container.querySelector(`#${section}`)).not.toBeNull();
+  });
+
+  it('shows the configured abuse address in the terms', () => {
+    vi.stubEnv('ABUSE_EMAIL', 'zgloszenia@operator.pl');
+    render(<TermsPage />);
+    expect(screen.getByText(/zgloszenia@operator\.pl/)).toBeInTheDocument();
+    expect(screen.queryByText(/\[do uzupełnienia: adres do zgłoszeń nadużyć\]/)).toBeNull();
   });
 
   it('names the processors and the 30-day backups in the privacy policy', () => {

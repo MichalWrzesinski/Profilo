@@ -5,6 +5,7 @@ import { Alert } from '@/components/Alert';
 import { api, type Problem } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 import { useSession } from '@/lib/session';
+import { BlockedNotice } from './BlockedNotice';
 import styles from './PublishPanel.module.css';
 
 type OwnerProfile = components['schemas']['OwnerProfile'];
@@ -83,48 +84,57 @@ export function PublishPanel() {
 
   const status = badge(profile);
   return (
-    <section className={`card card-pad ${styles.panel}`} aria-labelledby="page-status">
-      <div className={styles.row}>
-        <h2 id="page-status" className={styles.title}>
-          Status strony
-        </h2>
-        <span className={`badge ${status.className}`}>{status.label}</span>
-      </div>
-      {profile.publicUrl && (
-        <p className={styles.address}>
-          <a href={profile.publicUrl} target="_blank" rel="noopener">
-            {profile.publicUrl.replace(/^https?:\/\//, '')}
-          </a>
-        </p>
+    <>
+      {blocked && (
+        <div className={styles.notice}>
+          <BlockedNotice />
+        </div>
       )}
-      {error && <Alert variant="danger">{error}</Alert>}
-      <div className={styles.actions}>
-        <button
-          type="button"
-          className={`btn btn-primary${busy ? ' is-loading' : ''}`}
-          disabled={busy || blocker !== null || nothingToPublish}
-          aria-describedby={blocker ? 'publish-blocker' : undefined}
-          onClick={() => void run('publish')}
-        >
-          {publishLabel}
-        </button>
-        {published && (
+      <section className={`card card-pad ${styles.panel}`} aria-labelledby="page-status">
+        <div className={styles.row}>
+          <h2 id="page-status" className={styles.title}>
+            Status strony
+          </h2>
+          <span className={`badge ${status.className}`}>{status.label}</span>
+        </div>
+        {profile.publicUrl && (
+          <p className={styles.address}>
+            <a href={profile.publicUrl} target="_blank" rel="noopener">
+              {profile.publicUrl.replace(/^https?:\/\//, '')}
+            </a>
+          </p>
+        )}
+        {error && <Alert variant="danger">{error}</Alert>}
+        <div className={styles.actions}>
           <button
             type="button"
-            className="btn btn-secondary"
-            disabled={busy}
-            onClick={() => void run('unpublish')}
+            className={`btn btn-primary${busy ? ' is-loading' : ''}`}
+            disabled={busy || blocker !== null || nothingToPublish}
+            aria-describedby={blocker ? 'publish-blocker' : undefined}
+            onClick={() => void run('publish')}
           >
-            Ukryj stronę
+            {publishLabel}
           </button>
+          {published && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => void run('unpublish')}
+            >
+              Ukryj stronę
+            </button>
+          )}
+        </div>
+        {blocker && (
+          <p id="publish-blocker" className="hint">
+            {blocker}
+          </p>
         )}
-      </div>
-      {blocker && (
-        <p id="publish-blocker" className="hint">
-          {blocker}
-        </p>
-      )}
-      {nothingToPublish && !blocker && <p className="hint">Wszystkie zmiany są już na stronie.</p>}
-    </section>
+        {nothingToPublish && !blocker && (
+          <p className="hint">Wszystkie zmiany są już na stronie.</p>
+        )}
+      </section>
+    </>
   );
 }

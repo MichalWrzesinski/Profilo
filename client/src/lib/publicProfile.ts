@@ -1,11 +1,7 @@
 import { cache } from 'react';
 import type { components } from './api/schema';
-import { OPERATOR } from './operator';
 
 export type PublicProfile = components['schemas']['PublicProfile'];
-
-/** Operator address for abuse reports (PUB-BR-10); see `lib/operator.ts`. */
-export const ABUSE_EMAIL = OPERATOR.abuseEmail;
 
 export function apiBase(): string {
   return process.env.API_INTERNAL_URL ?? 'http://localhost:8000';

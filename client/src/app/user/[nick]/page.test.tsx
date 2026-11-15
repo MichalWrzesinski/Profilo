@@ -13,6 +13,8 @@ const params = (nick: string) => ({ params: Promise.resolve({ nick }) });
 
 afterEach(() => getPublicProfile.mockReset());
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe('/user/[nick]', () => {
   it('renders the published page with its structured data', async () => {
     getPublicProfile.mockResolvedValue(publicProfile());
@@ -23,6 +25,17 @@ describe('/user/[nick]', () => {
     expect(getPublicProfile).toHaveBeenCalledWith('anna-wisniewska');
     const data = container.querySelector('script[type="application/ld+json"]')!.textContent!;
     expect(JSON.parse(data)).toMatchObject({ mainEntity: { name: 'Anna Wiśniewska' } });
+  });
+
+  it('links reports to the configured operator address', async () => {
+    vi.stubEnv('ABUSE_EMAIL', 'zgloszenia@operator.pl');
+    getPublicProfile.mockResolvedValue(publicProfile());
+
+    render(await PublicPage(params('anna-wisniewska')));
+
+    expect(screen.getByRole('link', { name: 'Zgłoś nadużycie' }).getAttribute('href')).toMatch(
+      /^mailto:zgloszenia@operator\.pl/,
+    );
   });
 
   it('shows the 404 page for a hidden or unknown nick', async () => {

@@ -4,7 +4,8 @@ import type { CSSProperties, ReactNode } from 'react';
 import { Logo } from '@/components/Brand';
 import { LinkIcon, LinkMark, shortUrl } from '@/components/LinkIcon';
 import { formatPhone } from '@/lib/phone';
-import { ABUSE_EMAIL, initials, mailtoHref, type PublicProfile } from '@/lib/publicProfile';
+import { PLACEHOLDER_ABUSE_EMAIL } from '@/lib/operator';
+import { initials, mailtoHref, type PublicProfile } from '@/lib/publicProfile';
 import styles from './PublicPage.module.css';
 
 type Content = PublicProfile['content'];
@@ -149,14 +150,14 @@ function IconLinks({ content }: { content: Content }) {
   );
 }
 
-function Footer({ canonicalUrl }: { canonicalUrl: string }) {
+function Footer({ canonicalUrl, abuseEmail }: { canonicalUrl: string; abuseEmail: string }) {
   return (
     <footer>
       <Link className="made" href="/">
         <Logo size={16} />
         Utworzono w Profilo
       </Link>
-      <a href={mailtoHref(ABUSE_EMAIL, `Zgłoszenie nadużycia: ${canonicalUrl}`)}>
+      <a href={mailtoHref(abuseEmail, `Zgłoszenie nadużycia: ${canonicalUrl}`)}>
         Zgłoś nadużycie
       </a>
     </footer>
@@ -174,7 +175,14 @@ function Bio({ content }: { content: Content }) {
  * a background image the default graphic in the accent colour is used. A server component:
  * content and contact buttons work without JavaScript (PUB-BR-8). Also the editor preview.
  */
-export function PublicPage({ profile }: { profile: PublicProfile }) {
+type Props = {
+  profile: PublicProfile;
+  /** Operator address for „Zgłoś nadużycie” (ABUSE_EMAIL, read on the server); the preview
+   * in the editor shows the placeholder. */
+  abuseEmail?: string;
+};
+
+export function PublicPage({ profile, abuseEmail = PLACEHOLDER_ABUSE_EMAIL }: Props) {
   const { content, canonicalUrl } = profile;
   const accent = { '--page-accent': `var(--page-accent-${content.accent})` } as CSSProperties;
   const art = (className: string, sizes: string): ReactNode => (
@@ -192,7 +200,7 @@ export function PublicPage({ profile }: { profile: PublicProfile }) {
           <Contact content={content} />
           <Bio content={content} />
           <LinkList content={content} />
-          <Footer canonicalUrl={canonicalUrl} />
+          <Footer canonicalUrl={canonicalUrl} abuseEmail={abuseEmail} />
         </main>
       </div>
     );
@@ -209,13 +217,13 @@ export function PublicPage({ profile }: { profile: PublicProfile }) {
             <Contact content={content} />
             <Bio content={content} />
             {!asList && content.links.length > 0 && <IconLinks content={content} />}
-            {!asList && <Footer canonicalUrl={canonicalUrl} />}
+            {!asList && <Footer canonicalUrl={canonicalUrl} abuseEmail={abuseEmail} />}
           </div>
           {asList && (
             // Many links: the list in a second card, and the footer stays last (PUB-BR-9).
             <section className={`vcard ${styles.cardLinks}`}>
               <LinkList content={content} />
-              <Footer canonicalUrl={canonicalUrl} />
+              <Footer canonicalUrl={canonicalUrl} abuseEmail={abuseEmail} />
             </section>
           )}
         </main>
@@ -233,7 +241,7 @@ export function PublicPage({ profile }: { profile: PublicProfile }) {
         </div>
         <Bio content={content} />
         <LinkList content={content} />
-        <Footer canonicalUrl={canonicalUrl} />
+        <Footer canonicalUrl={canonicalUrl} abuseEmail={abuseEmail} />
       </main>
     </div>
   );

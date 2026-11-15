@@ -130,10 +130,15 @@ describe('PublishPanel', () => {
     expect(screen.getByRole('button', { name: 'Opublikuj' })).toHaveAccessibleDescription(reason);
   });
 
-  it('shows the blocked badge', async () => {
+  it('shows the blocked badge and the notice with the appeal link', async () => {
     setup(owner({ status: 'blocked' }));
 
     expect(await screen.findByText('Zablokowana')).toBeInTheDocument();
+    expect(screen.getByText('Strona zablokowana — skontaktuj się z nami.')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'jak się odwołać' })).toHaveAttribute(
+      'href',
+      '/regulamin#zgloszenia',
+    );
   });
 
   it('reloads the current state after a conflict', async () => {

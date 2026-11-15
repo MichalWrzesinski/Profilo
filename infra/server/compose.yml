@@ -93,6 +93,8 @@ services:
     environment:
       API_INTERNAL_URL: http://api:8000
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required}
+      # Operator address for abuse reports (PUB-BR-10); empty shows the placeholder.
+      ABUSE_EMAIL: ${ABUSE_EMAIL:-}
     logging: *logging
     networks: [internal]
 

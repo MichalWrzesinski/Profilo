@@ -3,6 +3,7 @@
 from celery import Celery
 from celery.schedules import crontab
 
+import app.models  # noqa: F401 - all models, as in the API (tasks flush ORM objects)
 from app.core.logging import configure_logging
 from app.core.settings import get_settings
 

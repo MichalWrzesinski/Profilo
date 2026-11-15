@@ -80,7 +80,7 @@ The service has a landing page, legal pages, abuse handling, production deployme
 - Hetzner CX33 (production) and Storage Box.
 - Brevo production SMTP key.
 - Sentry (EU region) and Better Stack Uptime accounts.
-- Operator data (company or person, address, NIP, contact e-mail, abuse e-mail) in `client/src/lib/operator.ts` (set `abuseEmailConfirmed`), for terms, privacy policy and abuse reports; legal review of the drafts from TASK-019 (`/regulamin`, `/prywatnosc`): retention of abuse reports, processor agreements and data regions (Hetzner, Brevo, Sentry, the operator's mailbox), consumer clauses. The abuse address must be real before production: every public page links `mailto:` to it (`OPERATOR.abuseEmail`).
+- Operator data (company or person, address, NIP, contact e-mail, abuse e-mail) in `client/src/lib/operator.ts`, for terms, privacy policy and abuse reports; legal review of the drafts from TASK-019 (`/regulamin`, `/prywatnosc`): retention of abuse reports, processor agreements and data regions (Hetzner, Brevo, Sentry, the operator's mailbox), consumer clauses. The abuse address must be real before production: set `ABUSE_EMAIL` in the server `.env` (every public page links `mailto:` to it; empty shows the placeholder).
 - Manual operator processes the legal drafts promise: acknowledging abuse notices and informing notifiers and owners (DSA art. 16, 17), answering complaints within 14 days, announcing changes of the terms 14 days ahead by e-mail (no bulk e-mail feature in the app).
 - Sentry (TASK-023): EU data region, IP collection off and scrubbing configured as the privacy policy says, before it is listed as active.
 - Repository secrets `PROD_*` (no GitHub environments on the free plan).

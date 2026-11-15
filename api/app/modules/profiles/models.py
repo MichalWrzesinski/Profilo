@@ -140,12 +140,15 @@ class PublishedProfile(Base):
 
 
 class ReservedNick(Base):
-    """System words, offensive words (also blocked as a part of a nick) and nicks in quarantine
-    after account deletion (PRF-BR-4, ACC-BR-10)."""
+    """System words, offensive words (also blocked as a part of a nick), nicks in quarantine
+    after account deletion (PRF-BR-4, ACC-BR-10) and nicks of deleted blocked pages (no
+    expiry: deleting the account must not free an address the operator blocked)."""
 
     __tablename__ = "reserved_nicks"
     __table_args__ = (
-        CheckConstraint("reason IN ('system', 'offensive', 'quarantine')", name="reason_value"),
+        CheckConstraint(
+            "reason IN ('system', 'offensive', 'quarantine', 'blocked')", name="reason_value"
+        ),
     )
 
     nick: Mapped[str] = mapped_column(CITEXT, primary_key=True)
