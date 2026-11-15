@@ -9,22 +9,29 @@ export async function open(page: Page, path: string) {
 }
 
 /** The confirmation link from the e-mail Mailpit received for `email`. */
-export async function confirmationPath(email: string): Promise<string> {
+export function confirmationPath(email: string): Promise<string> {
+  return linkFromMail(`to:${email} subject:"Potwierdź adres"`, /\/potwierdz-email\?token=[\w-]+/);
+}
+
+/** The password reset link from the newest reset e-mail for `email`. */
+export function resetPath(email: string): Promise<string> {
+  return linkFromMail(`to:${email} subject:"Ustaw nowe hasło"`, /\/nowe-haslo\?token=[\w-]+/);
+}
+
+async function linkFromMail(query: string, pattern: RegExp): Promise<string> {
   for (let attempt = 0; attempt < 30; attempt += 1) {
-    const search = await fetch(
-      `${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`,
-    );
+    const search = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(query)}`);
     const { messages } = (await search.json()) as { messages: { ID: string }[] };
     if (messages.length) {
       const message = (await (
         await fetch(`${MAILPIT}/api/v1/message/${messages[0]!.ID}`)
       ).json()) as { Text: string };
-      const match = /\/potwierdz-email\?token=[\w-]+/.exec(message.Text);
+      const match = pattern.exec(message.Text);
       if (match) return match[0];
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  throw new Error(`No confirmation e-mail for ${email}`);
+  throw new Error(`No e-mail for ${query}`);
 }
 
 /** Password of the throwaway E2E accounts (local stack only, not a secret). */
