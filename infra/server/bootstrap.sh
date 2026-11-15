@@ -78,7 +78,13 @@ if ! sshd -t; then
   echo "sshd configuration invalid — hardening not applied, nothing changed" >&2
   exit 1
 fi
-systemctl reload ssh 2>/dev/null || systemctl reload sshd || { echo "could not reload sshd" >&2; exit 1; }
+# Ubuntu 24.04 may start sshd on demand (ssh.socket): an inactive service reads the new
+# configuration when it next starts, so only a running one is reloaded.
+if systemctl is-active --quiet ssh; then
+  systemctl reload ssh || { echo "could not reload sshd" >&2; exit 1; }
+elif systemctl is-active --quiet sshd; then
+  systemctl reload sshd || { echo "could not reload sshd" >&2; exit 1; }
+fi
 
 echo "==> Firewall: 22, 80, 443 only"
 ufw --force default deny incoming
