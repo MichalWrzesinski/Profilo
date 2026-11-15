@@ -43,6 +43,16 @@ async def hit(limit: Limit, subject: str) -> int:
     return count
 
 
+async def count(limit: Limit, subject: str) -> int:
+    """Hits so far in the current window, without counting one; 0 when Valkey is down."""
+    try:
+        value = await get_valkey().get(f"rl:{limit.name}:{subject}")
+    except Exception as exc:
+        log.error("rate_limit_unavailable", limit=limit.name, error=type(exc).__name__)
+        return 0
+    return int(value) if value is not None else 0
+
+
 async def is_blocked(limit: Limit, subject: str) -> int | None:
     """Return seconds until unblocked when the counter is already over the limit."""
     key = f"rl:{limit.name}:{subject}"

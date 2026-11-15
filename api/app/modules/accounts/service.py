@@ -8,7 +8,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import rate_limit
+from app.core import proof_of_work, rate_limit
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
@@ -19,7 +19,9 @@ from app.modules.media import service as media
 from app.modules.notifications import service as notifications
 from app.modules.profiles.service import create_profile_for, forget_cards, quarantine_nick_of
 
-REGISTER_PER_IP = rate_limit.Limit("register_ip", max_hits=10, window_seconds=3600)
+# Low, and from the 4th attempt each one costs a proof of work (CHALLENGE_AFTER).
+REGISTER_PER_IP = rate_limit.Limit("register_ip", max_hits=20, window_seconds=3600)
+CHALLENGE_AFTER = 3  # registration attempts per IP per hour without a challenge
 REGISTER_PER_EMAIL = rate_limit.Limit("register_email", max_hits=5, window_seconds=3600)
 LOGIN_PER_IP = rate_limit.Limit("login_ip", max_hits=30, window_seconds=900)
 # 5 failed logins per account in 15 minutes; the 6th attempt is refused (429).
@@ -71,8 +73,24 @@ async def _new_session(session: AsyncSession, account: Account) -> IssuedSession
 
 
 async def register(
-    session: AsyncSession, display_name: str, email: str, password: str, client_ip: str
+    session: AsyncSession,
+    display_name: str,
+    email: str,
+    password: str,
+    client_ip: str,
+    challenge: str | None = None,
 ) -> IssuedSession:
+    # After CHALLENGE_AFTER attempts from one IP within the hour, each further attempt must
+    # carry a solved proof-of-work challenge (mass address checking, ACC edge cases).
+    attempts = await rate_limit.count(REGISTER_PER_IP, client_ip)
+    if attempts >= CHALLENGE_AFTER and not await proof_of_work.verify(challenge):
+        log.warning("registration_challenge_required")
+        raise ProblemError(
+            428,
+            "challenge_required",
+            "Potwierdzamy, że nie jesteś automatem. To potrwa chwilę.",
+            challenge=proof_of_work.create_challenge(),
+        )
     await rate_limit.hit(REGISTER_PER_IP, client_ip)
     await rate_limit.hit(REGISTER_PER_EMAIL, _key(email))
     if errors := passwords.policy_errors(password):

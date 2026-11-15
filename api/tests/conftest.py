@@ -26,6 +26,14 @@ async def clean_state() -> None:
 
 
 @pytest.fixture(autouse=True)
+def no_registration_challenge(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests register many accounts from one address; the challenge has its own tests."""
+    from app.modules.accounts import service
+
+    monkeypatch.setattr(service, "CHALLENGE_AFTER", 1000)
+
+
+@pytest.fixture(autouse=True)
 def sent_emails(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
     """Capture queued e-mails instead of publishing them to the broker."""
     from app.modules.notifications.tasks import send_email

@@ -56,7 +56,7 @@ paths:
           content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' }, example: { type: 'https://profilo.pl/problems/email-taken', title: Account already exists, status: 409, code: email_taken, detail: 'Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło.' } } }
         '422': { $ref: '#/components/responses/ValidationError' }
         '428':
-          description: Proof-of-work challenge required (`challenge_required`) after the per-IP threshold; the response contains a new challenge.
+          description: 'Proof-of-work challenge required (`challenge_required`): from the 4th attempt per IP within an hour, also for a missing, forged, expired or reused solution. The response contains a new challenge; send its solution in `challenge` (base64 JSON `{algorithm, challenge, number, salt, signature}`, ALTCHA format).'
           content: { application/problem+json: { schema: { $ref: '#/components/schemas/ChallengeProblem' } } }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
@@ -758,4 +758,14 @@ components:
         - $ref: '#/components/schemas/Problem'
         - type: object
           required: [challenge]
-          properties: { challenge: { type: object, description: ALTCHA challenge parameters. } }
+          properties:
+            challenge:
+              type: object
+              description: 'ALTCHA challenge: find `number` (0…maxnumber) with SHA-256(salt + number) = challenge. Valid 10 minutes, once.'
+              required: [algorithm, challenge, maxnumber, salt, signature]
+              properties:
+                algorithm: { const: SHA-256 }
+                challenge: { type: string }
+                maxnumber: { type: integer }
+                salt: { type: string }
+                signature: { type: string }

@@ -83,7 +83,12 @@ async def register(
     payload: RegisterRequest, request: Request, response: Response, session: DbSession
 ) -> SessionOut:
     issued = await service.register(
-        session, payload.display_name, payload.email, payload.password, _client_ip(request)
+        session,
+        payload.display_name,
+        payload.email,
+        payload.password,
+        _client_ip(request),
+        payload.challenge,
     )
     response.headers["Location"] = "/api/v1/me"
     return _session_response(response, issued)
