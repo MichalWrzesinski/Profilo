@@ -436,12 +436,12 @@ paths:
     get:
       tags: [profile]
       operationId: getQrCode
-      summary: QR code of the canonical page address (PUB-US-6, PUB-BR-12)
+      summary: QR code of the canonical page address — SVG or PNG 1024 × 1024, 4-module quiet zone (PUB-US-6, PUB-BR-12)
       parameters:
         - { name: format, in: query, required: false, schema: { type: string, enum: [svg, png], default: svg } }
       responses:
         '200':
-          description: QR image as attachment `profilo-{nick}.{format}`.
+          description: 'QR image as attachment `profilo-{nick}.{format}`, `Cache-Control: private, no-store`. Available from the first publication on, also while the page is hidden.'
           content:
             image/svg+xml: { schema: { type: string } }
             image/png: { schema: { type: string, contentMediaType: image/png } }
@@ -449,6 +449,7 @@ paths:
         '409':
           description: Profile never published (`not_published`).
           content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /api/v1/public/profiles/{nick}:
     get:
