@@ -513,6 +513,10 @@ async def qr_code(
         raise ProblemError(
             409, "not_published", "Kod QR będzie dostępny po pierwszej publikacji strony."
         )
+    if profile.blocked_at is not None:  # its address shows the 404 page (PUB-BR-10)
+        raise ProblemError(
+            409, "page_blocked", "Strona jest zablokowana — napisz do nas, jeśli to pomyłka."
+        )
     return render_qr(_public_url(profile.nick), format), profile.nick
 
 

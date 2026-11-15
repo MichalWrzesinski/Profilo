@@ -3,7 +3,6 @@
 """
 
 import io
-import re
 from typing import Literal
 
 import segno
@@ -55,11 +54,8 @@ def _svg(code: segno.QRCode, url: str) -> bytes:
         title=f"Kod QR: {url}",
     )
     svg = out.getvalue().decode()
-    svg = re.sub(
-        r"<svg ",
-        f'<svg width="{PNG_SIZE}" height="{PNG_SIZE}" shape-rendering="crispEdges" ',
-        svg,
-        count=1,
+    svg = svg.replace(
+        "<svg ", f'<svg width="{PNG_SIZE}" height="{PNG_SIZE}" shape-rendering="crispEdges" ', 1
     )
     return svg.encode()
 

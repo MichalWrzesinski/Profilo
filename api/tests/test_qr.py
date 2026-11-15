@@ -2,12 +2,16 @@
 
 import io
 import xml.etree.ElementTree as ET
+from datetime import UTC, datetime
 
 import pytest
 import segno
 from httpx import AsyncClient
 from PIL import Image
+from sqlalchemy import update
 
+from app.core.db import get_sessionmaker
+from app.modules.profiles.models import Profile
 from app.modules.qr import codes
 from tests.test_publishing import owner, publish
 
@@ -98,6 +102,19 @@ async def test_never_published_page_has_no_code(client: AsyncClient) -> None:
 
     assert response.status_code == 409
     assert response.json()["code"] == "not_published"
+
+
+async def test_blocked_page_has_no_code(client: AsyncClient) -> None:
+    auth = await owner(client)
+    await publish(client, auth)
+    async with get_sessionmaker()() as session:
+        await session.execute(update(Profile).values(blocked_at=datetime.now(UTC)))
+        await session.commit()
+
+    response = await client.get(QR, headers=auth)
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "page_blocked"
 
 
 @pytest.mark.parametrize("params", [{"format": "gif"}, {"format": ""}])

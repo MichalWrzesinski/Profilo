@@ -447,7 +447,7 @@ paths:
             image/png: { schema: { type: string, contentMediaType: image/png } }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409':
-          description: Profile never published (`not_published`).
+          description: Profile never published (`not_published`) or blocked by the operator (`page_blocked`).
           content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
         '422': { $ref: '#/components/responses/ValidationError' }
 
