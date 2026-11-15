@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# Prepares a SHARED Debian/Ubuntu server (other projects, the host's nginx with certbot on
+# 80/443, Docker already installed) for Profilo. Unlike bootstrap.sh it changes nothing
+# server-wide: no firewall, no SSH settings, no packages. Idempotent. Run as root (sudo):
+#
+#   sudo bash setup-shared-host.sh <environment> <domain> "<deploy SSH public key>" \
+#       [app_dir=/srv/Profilo] [deploy_user=profilo_deploy] [proxy_port=8090] \
+#       [subnet=172.28.0.0/24]
+#
+# It creates the deploy user (SSH key only, member of the docker group), the app directory
+# and its .env (generated database password and JWT secret; never leaves the server).
+set -euo pipefail
+
+ENVIRONMENT="${1:?environment (staging|production) required}"
+DOMAIN="${2:?domain required}"
+DEPLOY_PUBKEY="${3:?deploy SSH public key required}"
+APP_DIR="${4:-/srv/Profilo}"
+DEPLOY_USER="${5:-profilo_deploy}"
+PROXY_PORT="${6:-8090}"
+SUBNET="${7:-172.28.0.0/24}"
+
+fail() { echo "ERROR: $*" >&2; exit 1; }
+[[ "$(id -u)" == 0 ]] || fail "run as root (sudo)"
+[[ "$ENVIRONMENT" =~ ^(staging|production)$ ]] || fail "invalid environment"
+[[ "$DOMAIN" =~ ^[a-z0-9.-]+$ ]] || fail "invalid domain"
+[[ "$APP_DIR" =~ ^/srv/[A-Za-z0-9._-]+$ ]] || fail "app_dir must be a directory directly in /srv"
+[[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || fail "invalid user name"
+[[ "$PROXY_PORT" =~ ^[0-9]{4,5}$ ]] || fail "invalid port"
+[[ "$SUBNET" =~ ^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\.0/24$ ]] || fail "subnet must be a /24, e.g. 172.28.0.0/24"
+NET_PREFIX="${BASH_REMATCH[1]}"
+GATEWAY="$NET_PREFIX.1"   # the host's nginx reaches Caddy through this address
+CADDY_IP="$NET_PREFIX.10"
+
+command -v docker >/dev/null || fail "Docker is not installed"
+docker compose version >/dev/null || fail "the Docker Compose plugin is not installed"
+getent group docker >/dev/null || fail "the docker group does not exist"
+
+key_file="$(mktemp)"
+printf '%s\n' "$DEPLOY_PUBKEY" > "$key_file"
+ssh-keygen -lf "$key_file" >/dev/null || { rm -f "$key_file"; fail "the deploy key is not a valid SSH public key"; }
+rm -f "$key_file"
+
+echo "==> Checks on the shared host"
+# Another Docker network or a host route in the same /16 (another project, the provider's
+# network, a VPN) would clash with Profilo's bridge — or worse, take over a route.
+NET16="$(cut -d. -f1-2 <<<"$NET_PREFIX")."
+while read -r net; do
+  [[ "$net" == profilo_internal ]] && continue
+  if docker network inspect "$net" --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}' | grep -q "^$NET16\| $NET16"; then
+    fail "Docker network '$net' uses addresses in ${NET16}0.0/16; pass another subnet as the 7th argument"
+  fi
+done < <(docker network ls --format '{{.Name}}')
+if ip -4 route | grep -v "br-" | grep -q "^$NET16"; then
+  fail "a host route already uses ${NET16}0.0/16 (ip -4 route); pass another subnet as the 7th argument"
+fi
+# Containers of a Compose project called "profilo" that does not run from this app directory.
+while read -r dir; do
+  [[ -z "$dir" || "$dir" == "$APP_DIR/releases/"* ]] && continue
+  fail "another Compose project is already called 'profilo' on this server ($dir)"
+done < <(docker ps -a --filter label=com.docker.compose.project=profilo \
+  --format '{{.Label "com.docker.compose.project.working_dir"}}' | sort -u)
+if ss -Htln "sport = :$PROXY_PORT" | grep -q .; then
+  if ! docker ps --format '{{.Names}} {{.Ports}}' | grep -q "^profilo-caddy.*127.0.0.1:$PROXY_PORT->"; then
+    fail "port $PROXY_PORT is already used on this server; pass another port as the 6th argument"
+  fi
+fi
+
+echo "==> Deploy user $DEPLOY_USER (SSH key only)"
+MARKER=.profilo-deploy-user
+if id "$DEPLOY_USER" >/dev/null 2>&1; then
+  # Never take over an existing account (a typo could lock an admin out or give a service
+  # account Docker access): only one this script created earlier.
+  home="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
+  [[ -f "$home/$MARKER" ]] || fail "user $DEPLOY_USER already exists and was not created by this script; choose another name"
+else
+  useradd --create-home --shell /bin/bash "$DEPLOY_USER"
+  passwd -l "$DEPLOY_USER" >/dev/null   # no password: key login only
+  home="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
+  touch "$home/$MARKER"
+fi
+usermod -aG docker "$DEPLOY_USER"
+install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$home/.ssh"
+touch "$home/.ssh/authorized_keys"
+# `restrict`: commands and scp only — no port forwarding (other projects' local services),
+# no agent forwarding, no terminal.
+key_line="restrict $DEPLOY_PUBKEY"
+grep -qxF "$key_line" "$home/.ssh/authorized_keys" || printf '%s\n' "$key_line" >> "$home/.ssh/authorized_keys"
+chown "$DEPLOY_USER:$DEPLOY_USER" "$home/.ssh/authorized_keys"
+chmod 600 "$home/.ssh/authorized_keys"
+
+echo "==> $APP_DIR"
+# A directory with other files (e.g. a temporary page nginx serves) is not taken over:
+# changing its owner and mode would break that page at once.
+if [[ -d "$APP_DIR" && ! -f "$APP_DIR/.env" ]] && [[ -n "$(ls -A "$APP_DIR")" ]]; then
+  fail "$APP_DIR already contains files; move them elsewhere first (docs/runbook.md, Shared host)"
+fi
+install -d -m 750 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$APP_DIR" "$APP_DIR/releases"
+
+if [[ -f "$APP_DIR/.env" ]]; then
+  echo "    .env exists — left unchanged"
+else
+  db_password="$(openssl rand -hex 24)"
+  jwt_secret="$(openssl rand -hex 32)"
+  if [[ "$ENVIRONMENT" == production ]]; then robots="all"; else robots="noindex, nofollow"; fi
+  cat > "$APP_DIR/.env" <<ENV
+# Generated by setup-shared-host.sh on $(date -u +%Y-%m-%d). Server-only; never commit.
+ENVIRONMENT=$ENVIRONMENT
+LOG_LEVEL=INFO
+DOMAIN=$DOMAIN
+# The host's nginx terminates TLS and forwards to Caddy on 127.0.0.1:$PROXY_PORT.
+TLS_MODE=proxied
+SITE_ADDRESS=http://:80
+PROXY_PORT=$PROXY_PORT
+INTERNAL_SUBNET=$SUBNET
+CADDY_IP=$CADDY_IP
+TRUSTED_PROXIES=$GATEWAY/32
+FORWARDED_ALLOW_IPS=$CADDY_IP,$GATEWAY
+ROBOTS_TAG="$robots"
+PUBLIC_BASE_URL=https://$DOMAIN
+# Operator address for abuse reports on public pages (PUB-BR-10); empty shows a placeholder.
+ABUSE_EMAIL=
+POSTGRES_USER=profilo
+POSTGRES_PASSWORD=$db_password
+POSTGRES_DB=profilo
+DATABASE_URL=postgresql+asyncpg://profilo:$db_password@db:5432/profilo
+VALKEY_URL=redis://valkey:6379/0
+JWT_SECRET=$jwt_secret
+COOKIE_SECURE=true
+ENV
+  chown "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR/.env"
+  chmod 600 "$APP_DIR/.env"
+fi
+
+cat <<NOTE
+==> Done.
+Next (docs/runbook.md, "Shared host"):
+  1. nginx: install infra/server/nginx-profilo.conf as the site for $DOMAIN (port $PROXY_PORT).
+  2. Check the key login: ssh $DEPLOY_USER@<server> 'docker ps' (from the machine with the key).
+  3. GitHub secrets and variables, then the first deployment.
+Note: the docker group is root-equivalent on this whole server, including the other
+projects. Keep the deploy key only in the GitHub secret (it is limited with "restrict").
+NOTE

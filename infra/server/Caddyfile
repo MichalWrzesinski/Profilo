@@ -1,10 +1,18 @@
 # Staging and production reverse proxy. Domain and TLS mode come from the environment:
-#   DOMAIN      e.g. staging.profilo.pl
-#   TLS_MODE    acme (default, Let's Encrypt) | internal (local test VM)
-#   ROBOTS_TAG  "noindex, nofollow" on staging, "all" on production
-#   ACME_EMAIL  contact for Let's Encrypt expiry notices
+#   DOMAIN        e.g. staging.profilo.pl
+#   TLS_MODE      acme (default, Let's Encrypt on 80/443) | internal (local test VM)
+#                 | proxied (shared host: the host's nginx terminates TLS, see
+#                   compose.proxied.yml and nginx-profilo.conf)
+#   SITE_ADDRESS  what Caddy serves: the domain (compose.yml default), http://:80 when proxied
+#   TRUSTED_PROXIES  addresses whose X-Forwarded-* headers are believed (proxied: the
+#                 Docker gateway the host's nginx connects through); nobody by default
+#   ROBOTS_TAG    "noindex, nofollow" on staging, "all" on production
+#   ACME_EMAIL    contact for Let's Encrypt expiry notices
 {
-	email {$ACME_EMAIL}
+	email {$ACME_EMAIL:unused@example.invalid}
+	servers {
+		trusted_proxies static {$TRUSTED_PROXIES:127.0.0.1/32}
+	}
 }
 
 (tls_acme) {
@@ -12,6 +20,11 @@
 
 (tls_internal) {
 	tls internal
+}
+
+# TLS is terminated by the host's reverse proxy; HSTS and the other headers are still set
+# here and pass through it.
+(tls_proxied) {
 }
 
 (security_headers) {
@@ -31,7 +44,7 @@
 	header @framable Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
 }
 
-{$DOMAIN} {
+{$SITE_ADDRESS} {
 	import tls_{$TLS_MODE:acme}
 	import security_headers
 	encode zstd gzip

@@ -2,7 +2,8 @@
 # Deploys one release on this server and verifies it; on failure restores the previous
 # release (its images *and* its stack files). Layout in /srv/profilo:
 #   .env                     server-only settings and secrets (bootstrap.sh)
-#   releases/<sha>/          compose.yml, Caddyfile, deploy.sh uploaded by the workflow
+#   releases/<sha>/          compose.yml (+ compose.proxied.yml), Caddyfile, deploy.sh
+#                            uploaded by the workflow
 #   current -> releases/<sha>  last successful release
 # Run as the deploy user:  /srv/profilo/releases/<sha>/deploy.sh <sha>
 # DEPLOY_SKIP_PULL=1 skips pulling (local tests with preloaded images only).
@@ -39,16 +40,24 @@ set -a
 # shellcheck source=/dev/null
 . "$APP_DIR/.env"
 set +a
+if [[ "${TLS_MODE:-acme}" == acme && -z "${ACME_EMAIL:-}" ]]; then
+  echo "ACME_EMAIL is required when Caddy obtains certificates itself (TLS_MODE=acme)" >&2
+  exit 2
+fi
 PREV_TAG=""
 [[ -L "$APP_DIR/current" ]] && PREV_TAG="$(basename "$(readlink "$APP_DIR/current")")"
 CURL_TLS=()
 [[ "${TLS_MODE:-acme}" == internal ]] && CURL_TLS=(--insecure)
 
-# compose <tag> <args…>: runs Compose with the release's own files.
+# compose <tag> <args…>: runs Compose with the release's own files (plus the shared-host
+# override when the host's nginx terminates TLS).
 compose() {
   local tag="$1"; shift
-  IMAGE_TAG="$tag" docker compose --project-directory "$APP_DIR/releases/$tag" \
-    -f "$APP_DIR/releases/$tag/compose.yml" "$@"
+  local files=(-f "$APP_DIR/releases/$tag/compose.yml")
+  if [[ "${TLS_MODE:-acme}" == proxied ]]; then
+    files+=(-f "$APP_DIR/releases/$tag/compose.proxied.yml")
+  fi
+  IMAGE_TAG="$tag" docker compose --project-directory "$APP_DIR/releases/$tag" "${files[@]}" "$@"
 }
 
 smoke() {
@@ -56,8 +65,15 @@ smoke() {
   local deadline=$((SECONDS + 90)) path code
   for path in /ready /; do
     while true; do
-      code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "${CURL_TLS[@]}" \
-        --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN$path" 2>/dev/null || echo 000)"
+      if [[ "${TLS_MODE:-acme}" == proxied ]]; then
+        # Straight to Caddy on its local port, as the host's nginx reaches it.
+        code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
+          -H "Host: $DOMAIN" -H "X-Forwarded-Proto: https" \
+          "http://127.0.0.1:${PROXY_PORT:-8090}$path" 2>/dev/null || echo 000)"
+      else
+        code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "${CURL_TLS[@]}" \
+          --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN$path" 2>/dev/null || echo 000)"
+      fi
       [[ "$code" == 200 ]] && break
       if (( SECONDS >= deadline )); then
         log "smoke test failed: $path returned $code"
@@ -116,7 +132,8 @@ if start "$NEW_TAG" && smoke; then
   ln -sfn "releases/$NEW_TAG" "$APP_DIR/current"
   touch "$NEW_DIR"  # release order for cleanup = last time it became current
   cleanup_old_releases
-  docker image prune -f >/dev/null || true  # dangling layers only; tagged releases stay
+  # Dangling layers of Profilo's own images only (the server may host other projects).
+  docker image prune -f --filter "label=org.opencontainers.image.source=https://github.com/MichalWrzesinski/Profilo" >/dev/null || true
   log "deployed $NEW_TAG"
   exit 0
 fi
