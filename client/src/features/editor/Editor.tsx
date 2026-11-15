@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from '@/components/Alert';
 import { Brand } from '@/components/Brand';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
+import { BlockedNotice } from '@/features/panel/BlockedNotice';
 import { draftToPublic } from '@/features/preview/draftToPublic';
 import { ShareDialog } from '@/features/share/ShareDialog';
 import { DeviceToggle, LivePreview, type Device } from '@/features/preview/LivePreview';
@@ -343,6 +344,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
         </div>
       )}
       {!wizard && <ConfirmEmailBanner />}
+      {profile.status === 'blocked' && <BlockedNotice />}
       {sharing && profile.publicUrl && profile.nick && (
         <ShareDialog
           publicUrl={profile.publicUrl}

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { PublicPage as Page } from '@/features/public/PublicPage';
+import { abuseEmail } from '@/lib/operator';
 import { getPublicProfile } from '@/lib/publicProfile';
 import { jsonLdScript, profileJsonLd, profileMetadata } from '@/lib/seo';
 
@@ -40,7 +41,7 @@ export default async function PublicPage({ params }: Props) {
         // Data, not code: CSP does not apply and `<` is escaped (jsonLdScript).
         dangerouslySetInnerHTML={{ __html: jsonLdScript(profileJsonLd(profile)) }}
       />
-      <Page profile={profile} />
+      <Page profile={profile} abuseEmail={abuseEmail()} />
     </>
   );
 }

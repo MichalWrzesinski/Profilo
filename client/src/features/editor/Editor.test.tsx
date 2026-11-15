@@ -538,10 +538,11 @@ describe('Editor', () => {
     expect(screen.getByText('Nieopublikowana')).toBeInTheDocument();
   });
 
-  it('shows the blocked badge', async () => {
+  it('shows the blocked badge and notice', async () => {
     setup({ profile: owner({ status: 'blocked' }) });
 
     expect(await screen.findByText('Zablokowana')).toBeInTheDocument();
+    expect(screen.getByText('Strona zablokowana — skontaktuj się z nami.')).toBeVisible();
   });
 
   it('saves typed fields before a link change and continues from its version', async () => {

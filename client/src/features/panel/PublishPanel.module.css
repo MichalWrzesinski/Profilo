@@ -26,3 +26,7 @@
   flex-wrap: wrap;
   gap: var(--space-3);
 }
+
+.notice {
+  margin-bottom: var(--space-4);
+}

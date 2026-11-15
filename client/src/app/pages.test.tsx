@@ -27,6 +27,14 @@ describe('public pages', () => {
     expect(container.querySelector(`#${section}`)).not.toBeNull();
   });
 
+  it('shows the configured abuse address in the terms', () => {
+    vi.stubEnv('ABUSE_EMAIL', 'zgloszenia@operator.pl');
+    render(<TermsPage />);
+    expect(screen.getByText(/zgloszenia@operator\.pl/)).toBeInTheDocument();
+    expect(screen.queryByText(/\[do uzupełnienia: adres do zgłoszeń nadużyć\]/)).toBeNull();
+    vi.unstubAllEnvs();
+  });
+
   it('names the processors and the 30-day backups in the privacy policy', () => {
     render(<PrivacyPage />);
     for (const text of ['Hetzner Online GmbH', 'Brevo SAS', '(Sentry)', 'przez 30 dni']) {

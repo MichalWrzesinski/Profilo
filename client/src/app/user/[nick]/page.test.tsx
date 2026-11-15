@@ -25,6 +25,18 @@ describe('/user/[nick]', () => {
     expect(JSON.parse(data)).toMatchObject({ mainEntity: { name: 'Anna Wiśniewska' } });
   });
 
+  it('links reports to the configured operator address', async () => {
+    vi.stubEnv('ABUSE_EMAIL', 'zgloszenia@operator.pl');
+    getPublicProfile.mockResolvedValue(publicProfile());
+
+    render(await PublicPage(params('anna-wisniewska')));
+
+    expect(screen.getByRole('link', { name: 'Zgłoś nadużycie' }).getAttribute('href')).toMatch(
+      /^mailto:zgloszenia@operator\.pl/,
+    );
+    vi.unstubAllEnvs();
+  });
+
   it('shows the 404 page for a hidden or unknown nick', async () => {
     getPublicProfile.mockResolvedValue(null);
 

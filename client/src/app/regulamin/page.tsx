@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalDocument, Placeholder, Section } from '@/features/legal/LegalDocument';
-import { OPERATOR } from '@/lib/operator';
+import { configuredAbuseEmail, OPERATOR } from '@/lib/operator';
 
 export const metadata: Metadata = {
   title: 'Regulamin — Profilo',
@@ -9,9 +9,12 @@ export const metadata: Metadata = {
     'Zasady korzystania z Profilo: konto, treści, zgłaszanie nadużyć i odpowiedzialność.',
 };
 
+// The abuse address comes from ABUSE_EMAIL at request time (one image for every environment).
+export const dynamic = 'force-dynamic';
+
 /** Terms of service, including the DSA notice-and-action rules. Draft for the operator. */
 export default function TermsPage() {
-  const abuse = OPERATOR.abuseEmailConfirmed ? OPERATOR.abuseEmail : null;
+  const abuse = configuredAbuseEmail();
   return (
     <LegalDocument title="Regulamin">
       <Section id="uslugodawca" title="1. Usługodawca">

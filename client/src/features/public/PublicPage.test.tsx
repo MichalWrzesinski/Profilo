@@ -184,3 +184,13 @@ describe('PublicPage', () => {
     expect(container.querySelector('.links')).toBeNull();
   });
 });
+
+describe('abuse report address', () => {
+  it('uses the configured operator address', () => {
+    render(<PublicPage profile={publicProfile()} abuseEmail="zgloszenia@operator.pl" />);
+
+    expect(screen.getByRole('link', { name: 'Zgłoś nadużycie' }).getAttribute('href')).toMatch(
+      /^mailto:zgloszenia@operator\.pl\?subject=/,
+    );
+  });
+});
