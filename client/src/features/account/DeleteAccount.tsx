@@ -1,12 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/Alert';
 import { Field } from '@/components/Field';
 import { Modal } from '@/components/Modal';
 import { problemMessage } from '@/features/auth/messages';
-import { api, type Problem } from '@/lib/api/client';
+import { api, tokenStore, type Problem } from '@/lib/api/client';
+import { clearDrafts } from '@/lib/draftStorage';
 import styles from './AccountSettings.module.css';
 import { markDeleted } from './SignOutAfterDeletion';
 
@@ -20,6 +21,7 @@ export function DeleteAccount({ publicUrl }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [alert, setAlert] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const sending = useRef(false); // set at once, before React renders the busy state
 
   const close = () => {
     if (busy) return;
@@ -31,8 +33,9 @@ export function DeleteAccount({ publicUrl }: Props) {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy) return; // a second Enter while the first request runs
+    if (sending.current) return; // a second Enter while the first request runs
     if (!password) return setError('Wpisz hasło, aby potwierdzić.');
+    sending.current = true;
     setBusy(true);
     setError(null);
     setAlert(null);
@@ -44,6 +47,9 @@ export function DeleteAccount({ publicUrl }: Props) {
         // The goodbye page signs out (outside the panel, whose guard would send an
         // anonymous visitor to the login page first); the flag tells it this is real.
         markDeleted();
+        // Also here, in case the flag cannot be stored: the server has revoked everything.
+        tokenStore.set(null);
+        clearDrafts();
         router.replace('/konto-usuniete');
         return;
       }
@@ -53,6 +59,7 @@ export function DeleteAccount({ publicUrl }: Props) {
     } catch {
       setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie.');
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   };

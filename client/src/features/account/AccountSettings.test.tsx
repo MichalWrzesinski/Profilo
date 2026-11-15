@@ -157,6 +157,7 @@ describe('delete account', () => {
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/konto-usuniete'));
     expect(sessionStorage.getItem('profilo:account-deleted')).toBe('1');
+    expect(tokenStore.get()).toBeNull();
     sessionStorage.clear();
     expect(await bodyOf(fetch, '/me/deletion')).toEqual({ password: TYPED });
   });
