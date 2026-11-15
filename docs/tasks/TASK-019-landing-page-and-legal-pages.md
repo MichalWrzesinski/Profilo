@@ -1,7 +1,7 @@
 ---
 id: TASK-019
 title: Landing page and legal pages
-status: IN_PROGRESS
+status: DONE
 priority: high
 iteration: ITER-05
 depends_on: [TASK-012]
@@ -38,7 +38,7 @@ Legal texts are drafts by the agent; the user reviews them before production (pr
 
 ## Report
 
-**Implemented, in review.** The home page follows the mockup:
+**Done.** Approved after 2 review rounds. The home page follows the mockup:
 - hero, then „Zarezerwuj adres” with the real domain as the prefix;
 - the example page in a phone frame, three feature cards and a footer with the legal links.
 
@@ -59,4 +59,4 @@ Checks: client 437 tests, 95.8 % branches; E2E 17 tests pass locally; production
 
 Decisions: the claim form needs no JavaScript; the example is a real page in an iframe (shows the phone layout exactly as visitors see it) instead of a scaled copy; the legal texts are drafts by the development team — the operator data and the legal review are on the pre-production list in `plan.md`.
 
-Review round 1 fixes: the legal drafts now match what the system does — Caddy keeps its access log (IP addresses) as a file rotated after 14 days (before, Docker kept it by size, possibly months), e-mail addresses in the 1-hour attempt counters are listed, Sentry is marked as planned with what must be confirmed, backups cover photos too and are marked as pending (TASK-022), abuse-report data (GDPR art. 14) and the operator's mailbox provider are covered; the terms add the DSA statement-of-reasons contents, no automated decisions, appeals for notifiers too, out-of-court bodies and courts, the users' point of contact and languages, and when a page or account can be blocked; promises that need manual operator work and the real abuse address are on the pre-production list. The example frame is `inert` (keyboard users could reach its links) and the E2E axe run now scans it loaded. The address from the landing is trimmed and loses trailing hyphens. The home page has a canonical URL and Open Graph tags. The sample phone number is fictional.
+Review round 1 fixes: the legal drafts now match what the system does — Caddy keeps its access log (IP addresses) as a file rolled daily and deleted after 14 days (before, Docker kept it by size, possibly months), e-mail addresses in the 1-hour attempt counters are listed, Sentry is marked as planned with what must be confirmed, backups cover photos too and are marked as pending (TASK-022), abuse-report data (GDPR art. 14) and the operator's mailbox provider are covered; the terms add the DSA statement-of-reasons contents, no automated decisions, appeals for notifiers too, out-of-court bodies and courts, the users' point of contact and languages, and when a page or account can be blocked; promises that need manual operator work and the real abuse address are on the pre-production list. The example frame is `inert` (keyboard users could reach its links) and the E2E axe run now scans it loaded. The address from the landing is trimmed and loses trailing hyphens. The home page has a canonical URL and Open Graph tags. The sample phone number is fictional.
