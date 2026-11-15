@@ -1,7 +1,7 @@
 ---
 id: TASK-013
 title: Link previews and SEO for public pages
-status: IN_PROGRESS
+status: DONE
 priority: medium
 iteration: ITER-03
 depends_on: [TASK-012]
@@ -35,7 +35,7 @@ Shared profile links show the name, headline and photo in messengers and social 
 
 ## Report
 
-**Implemented, in review.** Every published page has a server-rendered title „{name} — {headline}”, a meta description (the bio cut at a word boundary to 160 characters; without a bio a sentence from headline, position, company and city), the canonical URL, Open Graph (`profile`, `pl_PL`, 1200 × 630 image) and a `summary_large_image` Twitter card, plus schema.org `ProfilePage`/`Person` JSON-LD (name, headline, job, company, city, photo, links as `sameAs`; `<` escaped). The preview image is a card drawn by the API with Pillow: accent background, the photo (or initials) in a white ring, name, headline, page address and the wordmark, in the brand font (Plus Jakarta Sans, OFL, bundled). `robots.txt` allows everything except `/api/` (the cards stay allowed) and points at `sitemap.xml`, which lists home, terms, privacy and every visible published page with its publication date. `/panel`, `/kreator` and `/edytor` are `noindex, nofollow` (login, registration, confirmation and preview already were).
+**Done.** Approved after 2 review rounds. Every published page has a server-rendered title „{name} — {headline}”, a meta description (the bio cut at a word boundary to 160 characters; without a bio a sentence from headline, position, company and city), the canonical URL, Open Graph (`profile`, `pl_PL`, 1200 × 630 image) and a `summary_large_image` Twitter card, plus schema.org `ProfilePage`/`Person` JSON-LD (name, headline, job, company, city, photo, links as `sameAs`; `<` escaped). The preview image is a card drawn by the API with Pillow: accent background, the photo (or initials) in a white ring, name, headline, page address and the wordmark, in the brand font (Plus Jakarta Sans, OFL, bundled). `robots.txt` allows everything except `/api/` (the cards stay allowed) and points at `sitemap.xml`, which lists home, terms, privacy and every visible published page with its publication date. `/panel`, `/kreator` and `/edytor` are `noindex, nofollow` (login, registration, confirmation and preview already were).
 
 Acceptance criteria:
 - S1 preview tags — met: E2E publishes a page and checks the title, description, Open Graph and Twitter tags and the canonical URL, then fetches the og:image URL: 200 `image/jpeg`. Checked with curl too (card 45 kB, `public, max-age=86400`); API tests check the card size, the accent and the photo by pixel sampling.
