@@ -17,10 +17,11 @@ const K = new Uint32Array([
 const rotr = (x: number, n: number) => (x >>> n) | (x << (32 - n));
 
 /**
- * SHA-256 in plain JavaScript (FIPS 180-4). `crypto.subtle` exists only in secure contexts
- * (HTTPS or localhost); on plain HTTP, e.g. the E2E stack at http://caddy, this is used.
+ * SHA-256 in plain JavaScript (FIPS 180-4), synchronous. Faster here than `crypto.subtle`,
+ * whose per-call promise costs more than hashing a short string, and available outside
+ * secure contexts too (plain HTTP, e.g. the E2E stack at http://caddy).
  */
-export function sha256HexFallback(text: string): string {
+export function sha256Hex(text: string): string {
   const bytes = new TextEncoder().encode(text);
   const length = Math.ceil((bytes.length + 9) / 64) * 64;
   const data = new Uint8Array(length);
@@ -70,12 +71,6 @@ export function sha256HexFallback(text: string): string {
   return hash.map((word) => word.toString(16).padStart(8, '0')).join('');
 }
 
-async function sha256Hex(text: string): Promise<string> {
-  if (!globalThis.crypto?.subtle) return sha256HexFallback(text);
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
 /**
  * Find the number with SHA-256(salt + number) = challenge and return the solution for the
  * API (base64 JSON). Null when no number up to `maxnumber` fits (not our challenge).
@@ -83,7 +78,7 @@ async function sha256Hex(text: string): Promise<string> {
 export async function solve(challenge: Challenge): Promise<string | null> {
   if (!challenge || challenge.maxnumber > 10_000_000) return null; // not a sensible challenge
   for (let number = 0; number <= challenge.maxnumber; number += 1) {
-    if ((await sha256Hex(`${challenge.salt}${number}`)) === challenge.challenge) {
+    if (sha256Hex(`${challenge.salt}${number}`) === challenge.challenge) {
       return btoa(
         JSON.stringify({
           algorithm: challenge.algorithm,
@@ -98,7 +93,11 @@ export async function solve(challenge: Challenge): Promise<string | null> {
   return null;
 }
 
-/** Solve in a web worker so the page stays responsive; on the main thread without one. */
+/**
+ * Solve in a web worker so the page stays responsive; on the main thread without one (the
+ * page then pauses for the few seconds it takes). The worker is not cancelled when the form
+ * goes away: it ends by itself once solved, within `maxnumber` hashes.
+ */
 export function solveInBackground(challenge: Challenge): Promise<string | null> {
   if (typeof Worker === 'undefined') return solve(challenge);
   return new Promise((resolve) => {

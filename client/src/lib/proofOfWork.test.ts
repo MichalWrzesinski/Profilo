@@ -1,4 +1,4 @@
-import { sha256HexFallback, solve, solveInBackground, type Challenge } from './proofOfWork';
+import { sha256Hex as sha256Sync, solve, solveInBackground, type Challenge } from './proofOfWork';
 
 async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -18,7 +18,7 @@ async function challengeFor(number: number, maxnumber = 500): Promise<Challenge>
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe('sha256HexFallback', () => {
+describe('sha256Hex', () => {
   it.each([
     ['', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'],
     ['abc', 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'],
@@ -28,10 +28,10 @@ describe('sha256HexFallback', () => {
     ],
     ['zażółć gęślą jaźń?expires=1', ''],
   ])('matches the standard for %j', async (text, expected) => {
-    expect(sha256HexFallback(text)).toBe(expected || (await sha256Hex(text)));
+    expect(sha256Sync(text)).toBe(expected || (await sha256Hex(text)));
   });
 
-  it('is used without crypto.subtle (plain HTTP)', async () => {
+  it('works without crypto.subtle (plain HTTP)', async () => {
     const challenge = await challengeFor(42);
     vi.stubGlobal('crypto', {});
 
