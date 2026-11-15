@@ -59,6 +59,8 @@ Helper for the commands below: `dc() { set -a; . /srv/profilo/.env; set +a; t=$(
 | Logs | `dc logs -f --tail=100 api` |
 | Redeploy or roll back to a commit | GitHub Actions → *Deploy staging* → *Run workflow* with the SHA (any commit on `main` whose images exist) |
 | Restart | `dc restart` |
+| Before restoring the database or the media volume | `dc stop beat` (no cleanup job runs against a half-restored database; the orphan cleanup also stops by itself when most files look orphaned, log `orphan_cleanup_aborted`); `dc start beat` once the restore is checked |
+| Run a cleanup job now | `dc exec worker celery -A app.worker call accounts.delete_unconfirmed` (or `profiles.release_quarantined_nicks`, `media.remove_orphaned_files`); result in `dc logs worker` as `job_done` with counts |
 
 ## Recovery
 
