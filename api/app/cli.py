@@ -13,6 +13,9 @@ import asyncio
 import sys
 from collections.abc import Sequence
 
+from redis.exceptions import RedisError
+from sqlalchemy.exc import OperationalError
+
 import app.models  # noqa: F401 - all models: a standalone process otherwise lacks some
 from app.core.db import dispose_engine
 from app.core.valkey import close_valkey
@@ -45,7 +48,7 @@ async def _run(command: str, nick: str) -> int:
     nick = nick.strip().lower()
     try:
         result = await service.set_blocked(nick, blocked=command == "block-profile")
-    except Exception as exc:  # database or Valkey down: a clear line, not a traceback
+    except (OSError, OperationalError, RedisError) as exc:  # unreachable database or Valkey
         print(f"Nie udało się: {type(exc).__name__}. Spróbuj ponownie.", file=sys.stderr)
         return 3
     finally:
