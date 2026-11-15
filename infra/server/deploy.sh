@@ -40,6 +40,10 @@ set -a
 # shellcheck source=/dev/null
 . "$APP_DIR/.env"
 set +a
+if [[ "${TLS_MODE:-acme}" == acme && -z "${ACME_EMAIL:-}" ]]; then
+  echo "ACME_EMAIL is required when Caddy obtains certificates itself (TLS_MODE=acme)" >&2
+  exit 2
+fi
 PREV_TAG=""
 [[ -L "$APP_DIR/current" ]] && PREV_TAG="$(basename "$(readlink "$APP_DIR/current")")"
 CURL_TLS=()
@@ -128,7 +132,8 @@ if start "$NEW_TAG" && smoke; then
   ln -sfn "releases/$NEW_TAG" "$APP_DIR/current"
   touch "$NEW_DIR"  # release order for cleanup = last time it became current
   cleanup_old_releases
-  docker image prune -f >/dev/null || true  # dangling layers only; tagged releases stay
+  # Dangling layers of Profilo's own images only (the server may host other projects).
+  docker image prune -f --filter "label=org.opencontainers.image.source=https://github.com/MichalWrzesinski/Profilo" >/dev/null || true
   log "deployed $NEW_TAG"
   exit 0
 fi

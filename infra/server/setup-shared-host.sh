@@ -41,13 +41,21 @@ ssh-keygen -lf "$key_file" >/dev/null || { rm -f "$key_file"; fail "the deploy k
 rm -f "$key_file"
 
 echo "==> Checks on the shared host"
-# Another project's Docker network on the same subnet would stop Profilo from starting.
+# Another Docker network or a host route in the same /16 (another project, the provider's
+# network, a VPN) would clash with Profilo's bridge — or worse, take over a route.
+NET16="$(cut -d. -f1-2 <<<"$NET_PREFIX")."
 while read -r net; do
   [[ "$net" == profilo_internal ]] && continue
-  if docker network inspect "$net" --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}' | grep -qw "$SUBNET"; then
-    fail "Docker network '$net' already uses $SUBNET; pass another subnet as the 7th argument"
+  if docker network inspect "$net" --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}' | grep -q "^$NET16\| $NET16"; then
+    fail "Docker network '$net' uses addresses in ${NET16}0.0/16; pass another subnet as the 7th argument"
   fi
 done < <(docker network ls --format '{{.Name}}')
+if ip -4 route | grep -v "br-" | grep -q "^$NET16"; then
+  fail "a host route already uses ${NET16}0.0/16 (ip -4 route); pass another subnet as the 7th argument"
+fi
+if docker ps -a --filter label=com.docker.compose.project=profilo --format '{{.Names}}' | grep -vq '^profilo-'; then
+  fail "another Compose project is already called 'profilo' on this server"
+fi
 if ss -Htln "sport = :$PROXY_PORT" | grep -q .; then
   if ! docker ps --format '{{.Names}} {{.Ports}}' | grep -q "^profilo-caddy.*127.0.0.1:$PROXY_PORT->"; then
     fail "port $PROXY_PORT is already used on this server; pass another port as the 6th argument"
@@ -55,19 +63,34 @@ if ss -Htln "sport = :$PROXY_PORT" | grep -q .; then
 fi
 
 echo "==> Deploy user $DEPLOY_USER (SSH key only)"
-if ! id "$DEPLOY_USER" >/dev/null 2>&1; then
+MARKER=.profilo-deploy-user
+if id "$DEPLOY_USER" >/dev/null 2>&1; then
+  # Never take over an existing account (a typo could lock an admin out or give a service
+  # account Docker access): only one this script created earlier.
+  home="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
+  [[ -f "$home/$MARKER" ]] || fail "user $DEPLOY_USER already exists and was not created by this script; choose another name"
+else
   useradd --create-home --shell /bin/bash "$DEPLOY_USER"
+  passwd -l "$DEPLOY_USER" >/dev/null   # no password: key login only
+  home="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
+  touch "$home/$MARKER"
 fi
-passwd -l "$DEPLOY_USER" >/dev/null   # no password: key login only
 usermod -aG docker "$DEPLOY_USER"
-home="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
 install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$home/.ssh"
 touch "$home/.ssh/authorized_keys"
-grep -qxF "$DEPLOY_PUBKEY" "$home/.ssh/authorized_keys" || printf '%s\n' "$DEPLOY_PUBKEY" >> "$home/.ssh/authorized_keys"
+# `restrict`: commands and scp only — no port forwarding (other projects' local services),
+# no agent forwarding, no terminal.
+key_line="restrict $DEPLOY_PUBKEY"
+grep -qxF "$key_line" "$home/.ssh/authorized_keys" || printf '%s\n' "$key_line" >> "$home/.ssh/authorized_keys"
 chown "$DEPLOY_USER:$DEPLOY_USER" "$home/.ssh/authorized_keys"
 chmod 600 "$home/.ssh/authorized_keys"
 
 echo "==> $APP_DIR"
+# A directory with other files (e.g. a temporary page nginx serves) is not taken over:
+# changing its owner and mode would break that page at once.
+if [[ -d "$APP_DIR" && ! -f "$APP_DIR/.env" ]] && [[ -n "$(ls -A "$APP_DIR")" ]]; then
+  fail "$APP_DIR already contains files; move them elsewhere first (docs/runbook.md, Shared host)"
+fi
 install -d -m 750 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$APP_DIR" "$APP_DIR/releases"
 
 if [[ -f "$APP_DIR/.env" ]]; then
@@ -111,6 +134,6 @@ Next (docs/runbook.md, "Shared host"):
   1. nginx: install infra/server/nginx-profilo.conf as the site for $DOMAIN (port $PROXY_PORT).
   2. Check the key login: ssh $DEPLOY_USER@<server> 'docker ps' (from the machine with the key).
   3. GitHub secrets and variables, then the first deployment.
-Note: members of the docker group can control every container on this server (root-like);
-keep the deploy key only in the GitHub secret.
+Note: the docker group is root-equivalent on this whole server, including the other
+projects. Keep the deploy key only in the GitHub secret (it is limited with "restrict").
 NOTE
