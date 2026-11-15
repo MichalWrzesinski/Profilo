@@ -1,7 +1,7 @@
 ---
 id: TASK-018
 title: Registration bot protection (ALTCHA)
-status: READY
+status: IN_PROGRESS
 priority: medium
 iteration: ITER-04
 depends_on: [TASK-004]
@@ -32,4 +32,13 @@ Mass registration attempts from one IP must solve a proof-of-work challenge.
 - When a forged solution is submitted, then registration is rejected.
 
 ## Report
-Filled in by development after the task.
+
+**Implemented, in review.** From the 4th registration attempt per IP within an hour (failed ones such as 409 `email_taken` count too, they are what address checking looks like) `POST /accounts` needs a solved proof-of-work challenge: without one, or with a forged, expired or reused one, it answers 428 `challenge_required` with a new challenge. The challenge uses the ALTCHA format (`algorithm`, `challenge` = SHA-256(salt + secret number), `maxnumber` 200 000, `salt` with `?expires=` 10 minutes, HMAC `signature`), implemented in `app/core/proof_of_work.py` without a library; the signing key is derived from the JWT secret, a solution is accepted once (Valkey, fails open like the rate limits). The registration form solves it in a web worker (`crypto.subtle`; a plain-JS SHA-256 where there is no secure context; a worker failure answers null and the form shows a message), showing „Sprawdzamy, czy nie jesteś automatem…” in a live region, then sends the form again. Security events (`registration_challenge_required`, `proof_of_work_rejected` with the reason) are logged without IP or e-mail.
+
+Acceptance criteria:
+- S1 normal user — met: the first 3 registrations from an IP get 201 without a challenge (API test); a person registering in the browser sees nothing.
+- S2 many attempts — met: the 4th attempt without a solution → 428 with a challenge; with the solution → 201 (API test); twelve kinds of forged solutions (wrong number, signature, algorithm, types, missing or bad expiry, broken base64/JSON), an expired challenge, one signed with another key and a reused solution are all refused (API tests). E2E: attempts from one IP until 428, a forged solution refused, then a person registers in the browser, which solves the challenge in its worker and lands in the wizard. Average solving time measured in Chromium: about 0.5 s for the full range with `crypto.subtle`.
+
+Checks: api 410 tests, 99 %; client 426 tests, 95.9 % branches; contract 28 paths; E2E 10 tests pass locally.
+
+Decisions: no ALTCHA libraries (the format is a few dozen lines on both sides and new dependencies need two weeks of age); the per-IP registration limit goes from 10 to 20 per hour, because from the 4th attempt each one costs a proof of work and a shared office or school network would otherwise be locked out early (also needed by the E2E suite); the threshold counts attempts, not only successful registrations.
