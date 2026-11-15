@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { PublicPage as Page } from '@/features/public/PublicPage';
 import { getPublicProfile } from '@/lib/publicProfile';
+import { jsonLdScript, profileJsonLd, profileMetadata } from '@/lib/seo';
 
 type Props = { params: Promise<{ nick: string }> };
 
@@ -24,8 +25,7 @@ async function load(params: Props['params']) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { profile } = await load(params);
   if (!profile) return { title: 'Nie znaleźliśmy tej strony — Profilo' };
-  const { displayName, headline } = profile.content;
-  return { title: headline ? `${displayName} — ${headline}` : displayName };
+  return profileMetadata(profile);
 }
 
 export default async function PublicPage({ params }: Props) {
@@ -33,5 +33,14 @@ export default async function PublicPage({ params }: Props) {
   if (!profile) notFound();
   // One address per page: /user/Anna-Wisniewska → /user/anna-wisniewska.
   if (profile.nick !== nick) permanentRedirect(`/user/${profile.nick}`);
-  return <Page profile={profile} />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        // Data, not code: CSP does not apply and `<` is escaped (jsonLdScript).
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(profileJsonLd(profile)) }}
+      />
+      <Page profile={profile} />
+    </>
+  );
 }

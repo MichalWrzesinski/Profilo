@@ -6,7 +6,7 @@ export type PublicProfile = components['schemas']['PublicProfile'];
 /** Operator address for abuse reports (PUB-BR-10). Placeholder until the operator is known. */
 export const ABUSE_EMAIL = 'naduzycia@profilo.pl';
 
-function apiBase(): string {
+export function apiBase(): string {
   return process.env.API_INTERNAL_URL ?? 'http://localhost:8000';
 }
 
