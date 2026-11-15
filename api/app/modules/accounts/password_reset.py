@@ -17,8 +17,9 @@ from app.core.db import get_sessionmaker
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
-from app.modules.accounts import passwords, tokens
-from app.modules.accounts.models import Account, OneTimeToken, RefreshToken
+from app.modules.accounts import one_time, passwords, tokens
+from app.modules.accounts.models import Account, OneTimeToken
+from app.modules.accounts.sessions import end_all_sessions
 from app.modules.notifications import service as notifications
 
 PURPOSE = "password_reset"
@@ -83,7 +84,7 @@ async def send_link(email: str) -> None:
                 log.error("password_reset_daily_cap_reached")
                 return
             now = datetime.now(UTC)
-            await _use_open_tokens(session, account, now)  # a new link replaces older ones
+            await use_open_tokens(session, account, now)  # a new link replaces older ones
             raw, digest = tokens.new_refresh_token()
             session.add(
                 OneTimeToken(
@@ -100,7 +101,7 @@ async def send_link(email: str) -> None:
         log.error("password_reset_request_failed", error=type(exc).__name__)
 
 
-async def _use_open_tokens(session: AsyncSession, account: Account, now: datetime) -> None:
+async def use_open_tokens(session: AsyncSession, account: Account, now: datetime) -> None:
     await session.execute(
         update(OneTimeToken)
         .where(
@@ -123,36 +124,24 @@ async def confirm(
     for which the caller starts a new session in this browser (still uncommitted)."""
     await rate_limit.hit(CONFIRM_PER_IP, client_ip)
     now = datetime.now(UTC)
-    stored = await session.scalar(
-        select(OneTimeToken)
-        .where(
-            OneTimeToken.token_hash == tokens.hash_refresh_token(raw_token),
-            OneTimeToken.purpose == PURPOSE,
-        )
-        .with_for_update()
-    )
-    if stored is None or stored.used_at is not None or stored.expires_at <= now:
+    locked = await one_time.lock_with_account(session, raw_token, PURPOSE)
+    if locked is None:
+        raise ProblemError(410, "token_expired", EXPIRED_DETAIL)
+    account, stored = locked
+    if stored.used_at is not None or stored.expires_at <= now:
         raise ProblemError(410, "token_expired", EXPIRED_DETAIL)
     # Checked after the token, so a stale link says „wygasł” before asking for a new password.
     if errors := _field_errors(new_password):
         raise ProblemError(422, "validation_error", errors=errors)
-    account = await session.get(Account, stored.account_id, with_for_update=True)
-    if account is None:  # pragma: no cover - tokens are deleted with the account
-        raise ProblemError(410, "token_expired", EXPIRED_DETAIL)
 
     account.password_hash = await passwords.hash_password(new_password)
     # Taken after hashing: tokens issued while the hash was computed are older than this.
     now = datetime.now(UTC)
-    account.password_changed_at = now
     # The link proves the owner reads this mailbox.
     if account.email_confirmed_at is None:
         account.email_confirmed_at = now
-    await _use_open_tokens(session, account, now)
-    await session.execute(
-        update(RefreshToken)
-        .where(RefreshToken.account_id == account.id, RefreshToken.revoked_at.is_(None))
-        .values(revoked_at=now)
-    )
+    await use_open_tokens(session, account, now)
+    await end_all_sessions(session, account, now)
     log.info("password_reset_completed", account_id=str(account.id))
     return account
 

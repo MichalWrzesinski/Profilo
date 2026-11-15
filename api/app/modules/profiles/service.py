@@ -5,13 +5,14 @@ import asyncio
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 
 import phonenumbers
 from email_validator import EmailNotValidError, validate_email
 from sqlalchemy import func, or_, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -720,3 +721,48 @@ async def is_image_public(
         return False
     ref = str(image_id)
     return any((snapshot.get(kind) or {}).get("id") == ref for kind in ("avatar", "background"))
+
+
+# --- account deletion (ACC-BR-10) -------------------------------------------------------
+
+QUARANTINE = timedelta(days=30)
+
+
+async def quarantine_nick_of(session: AsyncSession, account_id: uuid.UUID) -> uuid.UUID | None:
+    """Reserve the deleted account's nick for 30 days, so nobody takes over an address that
+    was shared recently (in the caller's transaction, before the account is deleted).
+    Returns the profile id, for `forget_cards` after the commit."""
+    row = (
+        await session.execute(
+            select(Profile.id, Profile.nick).where(Profile.account_id == account_id)
+        )
+    ).one_or_none()
+    if row is None:  # pragma: no cover - every account gets a profile at registration
+        return None
+    profile_id, nick = row
+    if not nick:
+        return profile_id
+    expires = datetime.now(UTC) + QUARANTINE
+    await session.execute(
+        pg_insert(ReservedNick)
+        .values(nick=nick, reason="quarantine", expires_at=expires)
+        .on_conflict_do_update(
+            index_elements=[ReservedNick.nick],
+            set_={"reason": "quarantine", "expires_at": expires},
+            # A system or offensive reservation (no expiry) is never weakened.
+            where=ReservedNick.reason == "quarantine",
+        )
+    )
+    return profile_id
+
+
+async def forget_cards(profile_id: uuid.UUID) -> None:
+    """Drop the cached Open Graph cards of a deleted profile (they hold the name and photo).
+    Fails open like the rest of the cache: they would expire within 7 days anyway."""
+    try:
+        client = get_valkey()
+        keys = [key async for key in client.scan_iter(match=f"og:*:{profile_id}:*")]
+        if keys:
+            await client.delete(*keys)
+    except Exception as exc:
+        log.error("og_cache_unavailable", error=type(exc).__name__)

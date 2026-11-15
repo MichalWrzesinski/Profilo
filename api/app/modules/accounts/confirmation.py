@@ -2,14 +2,14 @@
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import rate_limit
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
-from app.modules.accounts import tokens
+from app.modules.accounts import one_time, tokens
 from app.modules.accounts.models import Account, OneTimeToken
 from app.modules.notifications import service as notifications
 
@@ -71,19 +71,12 @@ async def confirm(session: AsyncSession, raw_token: str, client_ip: str) -> None
     (repeated click on the same link); expired, superseded or unknown tokens → 410."""
     await rate_limit.hit(CONFIRM_PER_IP, client_ip)
     now = datetime.now(UTC)
-    stored = await session.scalar(
-        select(OneTimeToken)
-        .where(
-            OneTimeToken.token_hash == tokens.hash_refresh_token(raw_token),
-            OneTimeToken.purpose == PURPOSE,
-        )
-        .with_for_update()
-    )
     expired = ProblemError(410, "token_expired", "Link wygasł albo został już użyty.")
-    if stored is None or stored.expires_at <= now:
+    locked = await one_time.lock_with_account(session, raw_token, PURPOSE)
+    if locked is None:
         raise expired
-    account = await session.get(Account, stored.account_id, with_for_update=True)
-    if account is None:  # pragma: no cover - tokens are deleted with the account
+    account, stored = locked
+    if stored.expires_at <= now:
         raise expired
     if stored.used_at is not None:
         # Same link clicked again after it confirmed the account: still a success.

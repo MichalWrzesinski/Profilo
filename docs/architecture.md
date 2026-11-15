@@ -179,7 +179,7 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | Image upload | Malicious files, metadata leaks | Content sniffing, size and pixel limits, re-encoding, EXIF removal, random keys, no direct file serving |
 | Nick | Takeover of shared addresses, impersonation | Nick locked after first publication; 30-day quarantine after deletion; reserved list |
 | Unpublish / block | Stale content visible | No caching of public pages; snapshot visibility checked on every request |
-| Account deletion | Accidental or hostile deletion | Password required; confirmation e-mail; cascade in one transaction |
+| Account deletion | Accidental or hostile deletion, data left behind | Password required (5 wrong passwords per account per 15 min, shared with the password change; like login, the limit fails open when Valkey is down); confirmation e-mail; cascade in one transaction; files removed by a task (directly when the queue is down); cached preview cards dropped |
 
 ## Code map
 
@@ -202,6 +202,7 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | `api/app/modules/profiles/` | Profile model (draft), `create_profile_for` | TASK-004 |
 | `api/app/modules/profiles/nicks.py`, `service.py`, `router.py` | Nick rules (PRF-BR-2, mirrored in `client/src/lib/nick.ts`; shared test cases in `docs/api/nick-cases.json`), reserved nicks (`0004` seeds system and offensive words; offensive ones also block nicks containing them), suggestions, availability, suggestion and save (shared 120/min limit), `PUT /me/profile/nick`; `GET`/`PATCH /me/profile` with optimistic locking and E.164 phones | TASK-006 |
 | `api/app/modules/accounts/password_reset.py`, `client/src/features/auth/ResetRequestForm.tsx`, `NewPasswordForm.tsx`, `client/src/app/nie-pamietam-hasla/`, `client/src/app/nowe-haslo/` | Password reset: request (background lookup and e-mail), confirm (new session, all others ended), templates `password_reset` and `password_changed`; „Nie pamiętam hasła” on the login page and in the `email_taken` message | TASK-015 |
+| `api/app/modules/accounts/sessions.py`, `service.change_password`, `service.delete_account`, `profiles/service.quarantine_nick_of`, `media/tasks.py`, `client/src/features/account/`, `client/src/app/panel/konto/`, `client/src/app/konto-usuniete/`, `client/src/components/Modal.tsx` | Account settings: `PUT /me/password` (confirmed accounts; every session ends, this browser gets a new one), `POST /me/deletion` (password; cascade delete, nick quarantined 30 days, files removed by the Celery task `media.delete_account_files`, confirmation e-mail); 5 wrong passwords per account per 15 min shared by both; panel menu „Ustawienia konta”, deletion dialog from the design system, goodbye page that signs out; shared `Modal` (focus trap) | TASK-016 |
 | `api/app/modules/accounts/confirmation.py` | E-mail confirmation tokens (48 h, single use, resend invalidates earlier ones), confirm and resend | TASK-005 |
 | `api/app/modules/notifications/` | `send()` (queues after commit, never fails the caller), Celery task with retries, SMTP adapter, Jinja2 templates (HTML + text, Polish) | TASK-005 |
 | `client/src/features/auth/ConfirmEmail*.tsx`, `client/src/app/potwierdz-email/` | Confirmation page (success, expired, logged-out redirect) and the panel banner with resend | TASK-005 |

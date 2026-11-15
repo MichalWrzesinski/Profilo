@@ -14,7 +14,10 @@ from app.core.logging import log
 from app.core.settings import get_settings
 from app.modules.accounts import confirmation, password_reset, passwords, tokens
 from app.modules.accounts.models import Account, RefreshToken
-from app.modules.profiles.service import create_profile_for
+from app.modules.accounts.sessions import end_all_sessions
+from app.modules.media import service as media
+from app.modules.notifications import service as notifications
+from app.modules.profiles.service import create_profile_for, forget_cards, quarantine_nick_of
 
 REGISTER_PER_IP = rate_limit.Limit("register_ip", max_hits=10, window_seconds=3600)
 REGISTER_PER_EMAIL = rate_limit.Limit("register_email", max_hits=5, window_seconds=3600)
@@ -193,3 +196,88 @@ async def reset_password(
     await session.commit()
     await password_reset.send_notice(account)
     return issued
+
+
+# --- account settings (ACC-US-5, ACC-US-6) ----------------------------------------------
+
+# Wrong current passwords per account: the 6th attempt within 15 minutes is refused (429),
+# as for login, so a stolen session cannot guess the password needed to delete the account.
+PASSWORD_CHECKS = rate_limit.Limit("password_check", max_hits=5, window_seconds=900)
+INVALID_PASSWORD_DETAIL = "Hasło jest nieprawidłowe."  # noqa: S105 - a message, not a secret
+
+
+async def _locked(session: AsyncSession, account_id: uuid.UUID) -> Account:
+    account = await session.get(Account, account_id, with_for_update=True, populate_existing=True)
+    if account is None:  # pragma: no cover - the caller is authenticated as this account
+        raise _unauthorized()
+    return account
+
+
+async def _check_password(account: Account, password: str) -> None:
+    if retry_after := await rate_limit.is_blocked(PASSWORD_CHECKS, str(account.id)):
+        raise ProblemError(
+            429,
+            "rate_limited",
+            "Za dużo prób z nieprawidłowym hasłem. Spróbuj ponownie później.",
+            headers={"Retry-After": str(retry_after)},
+        )
+    if not await passwords.verify_password(password, account.password_hash):
+        await rate_limit.hit(PASSWORD_CHECKS, str(account.id))
+        log.warning("password_check_failed", account_id=str(account.id))
+        raise ProblemError(403, "invalid_password", INVALID_PASSWORD_DETAIL)
+    await rate_limit.reset(PASSWORD_CHECKS, str(account.id))
+
+
+async def change_password(
+    session: AsyncSession, account_id: uuid.UUID, current: str, new: str
+) -> IssuedSession:
+    """New password for a confirmed account; every session ends and this browser gets a
+    new one (its access token would be refused otherwise)."""
+    account = await _locked(session, account_id)
+    if account.email_confirmed_at is None:
+        raise ProblemError(
+            403, "email_not_confirmed", "Potwierdź adres e-mail, żeby zmienić hasło."
+        )
+    await _check_password(account, current)
+    if errors := [{**error, "field": "newPassword"} for error in passwords.policy_errors(new)]:
+        raise ProblemError(422, "validation_error", errors=errors)
+    if new == current:
+        raise ProblemError(
+            422,
+            "validation_error",
+            errors=[
+                {
+                    "field": "newPassword",
+                    "code": "same_password",
+                    "message": "Nowe hasło musi być inne niż obecne.",
+                }
+            ],
+        )
+    account.password_hash = await passwords.hash_password(new)
+    now = datetime.now(UTC)
+    await end_all_sessions(session, account, now)
+    # A reset link asked for before the change (maybe by someone else) stops working.
+    await password_reset.use_open_tokens(session, account, now)
+    issued = await _new_session(session, account)
+    await session.commit()
+    log.info("password_changed", account_id=str(account.id))
+    await password_reset.send_notice(account)
+    return issued
+
+
+async def delete_account(session: AsyncSession, account_id: uuid.UUID, password: str) -> None:
+    """Delete the account at once (ACC-BR-9): the profile, links, snapshot, image rows and
+    tokens go with it (ON DELETE CASCADE), the nick is quarantined for 30 days (ACC-BR-10),
+    the image files are removed by a task and a confirmation e-mail is sent."""
+    account = await _locked(session, account_id)
+    await _check_password(account, password)
+    email = account.email
+    profile_id = await quarantine_nick_of(session, account.id)
+    await session.delete(account)
+    await session.commit()
+    log.info("account_deleted", account_id=str(account_id))
+    # After the commit; failures are logged, never undo the deletion.
+    await media.delete_files_of(account_id)
+    if profile_id:
+        await forget_cards(profile_id)
+    await notifications.send("account_deleted", email, {})

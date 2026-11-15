@@ -10,8 +10,10 @@ from app.core.settings import get_settings
 from app.modules.accounts import confirmation, password_reset, service
 from app.modules.accounts.models import Account
 from app.modules.accounts.schemas import (
+    AccountDeletion,
     AccountOut,
     LoginRequest,
+    PasswordChange,
     PasswordResetConfirm,
     PasswordResetRequest,
     RegisterRequest,
@@ -164,3 +166,25 @@ async def confirm_password_reset(
 @router.get("/me", tags=["account"])
 async def me(account: CurrentAccount) -> AccountOut:
     return _account_out(account)
+
+
+@router.put("/me/password", tags=["account"])
+async def change_password(
+    payload: PasswordChange, account: CurrentAccount, response: Response, session: DbSession
+) -> SessionOut:
+    """New password (ACC-US-5): every session ends, this browser gets a new one."""
+    issued = await service.change_password(
+        session, account.id, payload.current_password, payload.new_password
+    )
+    return _session_response(response, issued)
+
+
+@router.post("/me/deletion", status_code=204, tags=["account"])
+async def delete_account(
+    payload: AccountDeletion, account: CurrentAccount, response: Response, session: DbSession
+) -> Response:
+    """Delete the account and the page at once (ACC-US-6, ACC-BR-9)."""
+    await service.delete_account(session, account.id, payload.password)
+    _clear_cookie(response)
+    response.status_code = 204
+    return response
