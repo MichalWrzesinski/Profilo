@@ -10,23 +10,48 @@ import ResetRequestPage from './nie-pamietam-hasla/page';
 import NewPasswordPage from './nowe-haslo/page';
 import ConfirmPage from './potwierdz-email/page';
 import PrivacyPage from './prywatnosc/page';
+import ExamplePage from './przyklad/page';
 import TermsPage from './regulamin/page';
 import RegisterPage from './rejestracja/page';
 
 describe('public pages', () => {
   it.each([
-    [TermsPage, 'Regulamin'],
-    [PrivacyPage, 'Polityka prywatności'],
-  ])('shows a placeholder for %#', (Page, title) => {
-    render(<Page />);
-    expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
-    expect(screen.getByText('Dokument w przygotowaniu.')).toBeInTheDocument();
+    [TermsPage, 'Regulamin', 'zgloszenia'],
+    [PrivacyPage, 'Polityka prywatności', 'okres'],
+  ])('renders the legal draft %#', (Page, title, section) => {
+    const { container } = render(<Page />);
+    expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument();
+    expect(screen.getByText('Wersja robocza.')).toBeInTheDocument();
+    // Operator data still missing: clearly marked (TASK-019 scenario 2).
+    expect(screen.getAllByText(/\[do uzupełnienia: nazwa operatora\]/)[0]).toBeInTheDocument();
+    expect(container.querySelector(`#${section}`)).not.toBeNull();
   });
 
-  it('renders the registration page', () => {
+  it('names the processors and the 30-day backups in the privacy policy', () => {
+    render(<PrivacyPage />);
+    for (const text of ['Hetzner Online GmbH', 'Brevo SAS', '(Sentry)', 'przez 30 dni']) {
+      expect(screen.getAllByText(new RegExp(text.replace(/[()]/g, '\\$&')))[0]).toBeInTheDocument();
+    }
+  });
+
+  it('renders the example page for the landing', () => {
+    render(<ExamplePage />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Anna Wiśniewska' })).toBeInTheDocument();
+  });
+
+  it('carries the address chosen on the landing', async () => {
     render(
       <SessionProvider>
-        <RegisterPage />
+        {await RegisterPage({ searchParams: Promise.resolve({ adres: ['  Anna Nowak  ', 'x'] }) })}
+      </SessionProvider>,
+    );
+    expect(screen.getByText(/Adres „anna-nowak” sprawdzimy/)).toBeInTheDocument();
+  });
+
+  it('renders the registration page', async () => {
+    render(
+      <SessionProvider>
+        {await RegisterPage({ searchParams: Promise.resolve({}) })}
       </SessionProvider>,
     );
     expect(

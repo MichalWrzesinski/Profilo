@@ -1,7 +1,7 @@
 'use client';
 
 import { Check as CheckIcon, CircleAlert, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/Alert';
 import { api, type Problem } from '@/lib/api/client';
@@ -18,6 +18,8 @@ const DEBOUNCE_MS = 300;
 
 export function NickStep() {
   const router = useRouter();
+  // The address typed on the landing („Zarezerwuj adres”), if any.
+  const wanted = normaliseNickInput(useSearchParams().get('adres') ?? '');
   const [profile, setProfile] = useState<OwnerProfile | null>(null);
   const [name, setName] = useState('');
   const [nick, setNick] = useState('');
@@ -45,10 +47,15 @@ export function NickStep() {
           nickTouched.current = true;
           setNick(data.nick);
           setCheck({ state: 'current' });
+        } else if (wanted) {
+          // Check it at once: taken → suggestions (TASK-019 scenario 3).
+          nickTouched.current = true;
+          setNick(wanted);
+          setCheck({ state: nickFormatError(wanted) ? 'invalid' : 'checking' });
         }
       })
       .catch(() => setLoadFailed(true));
-  }, [attempt]);
+  }, [attempt, wanted]);
 
   // Propose a nick from the name until the owner edits the nick field (PRF-BR-2).
   useEffect(() => {

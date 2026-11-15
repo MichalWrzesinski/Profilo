@@ -1,5 +1,11 @@
+import { Suspense } from 'react';
 import { NickStep } from '@/features/wizard/NickStep';
 
 export default function WizardNickPage() {
-  return <NickStep />;
+  // NickStep reads `?adres=` (useSearchParams needs a Suspense boundary to prerender).
+  return (
+    <Suspense>
+      <NickStep />
+    </Suspense>
+  );
 }

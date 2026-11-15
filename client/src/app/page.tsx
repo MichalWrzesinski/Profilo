@@ -1,30 +1,32 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import styles from './page.module.css';
+import type { Metadata } from 'next';
+import { Landing } from '@/features/landing/Landing';
+import { siteUrl } from '@/lib/site';
+
+const TITLE = 'Profilo — Twoja wizytówka w sieci';
+const DESCRIPTION =
+  'Jeden stały adres z opisem, kontaktem i linkami do Twoich profili. Gotowy w 5 minut, bezpłatnie.';
+
+export function generateMetadata(): Metadata {
+  const url = `${siteUrl()}/`;
+  return {
+    title: TITLE,
+    description: DESCRIPTION,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'website',
+      url,
+      siteName: 'Profilo',
+      locale: 'pl_PL',
+      title: TITLE,
+      description: DESCRIPTION,
+    },
+    twitter: { card: 'summary', title: TITLE, description: DESCRIPTION },
+  };
+}
+
+// The address prefix shows the real domain (PUBLIC_BASE_URL, read per request).
+export const dynamic = 'force-dynamic';
 
 export default function Home() {
-  return (
-    <main className={styles.main}>
-      <div>
-        <Image
-          className={styles.logo}
-          src="/logo.svg"
-          alt="Profilo"
-          width={200}
-          height={44}
-          priority
-        />
-        <h1 className={styles.title}>Twoja wizytówka w sieci.</h1>
-        <p className={styles.lead}>Już wkrótce: jeden stały adres z opisem, kontaktem i linkami.</p>
-        <p className={styles.actions}>
-          <Link className="btn btn-primary" href="/rejestracja">
-            Załóż stronę
-          </Link>
-          <Link className="btn btn-secondary" href="/logowanie">
-            Zaloguj się
-          </Link>
-        </p>
-      </div>
-    </main>
-  );
+  return <Landing host={new URL(siteUrl()).host} />;
 }

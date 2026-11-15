@@ -1,0 +1,15 @@
+@media (max-width: 480px) {
+  .bar {
+    gap: var(--space-2);
+  }
+
+  /* The logo stays; the wordmark next to it makes room for both buttons. */
+  .bar :global(.brand) > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

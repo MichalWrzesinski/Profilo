@@ -35,7 +35,8 @@ type FormAlert = { kind: 'email_taken' } | { kind: 'error'; message: string };
 
 const FIELDS = ['displayName', 'email', 'password', 'acceptTerms'] as const;
 
-export function RegisterForm() {
+/** `nick`: the address chosen on the landing, passed on to wizard step 1. */
+export function RegisterForm({ nick }: { nick?: string } = {}) {
   const router = useRouter();
   const { signIn } = useSession();
   const [showPassword, setShowPassword] = useState(false);
@@ -68,7 +69,7 @@ export function RegisterForm() {
     }
     if (data) {
       signIn(data);
-      router.push('/kreator');
+      router.push(nick ? `/kreator?adres=${encodeURIComponent(nick)}` : '/kreator');
       return;
     }
     const problem = error as Problem | undefined;
