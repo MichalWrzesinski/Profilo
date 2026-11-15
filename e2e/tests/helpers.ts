@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { APIRequestContext, Page } from '@playwright/test';
 
 export const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025';
@@ -37,10 +38,48 @@ async function linkFromMail(query: string, pattern: RegExp): Promise<string> {
 /** Password of the throwaway E2E accounts (local stack only, not a secret). */
 export const TEST_PASSWORD = 'zielony-kubek-na-biurku-e2e'; // gitleaks:allow
 
+type Challenge = {
+  algorithm: string;
+  challenge: string;
+  maxnumber: number;
+  salt: string;
+  signature: string;
+};
+
+/** Solve a registration challenge (ALTCHA format) the way the browser's web worker does. */
+export function solveChallenge(challenge: Challenge): string {
+  for (let number = 0; number <= challenge.maxnumber; number += 1) {
+    if (
+      createHash('sha256').update(`${challenge.salt}${number}`).digest('hex') ===
+      challenge.challenge
+    ) {
+      const { algorithm, salt, signature } = challenge;
+      const payload = { algorithm, challenge: challenge.challenge, number, salt, signature };
+      return Buffer.from(JSON.stringify(payload)).toString('base64');
+    }
+  }
+  throw new Error('Unsolvable challenge');
+}
+
+/** POST /accounts, solving the proof-of-work challenge when the API asks for one. */
+export async function registerAccount(request: APIRequestContext, data: Record<string, unknown>) {
+  let response = await request.post('/api/v1/accounts', { data });
+  if (response.status() === 428) {
+    const { challenge } = (await response.json()) as { challenge: Challenge };
+    response = await request.post('/api/v1/accounts', {
+      data: { ...data, challenge: solveChallenge(challenge) },
+    });
+  }
+  return response;
+}
+
 /** A confirmed owner created through the API, for tests that are not about sign-up. */
 export async function owner(request: APIRequestContext, name: string, email: string) {
-  const created = await request.post('/api/v1/accounts', {
-    data: { displayName: name, email, password: TEST_PASSWORD, acceptTerms: true },
+  const created = await registerAccount(request, {
+    displayName: name,
+    email,
+    password: TEST_PASSWORD,
+    acceptTerms: true,
   });
   if (!created.ok()) throw new Error(`Registration failed: ${created.status()}`);
   const { accessToken } = (await created.json()) as { accessToken: string };
