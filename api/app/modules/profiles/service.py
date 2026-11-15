@@ -728,12 +728,20 @@ async def is_image_public(
 QUARANTINE = timedelta(days=30)
 
 
-async def quarantine_nick_of(session: AsyncSession, account_id: uuid.UUID) -> str | None:
+async def quarantine_nick_of(session: AsyncSession, account_id: uuid.UUID) -> uuid.UUID | None:
     """Reserve the deleted account's nick for 30 days, so nobody takes over an address that
-    was shared recently (in the caller's transaction, before the account is deleted)."""
-    nick = await session.scalar(select(Profile.nick).where(Profile.account_id == account_id))
-    if not nick:
+    was shared recently (in the caller's transaction, before the account is deleted).
+    Returns the profile id, for `forget_cards` after the commit."""
+    row = (
+        await session.execute(
+            select(Profile.id, Profile.nick).where(Profile.account_id == account_id)
+        )
+    ).one_or_none()
+    if row is None:  # pragma: no cover - every account gets a profile at registration
         return None
+    profile_id, nick = row
+    if not nick:
+        return profile_id
     expires = datetime.now(UTC) + QUARANTINE
     await session.execute(
         pg_insert(ReservedNick)
@@ -745,4 +753,16 @@ async def quarantine_nick_of(session: AsyncSession, account_id: uuid.UUID) -> st
             where=ReservedNick.reason == "quarantine",
         )
     )
-    return str(nick)
+    return profile_id
+
+
+async def forget_cards(profile_id: uuid.UUID) -> None:
+    """Drop the cached Open Graph cards of a deleted profile (they hold the name and photo).
+    Fails open like the rest of the cache: they would expire within 7 days anyway."""
+    try:
+        client = get_valkey()
+        keys = [key async for key in client.scan_iter(match=f"og:*:{profile_id}:*")]
+        if keys:
+            await client.delete(*keys)
+    except Exception as exc:
+        log.error("og_cache_unavailable", error=type(exc).__name__)

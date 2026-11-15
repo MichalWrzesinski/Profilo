@@ -100,6 +100,56 @@ async def test_change_password_ends_other_sessions_and_keeps_this_one(
     assert [mail["template"] for mail in sent_emails][-1] == "password_changed"
 
 
+async def test_this_browsers_old_access_token_stops_working_too(client: AsyncClient) -> None:
+    session = await owner(client)
+
+    changed = await client.put(
+        PASSWORD, json={"currentPassword": OLD, "newPassword": NEW}, headers=session["headers"]
+    )
+
+    assert changed.status_code == 200
+    assert (await client.get("/api/v1/me", headers=session["headers"])).status_code == 401
+
+
+async def test_change_cancels_open_reset_links(
+    client: AsyncClient, sent_emails: list[dict[str, Any]]
+) -> None:
+    from urllib.parse import parse_qs, urlparse
+
+    session = await owner(client)
+    await client.post("/api/v1/auth/password-resets", json={"email": EMAIL})
+    link = next(mail for mail in sent_emails if mail["template"] == "password_reset")
+    token = parse_qs(urlparse(link["params"]["link"]).query)["token"][0]
+
+    await client.put(
+        PASSWORD, json={"currentPassword": OLD, "newPassword": NEW}, headers=session["headers"]
+    )
+    reset = await client.post(
+        "/api/v1/auth/password-resets/confirm",
+        json={"token": token, "newPassword": "jeszcze-inne-haslo-1"},
+    )
+
+    assert reset.status_code == 410
+
+
+async def test_a_correct_password_resets_the_counter(client: AsyncClient) -> None:
+    session = await owner(client)
+    for _ in range(4):
+        await client.post(
+            DELETION, json={"password": "zle-haslo-zle-haslo"}, headers=session["headers"]
+        )
+    ok = await client.put(
+        PASSWORD, json={"currentPassword": OLD, "newPassword": NEW}, headers=session["headers"]
+    )
+    headers = {"Authorization": f"Bearer {ok.json()['accessToken']}"}
+
+    for _ in range(4):
+        wrong = await client.post(
+            DELETION, json={"password": "zle-haslo-zle-haslo"}, headers=headers
+        )
+        assert wrong.status_code == 403
+
+
 async def test_wrong_current_password_changes_nothing(client: AsyncClient) -> None:
     session = await owner(client)
 
@@ -305,7 +355,30 @@ async def test_files_are_removed_by_the_task(client: AsyncClient) -> None:
     assert await storage.get(f"{key}/256.webp") is None
 
 
-async def test_queue_failure_is_only_logged(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_files_are_removed_at_once_when_the_queue_is_down(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.modules.media import tasks
+
+    session = await published_owner_with_content(client)
+    image_id = session["avatar"].split("/")[2]
+    async with get_sessionmaker()() as db:
+        image = await db.get(Image, image_id)
+        assert image is not None
+        key = image.storage_key
+
+    def broken(**_: object) -> None:
+        raise ConnectionError
+
+    monkeypatch.setattr(tasks.delete_account_files, "apply_async", broken)
+
+    response = await client.post(DELETION, json={"password": OLD}, headers=session["headers"])
+
+    assert response.status_code == 204
+    assert await storage.get(f"{key}/256.webp") is None
+
+
+async def test_a_failing_direct_removal_is_only_logged(monkeypatch: pytest.MonkeyPatch) -> None:
     import uuid
 
     from app.modules.media import tasks
@@ -313,9 +386,40 @@ async def test_queue_failure_is_only_logged(monkeypatch: pytest.MonkeyPatch) -> 
     def broken(**_: object) -> None:
         raise ConnectionError
 
+    async def broken_storage(_: str) -> None:
+        raise OSError
+
     monkeypatch.setattr(tasks.delete_account_files, "apply_async", broken)
+    monkeypatch.setattr(storage, "delete_prefix", broken_storage)
 
     assert await media.delete_files_of(uuid.uuid4()) is False
+
+
+async def test_deletion_drops_the_cached_preview_cards(client: AsyncClient) -> None:
+    from app.core.valkey import get_valkey
+
+    session = await published_owner_with_content(client)
+    assert (await client.get("/api/v1/public/profiles/anna/og-image.jpg")).status_code == 200
+    keys = [key async for key in get_valkey().scan_iter(match="og:*")]
+    assert keys
+
+    await client.post(DELETION, json={"password": OLD}, headers=session["headers"])
+
+    assert [key async for key in get_valkey().scan_iter(match="og:*")] == []
+
+
+async def test_card_purge_fails_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    import uuid
+
+    from app.modules.profiles import service as profiles
+
+    class Down:
+        def scan_iter(self, **_: object) -> Any:
+            raise ConnectionError
+
+    monkeypatch.setattr(profiles, "get_valkey", lambda: Down())
+
+    await profiles.forget_cards(uuid.uuid4())  # no exception
 
 
 async def test_task_refuses_a_path_instead_of_an_account_id() -> None:

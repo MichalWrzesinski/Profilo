@@ -17,7 +17,7 @@ from app.modules.accounts.models import Account, RefreshToken
 from app.modules.accounts.sessions import end_all_sessions
 from app.modules.media import service as media
 from app.modules.notifications import service as notifications
-from app.modules.profiles.service import create_profile_for, quarantine_nick_of
+from app.modules.profiles.service import create_profile_for, forget_cards, quarantine_nick_of
 
 REGISTER_PER_IP = rate_limit.Limit("register_ip", max_hits=10, window_seconds=3600)
 REGISTER_PER_EMAIL = rate_limit.Limit("register_email", max_hits=5, window_seconds=3600)
@@ -254,7 +254,10 @@ async def change_password(
             ],
         )
     account.password_hash = await passwords.hash_password(new)
-    await end_all_sessions(session, account, datetime.now(UTC))
+    now = datetime.now(UTC)
+    await end_all_sessions(session, account, now)
+    # A reset link asked for before the change (maybe by someone else) stops working.
+    await password_reset.use_open_tokens(session, account, now)
     issued = await _new_session(session, account)
     await session.commit()
     log.info("password_changed", account_id=str(account.id))
@@ -269,10 +272,12 @@ async def delete_account(session: AsyncSession, account_id: uuid.UUID, password:
     account = await _locked(session, account_id)
     await _check_password(account, password)
     email = account.email
-    await quarantine_nick_of(session, account.id)
+    profile_id = await quarantine_nick_of(session, account.id)
     await session.delete(account)
     await session.commit()
     log.info("account_deleted", account_id=str(account_id))
     # After the commit; failures are logged, never undo the deletion.
     await media.delete_files_of(account_id)
+    if profile_id:
+        await forget_cards(profile_id)
     await notifications.send("account_deleted", email, {})
