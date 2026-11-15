@@ -89,6 +89,11 @@ Once, on your computer and on the server (example values: `profilo.gitpush.app`,
    ssh -t you@SERVER 'sudo certbot renew --dry-run --cert-name profilo.gitpush.app'
    ```
 8. **First deployment** — Actions → *Deploy staging* → *Run workflow* with the latest `main` SHA (afterwards every merge deploys).
+9. **Mail goes out** — many VPS providers block outgoing mail ports. Check from the server and from a container (changes nothing):
+   ```bash
+   ssh -t you@SERVER 'for p in 465 587; do timeout 6 bash -c "</dev/tcp/SMTP_HOST/$p" && echo "host $p OK" || echo "host $p BLOCKED"; done; sudo docker exec profilo-worker-1 python -c "from app.modules.notifications.mailer import _connect; from app.core.settings import get_settings as g; s=g(); c=_connect(); c.login(s.smtp_username, s.smtp_password.get_secret_value()); print(\"SMTP login OK\"); c.quit()"'
+   ```
+   Both ports blocked on the host while they open from another machine, with an `output` policy `accept` in `sudo nft list ruleset`: the provider blocks them — ask its support to open 465 or 587 (transactional mail through the mailbox, no bulk sending). Until then the site works but no e-mail is delivered (registration confirmation, password reset).
 
 On the server the Compose helper of „Manual operations” works with `/srv/Profilo` in place of `/srv/profilo` and `-f …/compose.proxied.yml` added; `deploy.sh` adds it by itself when `TLS_MODE=proxied`.
 

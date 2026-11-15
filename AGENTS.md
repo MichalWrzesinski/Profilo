@@ -99,4 +99,5 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 - Local ports bind to `127.0.0.1` only (8080 app, 8025 Mailpit).
 - The API trusts `X-Forwarded-*` only from `FORWARDED_ALLOW_IPS` (uvicorn default `127.0.0.1`); staging/production must set it to the Caddy container network, otherwise client IPs (rate limits) are wrong.
 - The API has no access log by design (no visitor IPs in app logs); request ids link Caddy and API logs.
+- Staging VPS (shared host): outgoing SMTP ports 465/587 are blocked by the provider (host and containers time out, local `output` policy accepts) — mail from staging fails until the provider opens a port; check with runbook „Shared host” step 9 before blaming the mailer.
 - Compose named volumes `client_node_modules` and `client_next` shadow the bind mount; after changing `package.json` run `docker compose build client` and `docker compose up -d --renew-anon-volumes client` (or `make down` + remove the volume).
