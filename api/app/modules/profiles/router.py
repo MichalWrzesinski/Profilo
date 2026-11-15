@@ -22,6 +22,7 @@ from app.modules.profiles.schemas import (
     OwnerProfileOut,
     PublicProfileOut,
     PublishRequest,
+    SitemapOut,
 )
 
 router = APIRouter(prefix="/api/v1")
@@ -84,6 +85,34 @@ async def get_public_profile(nick: str, session: DbSession, response: Response) 
     # PUB-BR-6/PRF-BR-17: unpublishing must take effect on the next request.
     response.headers["Cache-Control"] = "no-store"
     return await service.get_public_profile(session, nick[:60])
+
+
+@router.get(
+    "/public/profiles/{nick}/og-image.jpg",
+    tags=["public"],
+    response_class=Response,
+    responses={200: {"content": {"image/jpeg": {}}}},
+)
+async def get_og_image(nick: str, session: DbSession) -> Response:
+    """Link preview card (PUB-BR-7). Cached for a day like the page images, so unpublishing
+    stops it soon; the page links it with the publication as version."""
+    data = await service.og_card(session, nick[:60])
+    return Response(
+        data,
+        media_type="image/jpeg",
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "Content-Disposition": "inline",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/public/sitemap", tags=["public"])
+async def get_sitemap(session: DbSession, response: Response) -> SitemapOut:
+    """Published page addresses for `/sitemap.xml`, rendered by the client (PUB-BR-7)."""
+    response.headers["Cache-Control"] = "no-store"
+    return await service.sitemap(session)
 
 
 @router.post("/me/profile/links", tags=["links"], status_code=status.HTTP_201_CREATED)
