@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { router } from '@/test/navigation';
+import { router, searchParams } from '@/test/navigation';
 import { json, mockFetch } from '@/test/fetch';
 import { NickStep } from './NickStep';
 
@@ -93,9 +93,35 @@ const calls = (fetch: ReturnType<typeof mockFetch>, method: string, path: string
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  searchParams.current = new URLSearchParams();
 });
 
 describe('NickStep', () => {
+  it('checks the address chosen on the landing at once', async () => {
+    searchParams.current = new URLSearchParams({ adres: 'Anna' });
+    const { fetch } = setup();
+
+    expect(await screen.findByText(/Adres wolny/)).toBeInTheDocument();
+    expect(nickInput()).toHaveValue('anna');
+    expect(calls(fetch, 'GET', '/api/v1/nicks/suggestion')).toHaveLength(0);
+  });
+
+  it('shows a taken landing address with suggestions', async () => {
+    searchParams.current = new URLSearchParams({ adres: 'anna' });
+    const { user } = setup({ taken: ['anna'] });
+
+    expect(await screen.findByText(/Ten adres jest już zajęty/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'anna-2' }));
+    expect(nickInput()).toHaveValue('anna-2');
+  });
+
+  it('marks a landing address that breaks the rules', async () => {
+    searchParams.current = new URLSearchParams({ adres: 'a' });
+    setup();
+
+    expect(await screen.findByDisplayValue('a')).toHaveAttribute('aria-invalid', 'true');
+  });
+
   it('proposes a nick from the display name and saves it', async () => {
     const { fetch, user } = setup();
 

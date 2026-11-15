@@ -23,9 +23,10 @@
 		X-Robots-Tag "{$ROBOTS_TAG:noindex, nofollow}"
 		-Server
 	}
-	# Pages cannot be framed, except the editor preview (/podglad) by the same origin.
-	@framable path /podglad
-	@not_framable not path /podglad
+	# Pages cannot be framed, except the editor preview (/podglad) and the landing's example
+	# page (/przyklad), both by the same origin only.
+	@framable path /podglad /przyklad
+	@not_framable not path /podglad /przyklad
 	header @not_framable Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 	header @framable Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
 }
@@ -55,7 +56,12 @@
 	}
 
 	log {
-		output stdout
+		# Access log with IP addresses: kept 14 days (privacy policy), in the caddy_data volume.
+		output file /data/logs/access.log {
+			roll_interval 24h
+			roll_size 50MiB
+			roll_keep_for 336h
+		}
 		# One-time tokens in links (/potwierdz-email, /nowe-haslo) never reach the logs.
 		format filter {
 			wrap json

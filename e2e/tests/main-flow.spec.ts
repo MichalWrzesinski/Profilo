@@ -24,19 +24,28 @@ async function pageHtml(page: Page | ReturnType<Page['frameLocator']>) {
 }
 
 test('a new owner publishes a page that looks exactly like the preview', async ({ page }) => {
+  // The landing: „Zarezerwuj adres” opens registration with the chosen address (TASK-019).
+  await open(page, '/');
+  await expect(
+    page.frameLocator('iframe[title="Przykładowa strona w Profilo"]').locator('h1'),
+  ).toHaveText('Anna Wiśniewska');
+  await page.getByRole('textbox', { name: 'Wybrany adres strony' }).fill(`Ewa Testowa ${run}`);
+  await page.getByRole('button', { name: 'Zarezerwuj adres' }).click();
+  await expect(page).toHaveURL(new RegExp(`/rejestracja\\?adres=Ewa\\+Testowa\\+${run}$`));
+  await page.locator('html[data-hydrated]').waitFor();
+
   // Registration lands in the wizard.
-  await open(page, '/rejestracja');
   await page.getByLabel('Imię i nazwisko lub pseudonim').fill(name);
   await page.getByLabel('E-mail do logowania').fill(email);
   await page.getByLabel('Hasło', { exact: true }).fill(TEST_PASSWORD);
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Załóż konto' }).click();
-  await expect(page).toHaveURL(/\/kreator$/);
+  await expect(page).toHaveURL(new RegExp(`/kreator\\?adres=ewa-testowa-${run}$`));
 
-  // Step 1: the proposed nick is free.
+  // Step 1: the address from the landing, checked and free.
   await expect(page.getByText(/Adres wolny/)).toBeVisible();
   const nick = await page.getByLabel('Adres Twojej strony').inputValue();
-  expect(nick).toMatch(/^ewa-testowa-/);
+  expect(nick).toBe(`ewa-testowa-${run}`);
   await page.getByRole('button', { name: 'Dalej →' }).click();
 
   // Step 2: layout and colour.

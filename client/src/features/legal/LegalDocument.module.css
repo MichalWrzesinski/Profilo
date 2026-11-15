@@ -1,0 +1,62 @@
+.page {
+  padding: var(--space-10) var(--space-5) var(--space-12);
+}
+
+.doc {
+  max-width: 760px;
+  margin: 0 auto;
+  line-height: var(--leading-normal);
+}
+
+.doc h1 {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-2);
+}
+
+.doc h2 {
+  font-size: var(--text-lg);
+  margin: var(--space-8) 0 var(--space-3);
+}
+
+.doc p,
+.doc ul,
+.doc ol {
+  margin-bottom: var(--space-3);
+}
+
+.doc ul,
+.doc ol {
+  padding-left: var(--space-6);
+}
+
+.doc li {
+  margin-bottom: var(--space-1);
+}
+
+.doc table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.doc th,
+.doc td {
+  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.placeholder {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px dashed currentColor;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+  font-weight: var(--font-weight-semibold);
+}

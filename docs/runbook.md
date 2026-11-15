@@ -56,7 +56,7 @@ Helper for the commands below: `dc() { set -a; . /srv/profilo/.env; set +a; t=$(
 |---|---|
 | Current release | `readlink /srv/profilo/current` |
 | Status | `dc ps` |
-| Logs | `dc logs -f --tail=100 api` |
+| Logs | `dc logs -f --tail=100 api`; the Caddy access log (with IPs, kept 14 days) is a file: `dc exec caddy tail -f /data/logs/access.log` |
 | Redeploy or roll back to a commit | GitHub Actions → *Deploy staging* → *Run workflow* with the SHA (any commit on `main` whose images exist) |
 | Restart | `dc restart` |
 | Before restoring the database or the media volume | `dc stop beat` (no cleanup job runs against a half-restored database; the orphan cleanup also stops by itself when most files look orphaned, log `orphan_cleanup_aborted`); `dc start beat` once the restore is checked |

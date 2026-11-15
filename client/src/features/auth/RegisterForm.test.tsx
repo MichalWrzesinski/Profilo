@@ -44,6 +44,21 @@ afterEach(() => {
 });
 
 describe('RegisterForm', () => {
+  it('takes the address chosen on the landing to the wizard', async () => {
+    mockFetch(() => json(201, SESSION));
+    render(
+      <SessionProvider>
+        <RegisterForm nick="anna-nowak" />
+      </SessionProvider>,
+    );
+    const user = userEvent.setup();
+    await fill(user);
+
+    await user.click(screen.getByRole('button', { name: 'Załóż konto' }));
+
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kreator?adres=anna-nowak'));
+  });
+
   it('solves the challenge after a 428 and sends the form again', async () => {
     let finish: (solution: string) => void = () => undefined;
     solveInBackground.mockReturnValue(new Promise<string>((resolve) => (finish = resolve)));
