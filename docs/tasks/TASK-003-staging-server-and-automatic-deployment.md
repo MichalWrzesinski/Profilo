@@ -1,7 +1,7 @@
 ---
 id: TASK-003
 title: Staging server and automatic deployment
-status: BLOCKED
+status: DONE
 priority: highest
 iteration: ITER-00
 depends_on: [TASK-002]
@@ -41,7 +41,14 @@ Needs from the user before it can be completed: Hetzner account with the CX23 se
 
 ## Report
 
-**Implemented, waiting for the server setup.** The staging server is a VPS shared with other projects (Debian 13 Minimal, nginx with certbot on 80/443, Docker 29): a second mode `TLS_MODE=proxied` was added — Caddy on `127.0.0.1:<port>` without TLS behind the host's nginx (`compose.proxied.yml`, `nginx-profilo.conf`), `setup-shared-host.sh` instead of `bootstrap.sh` (deploy user, app directory and `.env` only; no firewall, SSH or package changes), configurable Docker subnet, deploy user, app directory and SMTP server (any mailbox; port 465 supported). Verified locally with the real `deploy.sh` on production images and nginx with this config in front: HTTP → 301 HTTPS, 200 with HSTS/CSP/nosniff/X-Robots-Tag, Caddy published only on 127.0.0.1, the visitor's IP reaches the API's rate limits and a spoofed `X-Forwarded-For` is ignored. Steps for the user: runbook „Shared host”. Security review: 2 rounds — the setup never takes over an existing user or a non-empty directory, the deploy key is `restrict`ed, image pruning only touches Profilo's images, SMTP values are quoted, subnet/route/project-name collisions are refused, and the nginx switch restores the old site file by itself when the test or reload fails; the setup script was exercised in a throwaway container (first run, rerun, refusals).
+**Done — live at https://profilo.gitpush.app (2026-11-15).** The shared VPS was prepared with `setup-shared-host.sh` (user `profilo_deploy`, `/srv/Profilo`), nginx switched to `nginx-profilo.conf` (`nginx -t` and reload passed, `certbot renew --dry-run` run by the user), secrets and variables set. Verified on the real server:
+- Scenario 1: *Deploy staging* for `dda1f35` (run 43754682028) — migrations, healthy stack (7 containers), internal and external smoke tests green. The first run (43754068036) failed only in the external smoke test because nginx still served the old site; that failure was visible in GitHub Actions while the stack itself was healthy. The automatic path (after CI on main) runs with the merge of this report.
+- Scenario 2: not provoked on the shared server (a deliberately broken release would take staging down for about a minute); rollback verified earlier on the VM (below).
+- Scenario 3: `http://` → 301 `https://`; HSTS, CSP, nosniff, Referrer-Policy, `X-Robots-Tag: noindex, nofollow`; `/ready` 200.
+- Client IP: the Caddy access log shows the visitor's real address, a spoofed `X-Forwarded-For: 1.2.3.4` is ignored.
+- **Open: e-mail.** The provider blocks outgoing ports 465 and 587 (from the host and the containers; the server's own firewall accepts all output; the same ports open from another network). Staging works without mail until the provider opens a port (runbook „Shared host” step 9). Sender is temporarily `tabularius@webhome.pl`; production needs its own address (TASK-021).
+
+**Earlier: implemented, waiting for the server setup.** The staging server is a VPS shared with other projects (Debian 13 Minimal, nginx with certbot on 80/443, Docker 29): a second mode `TLS_MODE=proxied` was added — Caddy on `127.0.0.1:<port>` without TLS behind the host's nginx (`compose.proxied.yml`, `nginx-profilo.conf`), `setup-shared-host.sh` instead of `bootstrap.sh` (deploy user, app directory and `.env` only; no firewall, SSH or package changes), configurable Docker subnet, deploy user, app directory and SMTP server (any mailbox; port 465 supported). Verified locally with the real `deploy.sh` on production images and nginx with this config in front: HTTP → 301 HTTPS, 200 with HSTS/CSP/nosniff/X-Robots-Tag, Caddy published only on 127.0.0.1, the visitor's IP reaches the API's rate limits and a spoofed `X-Forwarded-For` is ignored. Steps for the user: runbook „Shared host”. Security review: 2 rounds — the setup never takes over an existing user or a non-empty directory, the deploy key is `restrict`ed, image pruning only touches Profilo's images, SMTP values are quoted, subnet/route/project-name collisions are refused, and the nginx switch restores the old site file by itself when the test or reload fails; the setup script was exercised in a throwaway container (first run, rerun, refusals).
 
 **Earlier: implemented, blocked on access.** Waiting for the user: Hetzner CX23 server, staging DNS record, repository secrets `STAGING_SSH_HOST`, `STAGING_SSH_KEY`, `STAGING_SSH_KNOWN_HOSTS` and variable `STAGING_DOMAIN` (steps in `docs/runbook.md`). After that: run the workflow once, confirm the scenarios on the real server, set `DONE`.
 
