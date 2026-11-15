@@ -13,6 +13,8 @@ const params = (nick: string) => ({ params: Promise.resolve({ nick }) });
 
 afterEach(() => getPublicProfile.mockReset());
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe('/user/[nick]', () => {
   it('renders the published page with its structured data', async () => {
     getPublicProfile.mockResolvedValue(publicProfile());
@@ -34,7 +36,6 @@ describe('/user/[nick]', () => {
     expect(screen.getByRole('link', { name: 'Zgłoś nadużycie' }).getAttribute('href')).toMatch(
       /^mailto:zgloszenia@operator\.pl/,
     );
-    vi.unstubAllEnvs();
   });
 
   it('shows the 404 page for a hidden or unknown nick', async () => {

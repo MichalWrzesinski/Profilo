@@ -18,7 +18,7 @@ describe('PublicPage', () => {
     expect(screen.getByRole('link', { name: 'Utworzono w Profilo' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Zgłoś nadużycie' })).toHaveAttribute(
       'href',
-      'mailto:naduzycia@profilo.pl?subject=Zg%C5%82oszenie%20nadu%C5%BCycia%3A%20https%3A%2F%2Fprofilo.pl%2Fuser%2Fanna-wisniewska',
+      'mailto:naduzycia@profilo.invalid?subject=Zg%C5%82oszenie%20nadu%C5%BCycia%3A%20https%3A%2F%2Fprofilo.pl%2Fuser%2Fanna-wisniewska',
     );
     expect(container.firstElementChild?.getAttribute('style')).toContain(
       '--page-accent: var(--page-accent-morski)',

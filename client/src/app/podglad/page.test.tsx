@@ -8,6 +8,8 @@ function send(data: unknown, origin = window.location.origin, source: unknown = 
   });
 }
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe('/podglad', () => {
   it('asks for the draft and renders the public page component', () => {
     const post = vi.spyOn(window.parent, 'postMessage');
@@ -44,5 +46,15 @@ describe('/podglad', () => {
 
     expect(event.defaultPrevented).toBe(true);
     expect(plain).toBe(true);
+  });
+
+  it('uses the operator address of the public page', () => {
+    vi.stubEnv('ABUSE_EMAIL', 'zgloszenia@operator.pl');
+    render(<PreviewPage />);
+    send({ type: 'profilo-preview', profile: publicProfile() });
+
+    expect(screen.getByRole('link', { name: 'Zgłoś nadużycie' }).getAttribute('href')).toMatch(
+      /^mailto:zgloszenia@operator\.pl/,
+    );
   });
 });

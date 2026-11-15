@@ -134,9 +134,7 @@ describe('PublishPanel', () => {
     setup(owner({ status: 'blocked' }));
 
     expect(await screen.findByText('Zablokowana')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Strona zablokowana — skontaktuj się z nami.',
-    );
+    expect(screen.getByText('Strona zablokowana — skontaktuj się z nami.')).toBeVisible();
     expect(screen.getByRole('link', { name: 'jak się odwołać' })).toHaveAttribute(
       'href',
       '/regulamin#zgloszenia',

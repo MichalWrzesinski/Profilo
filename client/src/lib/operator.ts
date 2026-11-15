@@ -10,8 +10,12 @@ export const OPERATOR = {
   contactEmail: null as string | null,
 };
 
-/** Shown while ABUSE_EMAIL is not configured (local stack, tests). */
-export const PLACEHOLDER_ABUSE_EMAIL = 'naduzycia@profilo.pl';
+/** Shown while ABUSE_EMAIL is not configured: a non-deliverable address (RFC 2606), so
+ * reports with personal data never reach whoever owns a look-alike domain. */
+export const PLACEHOLDER_ABUSE_EMAIL = 'naduzycia@profilo.invalid';
+
+// One plain address: nothing that could add mailto headers (`?`, `&`, `#`) or spaces.
+const EMAIL = /^[^@\s?#&]+@[^@\s?#&]+\.[^@\s?#&]+$/;
 
 /**
  * Operator address for abuse reports (PUB-BR-10) from the ABUSE_EMAIL setting, read on the
@@ -19,7 +23,7 @@ export const PLACEHOLDER_ABUSE_EMAIL = 'naduzycia@profilo.pl';
  */
 export function configuredAbuseEmail(): string | null {
   const value = process.env.ABUSE_EMAIL?.trim();
-  return value ? value : null;
+  return value && EMAIL.test(value) ? value : null;
 }
 
 /** The address for the „Zgłoś nadużycie” link: the configured one or the placeholder. */

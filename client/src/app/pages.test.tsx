@@ -14,6 +14,8 @@ import ExamplePage from './przyklad/page';
 import TermsPage from './regulamin/page';
 import RegisterPage from './rejestracja/page';
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe('public pages', () => {
   it.each([
     [TermsPage, 'Regulamin', 'zgloszenia'],
@@ -32,7 +34,6 @@ describe('public pages', () => {
     render(<TermsPage />);
     expect(screen.getByText(/zgloszenia@operator\.pl/)).toBeInTheDocument();
     expect(screen.queryByText(/\[do uzupełnienia: adres do zgłoszeń nadużyć\]/)).toBeNull();
-    vi.unstubAllEnvs();
   });
 
   it('names the processors and the 30-day backups in the privacy policy', () => {

@@ -9,7 +9,7 @@ import type { PublicProfile } from '@/lib/publicProfile';
  * The draft rendered by the same component as /user/{nick}, inside the editor's frame.
  * Content comes from the parent window (same origin only); links do not navigate.
  */
-export default function PreviewPage() {
+export function PreviewFrame({ abuseEmail }: { abuseEmail: string }) {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
 
   useEffect(() => {
@@ -36,5 +36,5 @@ export default function PreviewPage() {
       </p>
     );
   }
-  return <PublicPage profile={profile} />;
+  return <PublicPage profile={profile} abuseEmail={abuseEmail} />;
 }

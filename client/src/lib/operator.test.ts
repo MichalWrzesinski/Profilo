@@ -15,3 +15,9 @@ it('falls back to the placeholder', () => {
   expect(configuredAbuseEmail()).toBeNull();
   expect(abuseEmail()).toBe(PLACEHOLDER_ABUSE_EMAIL);
 });
+
+it.each(['a@b.pl?bcc=x@y.pl', 'nie-adres', 'a b@c.pl'])('ignores an odd value %j', (value) => {
+  vi.stubEnv('ABUSE_EMAIL', value);
+
+  expect(configuredAbuseEmail()).toBeNull();
+});
