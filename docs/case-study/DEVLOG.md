@@ -28,6 +28,7 @@ Każdy wpis ma te części:
     - TASK-015 (blocker): wyścig odświeżania sesji z resetem; skradziona sesja mogła przetrwać reset. Poprawka: ustalona kolejność blokad (konto, potem token) i test współbieżności, który bez poprawki nie przechodzi.
     - TASK-016: zakleszczenie przy kliknięciu linku z e-maila w trakcie usuwania konta; karty podglądu zostawały w cache 7 dni; pliki zostawały, gdy kolejka nie działała; podwójne wysłanie okna usuwania.
     - TASK-017: przy pustej lub częściowo odtworzonej bazie zadanie usunęłoby wszystkie zdjęcia. Dodałem bezpiecznik (stop powyżej 20% „sierot”, limit 500 na przebieg) i wpis w runbooku.
+    - TASK-018 (blocker): równoległe żądania omijały wyzwanie, bo licznik był odczytywany przed zwiększeniem. Do tego ważność wyzwania dało się przedłużyć, przesuwając cyfry z liczby do soli, a IPv6 nie był liczony według sieci /64.
     - Każdą recenzję zamykały 2 rundy.
   - **Środowisko:**
     - worker Celery nie przeładowuje kodu (brak nowego szablonu e-maila, `KeyError`);
@@ -45,7 +46,7 @@ Każdy wpis ma te części:
   - **Nadmiarowe prośby o reset dla jednego adresu są cicho pomijane** zamiast 429, żeby nie zdradzać, że ktoś pytał o ten adres.
   - **Kwarantanna nicka przy każdym usunięciu konta** (ACC-BR-10). Przy automatycznym usunięciu niepotwierdzonego konta nick zwalnia się od razu (ACC-BR-6).
   - **Blokada zadań w Valkey przy niedostępnym Valkey pomija przebieg** zamiast go wykonać, bo zadania usuwają dane.
-  - **ALTCHA bez bibliotek** (kilkadziesiąt linii i brak zależności, które musiałyby mieć 2 tygodnie). Limit rejestracji na IP podniesiony z 10 do 20 na godzinę, bo od 4. próby i tak obowiązuje proof-of-work.
+  - **ALTCHA bez bibliotek** (kilkadziesiąt linii i brak zależności, które musiałyby mieć 2 tygodnie). Pierwsza wersja podniosła limit rejestracji na IP z 10 do 20 na godzinę. Recenzja pokazała, że bot z natywnym kodem rozwiązuje wyzwanie w milisekundach, więc limit wrócił do 10, a proof-of-work tylko podnosi koszt.
   - **Poprawkę przewijania edytora przy 320 px wydzieliłem** do osobnej sesji zamiast robić ją w ramach zadania.
 - **Udział człowieka:**
   - Polecenia rozpoczęcia kolejnych zadań.
@@ -64,7 +65,8 @@ Każdy wpis ma te części:
   - Kontrakt sprzeczny ze scenariuszami: 204 przy resecie i zmianie hasła, a jednocześnie wymóg „zalogowany”.
   - Standardy nie mówią o kolejności blokad, ujawnianiu kont przez czas odpowiedzi ani o bezpiecznikach przy masowym usuwaniu danych; wszystko wyszło dopiero w recenzji.
   - Środowisko E2E na zwykłym HTTP różni się od produkcji (brak bezpiecznego kontekstu).
-  - Limit rejestracji na IP nie uwzględniał zestawu E2E.
+  - Limit rejestracji na IP nie uwzględniał zestawu E2E (budżet 9 z 10 rejestracji na godzinę).
+  - Pomiary kosztu proof-of-work były niespójne (`crypto.subtle` z jednym `await` na liczbę jest wolniejszy niż synchroniczne SHA-256 w JS). Recenzja to wychwyciła.
 - **Rola:**
   - Dev: wyścigi, testy, środowisko.
   - QA/Security: recenzje.
