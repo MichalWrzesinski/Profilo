@@ -3,8 +3,9 @@
 import asyncio
 import uuid
 
+from app.core import jobs
 from app.core.logging import log
-from app.modules.media import storage
+from app.modules.media import service, storage
 from app.worker import celery_app
 
 
@@ -20,3 +21,9 @@ def delete_account_files(account_id: str) -> None:
     prefix = str(uuid.UUID(account_id))  # never a path fragment from elsewhere
     asyncio.run(storage.delete_prefix(prefix))
     log.info("account_files_deleted", account_id=prefix)
+
+
+@celery_app.task(name="media.remove_orphaned_files")  # type: ignore[untyped-decorator]
+def remove_orphaned_files() -> None:
+    """Hourly (Celery Beat)."""
+    jobs.run("remove_orphaned_files", service.remove_orphaned_files)

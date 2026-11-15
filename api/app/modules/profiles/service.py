@@ -11,12 +11,13 @@ from urllib.parse import urlsplit
 
 import phonenumbers
 from email_validator import EmailNotValidError, validate_email
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import rate_limit
+from app.core.db import get_sessionmaker
 from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
@@ -766,3 +767,26 @@ async def forget_cards(profile_id: uuid.UUID) -> None:
             await client.delete(*keys)
     except Exception as exc:
         log.error("og_cache_unavailable", error=type(exc).__name__)
+
+
+async def profile_ids_of(session: AsyncSession, account_ids: list[uuid.UUID]) -> list[uuid.UUID]:
+    return list(
+        await session.scalars(select(Profile.id).where(Profile.account_id.in_(account_ids)))
+    )
+
+
+async def release_quarantined_nicks(now: datetime | None = None) -> dict[str, int]:
+    """Remove quarantines older than 30 days (ACC-BR-10). Nick checks ignore expired rows
+    already, so this only keeps the table small; running it twice changes nothing."""
+    async with get_sessionmaker()() as session:
+        result = await session.execute(
+            delete(ReservedNick)
+            .where(
+                ReservedNick.reason == "quarantine",
+                ReservedNick.expires_at <= (now or datetime.now(UTC)),
+            )
+            .returning(ReservedNick.nick)
+        )
+        released = len(result.all())
+        await session.commit()
+    return {"released": released}

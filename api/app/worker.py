@@ -1,6 +1,7 @@
 """Celery application: `celery -A app.worker worker` and `celery -A app.worker beat`."""
 
 from celery import Celery
+from celery.schedules import crontab
 
 from app.core.logging import configure_logging
 from app.core.settings import get_settings
@@ -21,7 +22,24 @@ celery_app.conf.update(
     # Publishing from the API must fail fast when Valkey is down (notifications.send).
     broker_transport_options={"socket_connect_timeout": 2, "socket_timeout": 2},
     timezone="UTC",
-    beat_schedule={},
+    # Cleanup jobs (TASK-017), hourly at different minutes; each takes a Valkey lock.
+    beat_schedule={
+        "delete-unconfirmed-accounts": {
+            "task": "accounts.delete_unconfirmed",
+            "schedule": crontab(minute=5),
+            "options": {"expires": 50 * 60},  # after an outage, no backlog of hourly runs
+        },
+        "release-quarantined-nicks": {
+            "task": "profiles.release_quarantined_nicks",
+            "schedule": crontab(minute=15),
+            "options": {"expires": 50 * 60},  # after an outage, no backlog of hourly runs
+        },
+        "remove-orphaned-files": {
+            "task": "media.remove_orphaned_files",
+            "schedule": crontab(minute=25),
+            "options": {"expires": 50 * 60},  # after an outage, no backlog of hourly runs
+        },
+    },
 )
 celery_app.autodiscover_tasks(
     [f"app.modules.{name}" for name in ("accounts", "profiles", "media", "notifications", "qr")]
