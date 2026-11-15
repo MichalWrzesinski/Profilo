@@ -53,9 +53,12 @@ done < <(docker network ls --format '{{.Name}}')
 if ip -4 route | grep -v "br-" | grep -q "^$NET16"; then
   fail "a host route already uses ${NET16}0.0/16 (ip -4 route); pass another subnet as the 7th argument"
 fi
-if docker ps -a --filter label=com.docker.compose.project=profilo --format '{{.Names}}' | grep -vq '^profilo-'; then
-  fail "another Compose project is already called 'profilo' on this server"
-fi
+# Containers of a Compose project called "profilo" that does not run from this app directory.
+while read -r dir; do
+  [[ -z "$dir" || "$dir" == "$APP_DIR/releases/"* ]] && continue
+  fail "another Compose project is already called 'profilo' on this server ($dir)"
+done < <(docker ps -a --filter label=com.docker.compose.project=profilo \
+  --format '{{.Label "com.docker.compose.project.working_dir"}}' | sort -u)
 if ss -Htln "sport = :$PROXY_PORT" | grep -q .; then
   if ! docker ps --format '{{.Names}} {{.Ports}}' | grep -q "^profilo-caddy.*127.0.0.1:$PROXY_PORT->"; then
     fail "port $PROXY_PORT is already used on this server; pass another port as the 6th argument"
