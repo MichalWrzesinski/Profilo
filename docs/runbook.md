@@ -41,21 +41,26 @@ Once, on your computer and on the server (example values: `profilo.gitpush.app`,
    ```bash
    ssh-keygen -t ed25519 -N "" -C "github-actions-staging" -f profilo-staging-deploy
    ```
-2. **Prepare the server** — creates the deploy user (key only, docker group), `/srv/Profilo` and its `.env`; changes nothing else:
+2. **Look before changing anything** (as you, on the server) — the current site file, where the temporary page lives and how certbot renews the certificate:
+   ```bash
+   readlink -f /etc/nginx/sites-enabled/Profilo; grep -E 'root|ssl_certificate' /etc/nginx/sites-enabled/Profilo
+   sudo grep -E 'authenticator|webroot' /etc/letsencrypt/renewal/profilo.gitpush.app.conf
+   ls /etc/letsencrypt/options-ssl-nginx.conf /etc/letsencrypt/ssl-dhparams.pem; ls -A /srv/Profilo
+   ```
+   - If `/srv/Profilo` holds the temporary page, move it away first (e.g. `sudo mv /srv/Profilo /srv/Profilo-temp`); the setup refuses a directory with other files. The domain shows an nginx error until the first deployment (step 8).
+   - If certbot uses `webroot`, put its path into the `location /.well-known/acme-challenge/` block of `nginx-profilo.conf` instead of `/var/www/html` (with `authenticator = nginx` nothing needs changing).
+   - If one of the two `/etc/letsencrypt/…` files is missing, remove its line from `nginx-profilo.conf`.
+3. **Prepare the server** — creates the deploy user (key only, `restrict`ed: no tunnels), `/srv/Profilo` and its `.env`; changes nothing else:
    ```bash
    scp infra/server/setup-shared-host.sh infra/server/nginx-profilo.conf you@SERVER:/tmp/
    ssh -t you@SERVER "sudo bash /tmp/setup-shared-host.sh staging profilo.gitpush.app \"$(cat profilo-staging-deploy.pub)\" /srv/Profilo profilo_deploy 8090"
    ```
-   It stops with a message if port 8090 or the Docker subnet `172.28.0.0/24` is already taken (pass other values as the 6th and 7th argument).
-3. **Check the key login** (an `AllowUsers` line in `/etc/ssh/sshd_config` may need the new user):
+   It stops with a message if the user already exists (and was not created by it), if port 8090 or the Docker subnet `172.28.0.0/16` is taken, or if another Compose project is called `profilo` (pass other values as the 6th and 7th argument).
+   **The `profilo_deploy` user can run Docker, which is root-equivalent on the whole server, including the other projects.** Its key lives only in the GitHub secret; anyone who can change the deploy workflow on GitHub can act as it.
+4. **Check the key login** (an `AllowUsers` line in `/etc/ssh/sshd_config` may need the new user):
    ```bash
    ssh -i profilo-staging-deploy profilo_deploy@SERVER 'docker ps --format "{{.Names}}" | head -3'
    ```
-4. **nginx** — keep the old site file and put Profilo's in its place (the certificate paths are certbot's):
-   ```bash
-   ssh -t you@SERVER 'sudo cp /etc/nginx/sites-available/Profilo /etc/nginx/sites-available/Profilo.before-profilo && sudo cp /tmp/nginx-profilo.conf /etc/nginx/sites-available/Profilo && sudo nginx -t && sudo systemctl reload nginx'
-   ```
-   Until the first deployment the domain answers 502. To go back: copy `Profilo.before-profilo` over `Profilo` and reload.
 5. **GitHub secrets and variables** (from the repository folder on your computer, `gh` logged in):
    ```bash
    gh secret set STAGING_SSH_HOST --body "SERVER"
@@ -72,7 +77,16 @@ Once, on your computer and on the server (example values: `profilo.gitpush.app`,
    gh secret set STAGING_SMTP_PASSWORD                            # asks for the value
    ```
    Compare the `ssh-keyscan` fingerprint with the one the server shows (`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`), then delete `profilo-staging-deploy` from your computer. The sender in `STAGING_MAIL_FROM` must be an address that mailbox may send as, or mail lands in spam.
-6. **First deployment** — Actions → *Deploy staging* → *Run workflow* with the latest `main` SHA (afterwards every merge deploys).
+6. **nginx** — save the old site file and switch; if the test fails, the old file comes back on its own, so a broken config never stays (a failed reload, e.g. at the next certificate renewal, would stop every site on the server):
+   ```bash
+   ssh -t you@SERVER 'site=$(readlink -f /etc/nginx/sites-enabled/Profilo) && sudo cp "$site" /root/Profilo.nginx.before-profilo && sudo cp /tmp/nginx-profilo.conf "$site" && { sudo nginx -t && sudo systemctl reload nginx; } || { sudo cp /root/Profilo.nginx.before-profilo "$site" && sudo nginx -t && echo "nginx config restored"; }'
+   ```
+   Until the first deployment the domain answers 502. To go back later: copy `/root/Profilo.nginx.before-profilo` over the site file, `sudo nginx -t`, reload.
+7. **Certificate renewal still works** with the new site file:
+   ```bash
+   ssh -t you@SERVER 'sudo certbot renew --dry-run --cert-name profilo.gitpush.app'
+   ```
+8. **First deployment** — Actions → *Deploy staging* → *Run workflow* with the latest `main` SHA (afterwards every merge deploys).
 
 On the server the Compose helper of „Manual operations” works with `/srv/Profilo` in place of `/srv/profilo` and `-f …/compose.proxied.yml` added; `deploy.sh` adds it by itself when `TLS_MODE=proxied`.
 
