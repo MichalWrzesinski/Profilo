@@ -49,6 +49,8 @@ Acceptance criteria:
 - S3 expired link — met: used, expired (> 1 h), replaced, unknown and confirmation-purpose tokens → 410 (API test); the page shows „Link wygasł” with „Wyślij nowy link” (E2E reuses the link; unit tests).
 - S4 too many requests — met: the 6th request from one IP within an hour → 429 with `Retry-After` (API test). Extra requests for one address (more than 3 per hour) are dropped silently instead, so a 429 cannot tell anyone that the address was asked for.
 
-Checks: api 340 tests, 99 %; client 392 tests, 95.8 % branches; contract 26 paths; E2E 8 tests pass locally. E-mails checked in Mailpit.
+Checks: api 343 tests, 99 %; client 393 tests, 95.8 % branches; contract 26 paths; E2E 8 tests pass locally. E-mails checked in Mailpit.
 
 Decisions: the reset logs the browser in (scenario 1) and therefore returns a session, not 204; an unconfirmed e-mail becomes confirmed by the reset; the per-address limit drops silently. Known limit: a request already counted against the per-IP limit is still refused for an hour even if it was for one's own address (shared NAT); 5 per hour is the task's number.
+
+Security review round 1 fixes: a refresh rotating at the moment of the reset kept a token the revocation could not see (READ COMMITTED) — login and refresh now lock the account `FOR SHARE` before touching refresh tokens and the reset holds it `FOR UPDATE`; a concurrency test (a refresh paused while holding its locks, the reset running meanwhile) fails without the fix; `password_changed_at` is taken after the password hash is computed; Caddy redacts `token` in its access log (also for `/potwierdz-email`); `/nowe-haslo` removes the token from the address bar and history after reading it; the per-IP limit counts an IPv6 /64 as one address and reset e-mails have a daily cap of 150 (quota shared with confirmations).
