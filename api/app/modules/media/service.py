@@ -145,3 +145,25 @@ async def delete_files(keys: list[str]) -> None:
 
 def too_large() -> ProblemError:
     return _too_large()
+
+
+async def delete_files_of(account_id: uuid.UUID) -> bool:
+    """Queue the removal of every image file of a deleted account (keys start with the
+    account id). Returns False and logs when the queue is unavailable: the rows are gone,
+    so the orphaned files are left to the cleanup job (TASK-017)."""
+
+    def enqueue() -> None:
+        from app.modules.media.tasks import delete_account_files
+
+        delete_account_files.apply_async(
+            kwargs={"account_id": str(account_id)},
+            retry=True,
+            retry_policy={"max_retries": 2, "interval_start": 0, "interval_step": 0.5},
+        )
+
+    try:
+        await asyncio.to_thread(enqueue)
+    except Exception as exc:
+        log.error("media_delete_enqueue_failed", error=type(exc).__name__)
+        return False
+    return True

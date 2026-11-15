@@ -10,6 +10,7 @@ SUBJECTS = {
     "email_confirmation": "Potwierdź adres e-mail w Profilo",
     "password_reset": "Ustaw nowe hasło w Profilo",
     "password_changed": "Hasło do Profilo zostało zmienione",
+    "account_deleted": "Twoje konto w Profilo zostało usunięte",
 }
 
 _env = Environment(

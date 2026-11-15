@@ -18,7 +18,8 @@ from app.core.errors import ProblemError
 from app.core.logging import log
 from app.core.settings import get_settings
 from app.modules.accounts import passwords, tokens
-from app.modules.accounts.models import Account, OneTimeToken, RefreshToken
+from app.modules.accounts.models import Account, OneTimeToken
+from app.modules.accounts.sessions import end_all_sessions
 from app.modules.notifications import service as notifications
 
 PURPOSE = "password_reset"
@@ -143,16 +144,11 @@ async def confirm(
     account.password_hash = await passwords.hash_password(new_password)
     # Taken after hashing: tokens issued while the hash was computed are older than this.
     now = datetime.now(UTC)
-    account.password_changed_at = now
     # The link proves the owner reads this mailbox.
     if account.email_confirmed_at is None:
         account.email_confirmed_at = now
     await _use_open_tokens(session, account, now)
-    await session.execute(
-        update(RefreshToken)
-        .where(RefreshToken.account_id == account.id, RefreshToken.revoked_at.is_(None))
-        .values(revoked_at=now)
-    )
+    await end_all_sessions(session, account, now)
     log.info("password_reset_completed", account_id=str(account.id))
     return account
 

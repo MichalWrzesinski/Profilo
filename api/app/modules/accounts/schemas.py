@@ -35,6 +35,15 @@ class PasswordResetConfirm(ApiModel):
     new_password: Password = Field(max_length=1024)
 
 
+class PasswordChange(ApiModel):
+    current_password: Password = Field(max_length=128)
+    new_password: Password = Field(max_length=1024)
+
+
+class AccountDeletion(ApiModel):
+    password: Password = Field(max_length=128)
+
+
 class TokenRequest(ApiModel):
     token: str = Field(min_length=20, max_length=200)
 

@@ -20,6 +20,8 @@ async def clean_state() -> None:
     """Empty application tables and the test Valkey database (VALKEY_URL …/1)."""
     async with get_engine().begin() as conn:
         await conn.execute(text("TRUNCATE accounts CASCADE"))
+        # Seeded system and offensive words stay; quarantines come from deleted accounts.
+        await conn.execute(text("DELETE FROM reserved_nicks WHERE reason = 'quarantine'"))
     await get_valkey().flushdb()
 
 

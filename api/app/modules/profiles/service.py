@@ -5,13 +5,14 @@ import asyncio
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 
 import phonenumbers
 from email_validator import EmailNotValidError, validate_email
 from sqlalchemy import func, or_, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -720,3 +721,28 @@ async def is_image_public(
         return False
     ref = str(image_id)
     return any((snapshot.get(kind) or {}).get("id") == ref for kind in ("avatar", "background"))
+
+
+# --- account deletion (ACC-BR-10) -------------------------------------------------------
+
+QUARANTINE = timedelta(days=30)
+
+
+async def quarantine_nick_of(session: AsyncSession, account_id: uuid.UUID) -> str | None:
+    """Reserve the deleted account's nick for 30 days, so nobody takes over an address that
+    was shared recently (in the caller's transaction, before the account is deleted)."""
+    nick = await session.scalar(select(Profile.nick).where(Profile.account_id == account_id))
+    if not nick:
+        return None
+    expires = datetime.now(UTC) + QUARANTINE
+    await session.execute(
+        pg_insert(ReservedNick)
+        .values(nick=nick, reason="quarantine", expires_at=expires)
+        .on_conflict_do_update(
+            index_elements=[ReservedNick.nick],
+            set_={"reason": "quarantine", "expires_at": expires},
+            # A system or offensive reservation (no expiry) is never weakened.
+            where=ReservedNick.reason == "quarantine",
+        )
+    )
+    return str(nick)
