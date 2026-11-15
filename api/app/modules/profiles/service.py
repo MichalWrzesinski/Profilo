@@ -6,7 +6,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlsplit
 
 import phonenumbers
@@ -790,3 +790,29 @@ async def release_quarantined_nicks(now: datetime | None = None) -> dict[str, in
         released = len(result.all())
         await session.commit()
     return {"released": released}
+
+
+# --- operator blocking (PUB-BR-10) ------------------------------------------------------
+
+BlockResult = Literal["changed", "unchanged", "unknown"]
+
+
+async def set_blocked(nick: str, blocked: bool) -> BlockResult:
+    """Block or unblock a page by its nick (operator CLI). A blocked page returns the same
+    404 as an unknown one at once (the public read checks `blocked_at` on every request);
+    unblocking shows the last published version again. Idempotent."""
+    async with get_sessionmaker()() as session:
+        profile = await session.scalar(
+            select(Profile).where(Profile.nick == nick.strip().lower()).with_for_update()
+        )
+        if profile is None:
+            return "unknown"
+        if (profile.blocked_at is not None) == blocked:
+            return "unchanged"
+        profile.blocked_at = datetime.now(UTC) if blocked else None
+        profile_id = profile.id
+        await session.commit()
+    log.info("profile_blocked" if blocked else "profile_unblocked", profile_id=str(profile_id))
+    if blocked:
+        await forget_cards(profile_id)  # the cached preview card shows the page's content
+    return "changed"
