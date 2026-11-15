@@ -37,6 +37,8 @@ from app.modules.profiles.schemas import (
     SitemapEntryOut,
     SitemapOut,
 )
+from app.modules.qr import Format as QrFormat
+from app.modules.qr import render as render_qr
 
 # Shared by availability, suggestion and save: all of them tell whether a nick is free.
 NICK_CHECKS = rate_limit.Limit("nick_check", max_hits=120, window_seconds=60)
@@ -499,6 +501,23 @@ async def og_card(session: AsyncSession, nick: str, client_ip: str) -> bytes:
     )
     await _cache_set(key, card)
     return card
+
+
+async def qr_code(
+    session: AsyncSession, account_id: uuid.UUID, format: QrFormat
+) -> tuple[bytes, str]:
+    """QR code of the owner's page address and the nick (PUB-BR-12). Available from the
+    first publication on: the address is fixed from then (PRF-BR-7)."""
+    profile = await get_own_profile(session, account_id)
+    if not profile.nick_locked or not profile.nick:
+        raise ProblemError(
+            409, "not_published", "Kod QR będzie dostępny po pierwszej publikacji strony."
+        )
+    if profile.blocked_at is not None:  # its address shows the 404 page (PUB-BR-10)
+        raise ProblemError(
+            409, "page_blocked", "Strona jest zablokowana — napisz do nas, jeśli to pomyłka."
+        )
+    return render_qr(_public_url(profile.nick), format), profile.nick
 
 
 async def sitemap(session: AsyncSession) -> SitemapOut:

@@ -495,6 +495,7 @@ describe('Editor', () => {
     await waitFor(() => expect(screen.queryByText('Masz nieopublikowane zmiany')).toBeNull());
     const request = fetch.mock.calls.at(-1)![0] as Request;
     expect(await request.json()).toEqual({ version: 5 });
+    expect(router.push).not.toHaveBeenCalled(); // not the first publication
   });
 
   it.each([
@@ -732,12 +733,37 @@ describe('Editor', () => {
     expect(document.querySelector('.topbar')).toBeNull();
   });
 
-  it('confirms the publication made in the wizard', async () => {
-    window.history.replaceState(null, '', '/edytor?opublikowano=1');
-    setup();
+  it('opens the „Opublikowano” screen after the first publication', async () => {
+    const { user } = setup({
+      profile: owner({ status: 'never_published', nickLocked: false, publicUrl: null }),
+    });
 
-    expect(await screen.findByText('Strona jest opublikowana.')).toBeVisible();
-    await waitFor(() => expect(window.location.search).toBe(''));
+    await user.click(await screen.findByRole('button', { name: 'Opublikuj' }));
+
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/opublikowano'));
+  });
+
+  it('shares the address and QR code from the top bar', async () => {
+    const { user } = setup();
+    const share = await screen.findByRole('button', { name: 'Udostępnij: adres i kod QR' });
+
+    await user.click(share);
+    const dialog = screen.getByRole('dialog', { name: 'Udostępnij stronę' });
+    expect(dialog).toContainElement(
+      screen.getByDisplayValue('localhost:8080/user/anna-wisniewska'),
+    );
+    expect(screen.getByRole('button', { name: 'Zamknij' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(share).toHaveFocus();
+  });
+
+  it('offers sharing only for a visible page', async () => {
+    setup({ profile: owner({ status: 'unpublished', publicUrl: null }) });
+
+    await screen.findByRole('button', { name: /^Opublikuj/ });
+    expect(screen.queryByRole('button', { name: /Udostępnij/ })).toBeNull();
   });
 
   it('shows the draft in the live preview', async () => {

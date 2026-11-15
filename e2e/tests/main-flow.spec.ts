@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { PNG } from 'pngjs';
 import { confirmationPath, open, TEST_PASSWORD } from './helpers';
 
 // Main flow (docs/design/flows.md): register → nick → content → preview → confirm e-mail
@@ -74,8 +76,36 @@ test('a new owner publishes a page that looks exactly like the preview', async (
   await expect(stepPreview.locator('h1')).toHaveText(name);
   await expect(publish).toBeEnabled();
   await publish.click();
+
+  // „Opublikowano”: the address, the copy action and the QR code (TASK-014).
+  await expect(page).toHaveURL(/\/opublikowano$/);
+  await expect(
+    page.getByRole('heading', { name: 'Gotowe! Twoja strona jest online' }),
+  ).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Adres strony' })).toHaveValue(
+    new RegExp(`/user/${nick}$`),
+  );
+  await expect(page.getByRole('img', { name: /^Kod QR z adresem/ })).toBeVisible();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Pobierz PNG' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe(`profilo-${nick}.png`);
+  const qr = PNG.sync.read(readFileSync((await download.path())!));
+  expect([qr.width, qr.height]).toEqual([1024, 1024]);
+  // Quiet zone: 40 px in from every edge is light (4 modules are wider up to version 13).
+  for (let i = 0; i < 1024; i += 8) {
+    for (const [x, y] of [
+      [i, 40],
+      [40, i],
+      [i, 1000],
+      [1000, i],
+    ] as const) {
+      expect(qr.data[(y * 1024 + x) * 4]).toBe(255);
+    }
+  }
+  await page.getByRole('link', { name: 'Przejdź do edytora' }).click();
   await expect(page).toHaveURL(/\/edytor$/);
-  await expect(page.getByText('Strona jest opublikowana.')).toBeVisible();
   const editorPreview = page.frameLocator('iframe[title="Podgląd wersji roboczej"]');
   await expect(editorPreview.locator('h1')).toHaveText(name);
   const previewHtml = await pageHtml(editorPreview);

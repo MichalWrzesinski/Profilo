@@ -109,6 +109,29 @@ async def get_og_image(nick: str, request: Request, session: DbSession) -> Respo
     )
 
 
+@router.get(
+    "/me/profile/qr",
+    tags=["profile"],
+    response_class=Response,
+    responses={200: {"content": {"image/png": {}, "image/svg+xml": {}}}},
+)
+async def get_qr_code(
+    account: CurrentAccount, session: DbSession, format: Literal["svg", "png"] = "svg"
+) -> Response:
+    """QR code of the page address to download (PUB-BR-12): SVG or PNG 1024 px."""
+    data, nick = await service.qr_code(session, account.id, format)
+    media_type = "image/png" if format == "png" else "image/svg+xml"
+    return Response(
+        data,
+        media_type=media_type,
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": f'attachment; filename="profilo-{nick}.{format}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.get("/public/sitemap", tags=["public"])
 async def get_sitemap(session: DbSession, response: Response) -> SitemapOut:
     """Published page addresses for `/sitemap.xml`, rendered by the client (PUB-BR-7)."""
