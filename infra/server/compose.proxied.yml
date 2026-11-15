@@ -1,0 +1,7 @@
+# Shared host (TLS_MODE=proxied): the host's own reverse proxy (nginx with certbot) serves
+# 80/443 for several projects and forwards the Profilo domain to Caddy on a local port.
+# deploy.sh adds this file when TLS_MODE=proxied; see nginx-profilo.conf and the runbook.
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:${PROXY_PORT:-8090}:80"

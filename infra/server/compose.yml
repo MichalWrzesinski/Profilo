@@ -17,8 +17,9 @@ x-api: &api
     - path: ${APP_DIR:?APP_DIR is required}/.env.secrets
       required: false
   environment:
-    # Trust X-Forwarded-* only from Caddy (fixed address below; AGENTS.md pitfalls).
-    FORWARDED_ALLOW_IPS: 172.28.0.10
+    # Trust X-Forwarded-* only from Caddy (fixed address below; AGENTS.md pitfalls). Behind
+    # the host's nginx also from the Docker gateway it connects through (proxied mode).
+    FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-172.28.0.10}
   restart: unless-stopped
   logging: *logging
   networks: [internal]
@@ -39,8 +40,10 @@ services:
     environment:
       DOMAIN: ${DOMAIN:?}
       TLS_MODE: ${TLS_MODE:-acme}
+      SITE_ADDRESS: ${SITE_ADDRESS:-${DOMAIN}}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1/32}
       ROBOTS_TAG: ${ROBOTS_TAG:?}
-      ACME_EMAIL: ${ACME_EMAIL:?}
+      ACME_EMAIL: ${ACME_EMAIL:-unused@example.invalid}
     volumes:
       # The whole release directory: a replaced Caddyfile (new inode) is still seen on reload.
       - ./:/etc/caddy:ro
@@ -49,7 +52,7 @@ services:
     logging: *logging
     networks:
       internal:
-        ipv4_address: 172.28.0.10
+        ipv4_address: ${CADDY_IP:-172.28.0.10}
     depends_on:
       api: { condition: service_healthy }
       client: { condition: service_healthy }
@@ -133,7 +136,8 @@ networks:
   internal:
     ipam:
       config:
-        - subnet: 172.28.0.0/24
+        # Configurable on a shared host where other projects use Docker networks too.
+        - subnet: ${INTERNAL_SUBNET:-172.28.0.0/24}
 
 volumes:
   media:
