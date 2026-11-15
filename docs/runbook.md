@@ -46,7 +46,9 @@ Once, on your computer and on the server (example values: `profilo.gitpush.app`,
    readlink -f /etc/nginx/sites-enabled/Profilo; grep -E 'root|ssl_certificate' /etc/nginx/sites-enabled/Profilo
    sudo grep -E 'authenticator|webroot' /etc/letsencrypt/renewal/profilo.gitpush.app.conf
    ls /etc/letsencrypt/options-ssl-nginx.conf /etc/letsencrypt/ssl-dhparams.pem; ls -A /srv/Profilo
+   ip -4 route; docker network ls -q | xargs docker network inspect -f '{{.Name}} {{range .IPAM.Config}}{{.Subnet}} {{end}}'
    ```
+   - No route or Docker network may cover `172.28.0.0/24` (also not a wide one such as `172.16.0.0/12`); otherwise pick another `/24` for step 3.
    - If `/srv/Profilo` holds the temporary page, move it away first (e.g. `sudo mv /srv/Profilo /srv/Profilo-temp`); the setup refuses a directory with other files. The domain shows an nginx error until the first deployment (step 8).
    - If certbot uses `webroot`, put its path into the `location /.well-known/acme-challenge/` block of `nginx-profilo.conf` instead of `/var/www/html` (with `authenticator = nginx` nothing needs changing).
    - If one of the two `/etc/letsencrypt/…` files is missing, remove its line from `nginx-profilo.conf`.
@@ -77,9 +79,9 @@ Once, on your computer and on the server (example values: `profilo.gitpush.app`,
    gh secret set STAGING_SMTP_PASSWORD                            # asks for the value
    ```
    Compare the `ssh-keyscan` fingerprint with the one the server shows (`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`), then delete `profilo-staging-deploy` from your computer. The sender in `STAGING_MAIL_FROM` must be an address that mailbox may send as, or mail lands in spam.
-6. **nginx** — save the old site file and switch; if the test fails, the old file comes back on its own, so a broken config never stays (a failed reload, e.g. at the next certificate renewal, would stop every site on the server):
+6. **nginx** — save the old site file and switch; if the test fails, the old file comes back on its own, so a broken config never stays (a failed reload, e.g. at the next certificate renewal, would stop every site on the server); the first backup is kept on repeated runs (`cp -n`):
    ```bash
-   ssh -t you@SERVER 'site=$(readlink -f /etc/nginx/sites-enabled/Profilo) && sudo cp "$site" /root/Profilo.nginx.before-profilo && sudo cp /tmp/nginx-profilo.conf "$site" && { sudo nginx -t && sudo systemctl reload nginx; } || { sudo cp /root/Profilo.nginx.before-profilo "$site" && sudo nginx -t && echo "nginx config restored"; }'
+   ssh -t you@SERVER 'site=$(readlink -f /etc/nginx/sites-enabled/Profilo) && sudo cp -n "$site" /root/Profilo.nginx.before-profilo && sudo cp /tmp/nginx-profilo.conf "$site" && { sudo nginx -t && sudo systemctl reload nginx; } || { sudo cp /root/Profilo.nginx.before-profilo "$site" && sudo nginx -t && echo "nginx config restored"; }'
    ```
    Until the first deployment the domain answers 502. To go back later: copy `/root/Profilo.nginx.before-profilo` over the site file, `sudo nginx -t`, reload.
 7. **Certificate renewal still works** with the new site file:
