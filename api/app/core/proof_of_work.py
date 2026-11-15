@@ -10,18 +10,20 @@ import base64
 import hashlib
 import hmac
 import json
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from urllib.parse import parse_qs
 
 from app.core.logging import log
 from app.core.settings import get_settings
 from app.core.valkey import get_valkey
 
 ALGORITHM = "SHA-256"
-# About 1 to 2 s of hashing in a web worker on a phone on average, a few on old devices.
-MAX_NUMBER = 200_000
+# Half of it on average: about 1 s in a desktop browser and a few seconds on a phone with
+# the synchronous SHA-256 in the web worker; a bot with native code pays far less, so the
+# per-IP limit stays the hard stop (REGISTER_PER_IP).
+MAX_NUMBER = 500_000
 VALIDITY = timedelta(minutes=10)
 
 
@@ -52,13 +54,14 @@ def create_challenge(now: datetime | None = None) -> dict[str, Any]:
     }
 
 
+# Exactly what create_challenge makes. Without the strict form, digits could move from the
+# number to the end of the salt (the hash input is salt + number) and extend the expiry.
+_SALT = re.compile(r"[0-9a-f]{24}\?expires=(\d{10})")
+
+
 def _expiry(salt: str) -> int | None:
-    _, _, query = salt.partition("?")
-    values = parse_qs(query).get("expires")
-    try:
-        return int(values[0]) if values else None
-    except ValueError:
-        return None
+    match = _SALT.fullmatch(salt)
+    return int(match.group(1)) if match else None
 
 
 def _decode(payload: str) -> dict[str, Any] | None:
@@ -74,7 +77,7 @@ async def verify(payload: str | None, now: datetime | None = None) -> bool:
     time. Every reason for a refusal is logged without personal data."""
     reason = _check(payload, now)
     if reason is None:
-        return await _first_use(payload or "")
+        return await _first_use(_decode(payload or "") or {})
     log.warning("proof_of_work_rejected", reason=reason)
     return False
 
@@ -96,7 +99,10 @@ def _check(payload: str | None, now: datetime | None) -> str | None:
     ):
         return "malformed"
     expires = _expiry(salt)
-    if expires is None or expires <= (now or datetime.now(UTC)).timestamp():
+    moment = (now or datetime.now(UTC)).timestamp()
+    if expires is None or expires > moment + VALIDITY.total_seconds() + 60:
+        return "malformed"
+    if expires <= moment:
         return "expired"
     if not hmac.compare_digest(_sign(challenge), signature):
         return "bad_signature"
@@ -105,10 +111,10 @@ def _check(payload: str | None, now: datetime | None) -> str | None:
     return None
 
 
-async def _first_use(payload: str) -> bool:
-    data = _decode(payload) or {}
+async def _first_use(data: dict[str, Any]) -> bool:
     expires = _expiry(str(data.get("salt", ""))) or 0
-    ttl = max(int(expires - datetime.now(UTC).timestamp()), 1)
+    remaining = int(expires - datetime.now(UTC).timestamp())
+    ttl = min(max(remaining, 1), int(VALIDITY.total_seconds()) + 60)
     try:
         fresh = await get_valkey().set(f"pow:{data.get('challenge')}", "1", nx=True, ex=ttl)
     except Exception as exc:  # fail open, like the rate limits

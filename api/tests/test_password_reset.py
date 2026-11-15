@@ -293,12 +293,11 @@ async def test_a_refresh_running_during_the_reset_does_not_keep_its_session(
 
 
 async def test_reset_requests_count_an_ipv6_network_as_one_address() -> None:
-    assert password_reset.ip_key("2001:db8:1:2:aaaa::1") == password_reset.ip_key(
-        "2001:db8:1:2:ffff::9"
-    )
-    assert password_reset.ip_key("2001:db8:1:3::1") != password_reset.ip_key("2001:db8:1:2::1")
-    assert password_reset.ip_key("203.0.113.9") == "203.0.113.9"
-    assert password_reset.ip_key("unknown") == "unknown"
+    ip = rate_limit.ip_subject
+    assert ip("2001:db8:1:2:aaaa::1") == ip("2001:db8:1:2:ffff::9")
+    assert ip("2001:db8:1:3::1") != ip("2001:db8:1:2::1")
+    assert ip("203.0.113.9") == "203.0.113.9"
+    assert ip("unknown") == "unknown"
 
 
 async def test_reset_mails_have_a_daily_cap(

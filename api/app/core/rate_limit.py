@@ -5,6 +5,7 @@ or registration fail (backend standard: dependency failure is not an application
 This also suspends the failed-login lockout, so it is logged at error level for alerting.
 """
 
+import ipaddress
 from dataclasses import dataclass
 
 from app.core.errors import ProblemError
@@ -43,14 +44,16 @@ async def hit(limit: Limit, subject: str) -> int:
     return count
 
 
-async def count(limit: Limit, subject: str) -> int:
-    """Hits so far in the current window, without counting one; 0 when Valkey is down."""
+def ip_subject(client_ip: str) -> str:
+    """Subject of a per-IP limit: an IPv4 address, or the /64 network of an IPv6 address
+    (one connection usually gets a whole /64, so single IPv6 addresses are free to change)."""
     try:
-        value = await get_valkey().get(f"rl:{limit.name}:{subject}")
-    except Exception as exc:
-        log.error("rate_limit_unavailable", limit=limit.name, error=type(exc).__name__)
-        return 0
-    return int(value) if value is not None else 0
+        address = ipaddress.ip_address(client_ip)
+    except ValueError:
+        return client_ip
+    if address.version == 6:
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return client_ip
 
 
 async def is_blocked(limit: Limit, subject: str) -> int | None:

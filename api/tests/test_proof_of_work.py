@@ -93,6 +93,7 @@ async def test_failed_attempts_count_too(client: AsyncClient) -> None:
         lambda c: solve(c, number=-1),
         lambda c: solve(c, salt=None),
         lambda c: solve(c, salt="abc"),  # no expiry
+        lambda c: solve(c, salt=c["salt"].replace("?expires=", "?expires=0")),
         lambda c: solve(c, salt="abc?expires=jutro"),
         lambda _: "nie-base64!",
         lambda _: base64.b64encode(b"[1, 2]").decode(),
@@ -147,16 +148,49 @@ async def test_without_valkey_a_correct_solution_is_accepted(
     assert await proof_of_work.verify(solve(challenge)) is True
 
 
-async def test_rate_limit_count_without_valkey_is_zero(monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.core import rate_limit
+async def test_parallel_attempts_cannot_skip_the_challenge(client: AsyncClient) -> None:
+    """Review B1: the threshold is decided on an atomic increment, not on a read."""
+    import asyncio
 
-    class Down:
-        async def get(self, *_: object) -> None:
-            raise ConnectionError
+    responses = await asyncio.gather(
+        *(
+            client.post(
+                "/api/v1/accounts",
+                json={
+                    "displayName": "Bot",
+                    "email": f"bot{number}@example.pl",
+                    "password": "jasne-niebo-nad-krakowem",
+                    "acceptTerms": True,
+                },
+            )
+            for number in range(8)
+        )
+    )
 
-    monkeypatch.setattr(rate_limit, "get_valkey", lambda: Down())
+    statuses = sorted(response.status_code for response in responses)
+    assert statuses.count(428) == 5
+    assert statuses.count(201) == 3
 
-    assert await rate_limit.count(service.REGISTER_PER_IP, "203.0.113.1") == 0
+
+async def test_moving_digits_into_the_salt_does_not_extend_the_expiry() -> None:
+    """Review S1: salt + number is hashed without a separator."""
+    challenge = proof_of_work.create_challenge()
+    real = json.loads(base64.b64decode(solve(challenge)))
+    number = str(real["number"])
+    if len(number) < 2:  # nothing to move: try another challenge
+        pytest.skip("number too short")
+    shifted = solve(challenge, salt=challenge["salt"] + number[:-1], number=int(number[-1]))
+
+    assert (
+        await proof_of_work.verify(shifted, now=datetime.now(UTC) + timedelta(days=3650)) is False
+    )
+    assert await proof_of_work.verify(shifted) is False
+
+
+async def test_a_challenge_from_the_far_future_is_rejected() -> None:
+    late = proof_of_work.create_challenge(now=datetime.now(UTC) + timedelta(days=1))
+
+    assert await proof_of_work.verify(solve(late)) is False
 
 
 def test_the_number_is_within_the_published_range() -> None:
