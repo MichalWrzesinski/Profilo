@@ -1,8 +1,8 @@
 name: Rollback production
 
 # Returns production to a release that was deployed there before (deployment standard: the
-# agent may start it without consent and informs the user at once). No dump and no
-# migrations: the database stays as it is, and the release's migrations are already applied.
+# agent may start it without consent and informs the user at once). No dump; migrations run
+# only if the database is behind that release (e.g. after a restore), never backwards.
 # Same secrets and variables as deploy-production.
 on:
   workflow_dispatch:

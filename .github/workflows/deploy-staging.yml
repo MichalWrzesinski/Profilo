@@ -16,10 +16,9 @@ on:
         description: Full commit SHA on main to deploy (also used to roll back to an older release)
         required: true
 
-permissions:
-  contents: read
-  packages: read
-  statuses: write
+# Job-level permissions: the job that reaches the server gets a read-only token (it is
+# handed to the server for the registry login); only the status job may write.
+permissions: {}
 
 concurrency:
   group: deploy-staging
@@ -33,6 +32,11 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      skip: ${{ steps.guard.outputs.skip }}
     env:
       SHA: ${{ github.event.workflow_run.head_sha || inputs.sha }}
       DOMAIN: ${{ vars.STAGING_DOMAIN }}
@@ -87,10 +91,19 @@ jobs:
           GHCR_USER: ${{ github.actor }}
         run: bash "$RUNNER_TEMP/deploy-remote.sh"
 
+  verified:
+    name: mark verified on staging
+    needs: deploy
+    if: needs.deploy.outputs.skip != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      statuses: write
+    steps:
       # deploy-production accepts only commits that staging verified (deployment standard).
-      - name: Mark the commit as verified on staging
-        if: steps.guard.outputs.skip != 'true'
+      - name: Set the commit status deploy/staging
         env:
+          SHA: ${{ github.event.workflow_run.head_sha || inputs.sha }}
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |

@@ -14,10 +14,9 @@ on:
         description: Full commit SHA on main, deployed and verified on staging
         required: true
 
-permissions:
-  contents: write  # the release tag
-  packages: read
-  statuses: read
+# Job-level permissions: the job that reaches the server gets a read-only token (it is
+# handed to the server for the registry login); only the release job may write.
+permissions: {}
 
 concurrency:
   group: production
@@ -34,6 +33,10 @@ jobs:
       github.triggering_actor == 'MichalWrzesinski'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+      statuses: read
     env:
       SHA: ${{ inputs.sha }}
       DOMAIN: ${{ vars.PROD_DOMAIN }}
@@ -79,9 +82,27 @@ jobs:
           GHCR_USER: ${{ github.actor }}
         run: bash "$RUNNER_TEMP/deploy-remote.sh"
 
+  release:
+    name: GitHub release
+    needs: deploy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      SHA: ${{ inputs.sha }}
+      DOMAIN: ${{ vars.PROD_DOMAIN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
       # Tag production-<UTC time> on the commit; the notes list the PRs merged since the
-      # previous production release.
-      - name: GitHub release
+      # previous production release. Without this tag rollback-production refuses the commit.
+      - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

@@ -5,6 +5,8 @@
 # everything as environment variables; only those workflows reference deployment secrets.
 #
 #   MODE           deploy | rollback (rollback: only a commit deployed on that server before)
+# deploy.sh and the stack files come from the deployed commit (they are one contract); this
+# script always comes from main.
 #   ENV_NAME       staging | production (messages only)
 #   SHA DOMAIN SSH_HOST SSH_USER APP_DIR SSH_KEY KNOWN_HOSTS
 #   SMTP_HOST SMTP_PORT SMTP_SECURITY SMTP_USERNAME SMTP_PASSWORD MAIL_FROM
@@ -48,6 +50,10 @@ endgroup
 # SHA and APP_DIR are validated above, so expanding them on the client side is safe.
 # shellcheck disable=SC2029
 {
+  # A deployment still running on the server (e.g. after a dropped connection) must not have
+  # its files or secrets replaced under it.
+  ssh server "flock -n '$APP_DIR/.deploy.lock' true" \
+    || fail "a deployment is still running on the $ENV_NAME server; wait for it and check releases/*/deploy.log"
   group "Upload stack files of $SHA"
   ssh server "mkdir -p '$APP_DIR/releases/$SHA'"
   scp -q infra/server/compose.yml infra/server/compose.proxied.yml infra/server/Caddyfile \
@@ -81,13 +87,13 @@ esac
 
 group "External smoke tests"
 for path in /ready /; do
-  code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "https://$DOMAIN$path")
+  code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "https://$DOMAIN$path") || true
   [[ "$code" == 200 ]] || fail "$path returned $code"
 done
-headers=$(curl -sS -D - -o /dev/null --max-time 15 "http://$DOMAIN/")
+headers=$(curl -sS -D - -o /dev/null --max-time 15 "http://$DOMAIN/") || true
 grep -qiE '^HTTP/[0-9.]+ 30[18]' <<<"$headers" || fail "HTTP does not redirect"
 grep -qi '^location: https://' <<<"$headers" || fail "redirect is not to HTTPS"
-secure=$(curl -sS -D - -o /dev/null --max-time 15 "https://$DOMAIN/")
+secure=$(curl -sS -D - -o /dev/null --max-time 15 "https://$DOMAIN/") || true
 for h in strict-transport-security content-security-policy x-content-type-options referrer-policy; do
   grep -qi "^$h:" <<<"$secure" || fail "missing header $h"
 done
