@@ -1108,15 +1108,18 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Changed. */
-            204: {
+            /** @description Changed. Every session ends (refresh tokens revoked, older access tokens refused), so this browser gets a new session; a security notice e-mail is sent. */
+            200: {
                 headers: {
+                    "Set-Cookie": components["headers"]["RefreshCookie"];
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Session"];
+                };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description Current password wrong (`invalid_password`) or e-mail not confirmed (`email_not_confirmed`). */
+            /** @description Current password wrong (`invalid_password`) or e-mail not confirmed (`email_not_confirmed`, checked first). 5 wrong passwords per account in 15 minutes, shared with deletion, then 429. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1144,7 +1147,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Deleted; refresh cookie cleared; nick quarantined for 30 days. */
+            /** @description Deleted at once with the profile, links, snapshot, image rows and sessions; image files removed by a background task; refresh cookie cleared; nick quarantined for 30 days; confirmation e-mail sent. Available to unconfirmed accounts too. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -1161,6 +1164,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
             429: components["responses"]["TooManyRequests"];
         };
     };

@@ -57,4 +57,17 @@ describe('Panel', () => {
     );
     expect(tokenStore.get()).toBeNull();
   });
+
+  it('links to the account settings and closes the menu', async () => {
+    mockFetch(() => json(200, SESSION));
+    renderPanel();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Menu' }));
+    const settings = screen.getByRole('menuitem', { name: 'Ustawienia konta' });
+    expect(settings).toHaveAttribute('href', '/panel/konto');
+    await user.click(settings);
+
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
 });

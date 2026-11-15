@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { Brand } from '@/components/Brand';
@@ -40,6 +41,14 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
               role="menu"
               style={{ position: 'absolute', right: 0, top: '110%' }}
             >
+              <Link
+                role="menuitem"
+                className="btn btn-ghost btn-block"
+                href="/panel/konto"
+                onClick={() => setMenuOpen(false)}
+              >
+                Ustawienia konta
+              </Link>
               <button
                 type="button"
                 role="menuitem"

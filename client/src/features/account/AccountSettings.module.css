@@ -1,0 +1,29 @@
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-10) var(--space-5);
+  display: grid;
+  gap: var(--space-6);
+}
+
+.page h1 {
+  font-size: var(--text-xl);
+}
+
+.page h2 {
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-4);
+}
+
+.page :global(.card) > p {
+  margin-bottom: var(--space-4);
+}
+
+.danger {
+  border-color: var(--color-danger);
+}
+
+.small {
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-5);
+}
