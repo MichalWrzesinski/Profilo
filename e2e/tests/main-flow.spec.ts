@@ -93,7 +93,7 @@ test('a new owner publishes a page that looks exactly like the preview', async (
   expect(download.suggestedFilename()).toBe(`profilo-${nick}.png`);
   const qr = PNG.sync.read(readFileSync((await download.path())!));
   expect([qr.width, qr.height]).toEqual([1024, 1024]);
-  // Quiet zone: the 80 px border is light (4 modules are at least 80 px up to version 8).
+  // Quiet zone: 40 px in from every edge is light (4 modules are wider up to version 13).
   for (let i = 0; i < 1024; i += 8) {
     for (const [x, y] of [
       [i, 40],
