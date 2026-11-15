@@ -34,6 +34,7 @@ Każdy wpis ma te części:
     - worker Celery nie przeładowuje kodu (brak nowego szablonu e-maila, `KeyError`);
     - serwer deweloperski Next zwracał 404 dla nowych tras do restartu;
     - E2E wymagało restartu workera.
+  - **Build produkcyjny (TASK-018):** po scaleniu poprawek recenzji zadanie CI `check` dochodziło do 30-minutowego limitu na budowaniu obrazu produkcyjnego klienta. Na początku uznałem to za wolny runner i uruchomiłem ponownie; dopiero pytanie użytkownika („dlaczego ponad 32 minuty?”) skłoniło mnie do sprawdzenia lokalnie. Okazało się, że `next build` wisi przez cykl importów: moduł tworzący web worker był importowany przez sam worker. Serwer deweloperski i E2E tego nie pokazały. Poprawka: osobny moduł solvera (1 próba). Lekcja: przy zmianach bundlingu budować obraz produkcyjny lokalnie przed pushem.
   - **E2E i przeglądarka:**
     - wylogowanie po usunięciu konta ścigało się ze strażnikiem panelu; 2 próby, w drugiej podwójny efekt w Strict Mode;
     - `crypto.subtle` nie istnieje pod `http://caddy` (brak bezpiecznego kontekstu) i rozwiązywanie wyzwania wisiało. Rozwiązanie: SHA-256 w czystym JS i obsługa błędu workera (1 diagnoza w przeglądarce, 1 poprawka).
@@ -51,6 +52,7 @@ Każdy wpis ma te części:
 - **Udział człowieka:**
   - Polecenia rozpoczęcia kolejnych zadań.
   - Prośba o DEVLOG i checkpoint (zmiana procesu).
+  - Pytanie o zbyt długie CI w TASK-018: dzięki niemu znalazłem prawdziwy błąd (zawieszony build produkcyjny) zamiast ponawiać zadanie.
   - Pytanie, jak uruchomić projekt lokalnie.
   - Zaufanie repozytorium dla sesji z poprawką 320 px. Sesja nie wystartowała bez tej zgody i do dziś czeka.
   - W trakcie zadań nie było korekt merytorycznych.
