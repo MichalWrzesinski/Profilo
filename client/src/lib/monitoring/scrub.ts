@@ -8,7 +8,8 @@ const FILTERED = '[Filtered]';
 const SENSITIVE_KEY =
   /pass|secret|token|auth|cookie|session|e-?mail|phone|dsn|csrf|jwt|api[-_]?key|signature/i;
 // Also internationalised addresses: anything around an @ up to a separator, dot in the domain.
-const EMAIL = /[^\s@<>()[\]"',;:=]+@[^\s@<>()[\]"',;:=]+\.[^\s@<>()[\]"',;:=]+/g;
+// No "/" before the @, so paths of scoped packages (node_modules/@sentry/...) stay.
+const EMAIL = /[^\s@<>()[\]"',;:=/]+@[^\s@<>()[\]"',;:=]+\.[^\s@<>()[\]"',;:=]+/g;
 const JWT = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
 const OPAQUE = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{32,}(?![A-Za-z0-9_-])/g;
 const QUERY_SECRET = /((?:token|code|password|email|key)=)[^&#\s]+/gi;

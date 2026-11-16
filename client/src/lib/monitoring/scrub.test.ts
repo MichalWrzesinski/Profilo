@@ -20,6 +20,8 @@ describe('scrubText', () => {
   it('removes internationalised addresses', () => {
     const scrubbed = scrubText('Key (email)=(józef.wiśniewski@żółw.pl) <ąę@例え.jp>');
     expect(scrubbed).toBe('Key (email)=([Filtered]) <[Filtered]>');
+    const path = '/app/node_modules/@sentry/core/build/x.js';
+    expect(scrubText(path)).toBe(path);
   });
 });
 
