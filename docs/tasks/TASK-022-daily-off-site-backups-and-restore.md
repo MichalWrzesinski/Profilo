@@ -1,7 +1,7 @@
 ---
 id: TASK-022
 title: Daily off-site backups and restore test
-status: IN_PROGRESS
+status: BLOCKED
 priority: high
 iteration: ITER-05
 depends_on: [TASK-021]
@@ -62,6 +62,8 @@ Review (subagent, code review + security), round 1 — fixed and verified on the
 - deployments killed a running job (bash as PID 1 ignores SIGTERM; restic lock left for 30 min) → `init: true`, 30 s grace, the scheduler stops the job's process group on SIGTERM and keeps its mark unwritten, restic `--retry-lock 2m`; verified: stop in 0.1 s, the job reran after the start, no lock left;
 - a release without the backup service (older than this task) broke rollback and switch-back → `deploy.sh` decides per release (`background_of`);
 - SMTP password with a space broke alerts → quoted netrc tokens; `\r` in SMTP values rejected (header injection); schedule settings validated (`HH:MM`, day 01–28); the opposite result mark is removed; job output is collected in a file instead of a timed `tee` flush.
+
+Round 2: ready to merge; fixed the remaining minor and nits — an idle scheduler now stops at once (the trap also stops its `sleep`; measured 0.13 s), a repository without snapshots is reported as such, and a rollback to a release without the backup service logs that backups stop.
 
 Not verified: a real Storage Box and the deploy workflows writing the settings (no production server yet; the same commands ran by hand on the VM); the schedule over real days (the due-time logic was exercised by starting after 02:30).
 
