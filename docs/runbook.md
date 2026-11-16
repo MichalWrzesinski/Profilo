@@ -138,6 +138,8 @@ Only the user starts *Deploy production* (AGENTS.md). Both production workflows 
 | Secret | `PROD_BACKUP_SSH_KEY`, `PROD_BACKUP_KNOWN_HOSTS` | private key `profilo-backup` and `ssh-keyscan -p 23 u123456.your-storagebox.de` |
 | Secret | `PROD_BACKUP_PASSWORD` | backup encryption key: `openssl rand -hex 32` — **also keep it outside GitHub** (password manager): without it the backups cannot be read |
 | Variable | `PROD_ALERT_EMAIL` | where failed backups and the monthly restore report go |
+| Secret (optional) | `PROD_BACKUP_HEARTBEAT_URL` | Better Stack heartbeat of the daily backup (*Monitoring*) |
+| Secret | `PROD_SENTRY_DSN`, `PROD_SENTRY_AUTH_TOKEN` | error reporting and releases (*Monitoring*); required in production |
 
 Check that the server can reach the SMTP port (*Shared host* step 9) before the first deployment.
 
@@ -184,6 +186,34 @@ Save the printed key in your password manager, then set the variables `PROD_BACK
 | Logs | `dc logs --tail=100 backup` |
 | Restore the database from the latest off-site backup — **only with the user's consent** (data written since the backup is lost) | `dc stop api-$(live) client-$(live) worker beat`, then `dc exec -T backup profilo-backup dump-db > /tmp/restore.dump` and `dc exec -T db pg_restore -U profilo -d profilo --clean --if-exists < /tmp/restore.dump`, then `dc start api-$(live) client-$(live) worker beat`, delete `/tmp/restore.dump`. An older snapshot: `profilo-backup restic snapshots --tag db`, then `profilo-backup restic dump <id> /profilo.dump` |
 | Restore media — same consent | `dc run --rm --no-deps -v profilo_media:/restore/data/media backup restic restore --host profilo --tag media latest --target /restore` (the service itself mounts the volume read-only) |
+
+## Monitoring
+
+- **Errors → Sentry** (EU region): api and worker (`app/core/monitoring.py`), the Next.js server (`src/instrumentation.ts`) and the browser (`src/instrumentation-client.ts`). Release = commit SHA, environment = `staging` / `production`, tag `service` = `api`, `worker`, `client-server` or `browser`, tag `request_id` (matches `X-Request-ID` and the logs). The browser never talks to Sentry (CSP allows only our origin): it posts to `/api/v1/monitoring/sentry`, where the API keeps error events only, scrubs them again and forwards them with the server's DSN (30 reports per 10 min per IP). Error-level log entries (e.g. `email_failed`, `rate_limit_unavailable`) are reported too.
+- **No personal data**: no request bodies, cookies, headers (except the browser name), user data or frame variables are collected; every event is scrubbed (e-mail addresses, JWTs and long tokens, phone numbers, `token=`/`email=` in URLs, keys like `password`/`token`/`email`, SQL parameters, password hashes, and the exact passwords of the current request). Without `SENTRY_DSN` reporting is off and the tunnel drops reports.
+- **Source maps**: built into the client image (with debug IDs) outside the served directory (`/opt/sourcemaps`); the deploy workflows' *Sentry release* job uploads them, creates the release and records the deployment.
+- **Uptime → Better Stack**: monitors on `/ready` of staging and production; the daily backup sends a heartbeat.
+- **Failed deployments**: GitHub's failure e-mails of the deploy workflows.
+
+**Sentry (once)** — account in the **EU** region (`de.sentry.io`), one project `profilo` for all services (environments keep staging and production apart). In the project: *Security & Privacy* → *Data Scrubber* and *Use Default Scrubbers* on, *Prevent Storing of IP Addresses* on (a second line of defence). *Alerts*: an issue alert "A new issue is created" → e-mail, and an issue alert "Number of events in an issue is more than 20 in 5 minutes" → e-mail (error spike). Optional: the GitHub integration, so releases link to commits. Then:
+
+| Kind | Name | Value |
+|---|---|---|
+| Secret | `STAGING_SENTRY_DSN`, `PROD_SENTRY_DSN` | the project's DSN (*Client Keys*); may be the same |
+| Secret | `STAGING_SENTRY_AUTH_TOKEN`, `PROD_SENTRY_AUTH_TOKEN` | an organisation auth token (scopes `project:releases`, `org:read`) |
+| Variable | `SENTRY_ORG`, `SENTRY_PROJECT` | the slugs, e.g. `profilo` |
+| Variable (optional) | `SENTRY_URL` | default `https://de.sentry.io/` |
+
+Staging works without them (no reports); production refuses to deploy without `PROD_SENTRY_DSN` and `PROD_SENTRY_AUTH_TOKEN`.
+
+**Better Stack (once)** — *Uptime* → *Monitors* → *Create monitor* for `https://<staging domain>/ready` and `https://<production domain>/ready`: alert when "URL becomes unavailable" (any status other than 200), e-mail to you, check frequency 30 s or 1 min and confirmation period 2 min — scenario: `/ready` failing for 2 minutes sends an e-mail (the plan must allow that frequency; with 3-minute checks the alert comes later). *Heartbeats* → *Create heartbeat* "Profilo backups", expected every 1 day, grace period 2 hours; its URL goes into `PROD_BACKUP_HEARTBEAT_URL` (the backup pings it after each daily run and `…/fail` after a failure).
+
+**GitHub (once)** — *Settings* → *Notifications* → *System* → *Actions*: e-mail, "Only notify for failed workflows": a failed *Deploy staging*, *Deploy production* or *Rollback production* reaches you.
+
+| Task | Command / place |
+|---|---|
+| Test event from the API (after a deployment) | `dc exec api-$(live) python -c "import app.main, sentry_sdk; sentry_sdk.capture_message('profilo test'); sentry_sdk.flush()"` — appears in Sentry with the release and environment |
+| An error's details in the logs | the `request_id` tag of the Sentry event = `request_id` in `dc logs api-$(live)` and in Caddy's access log |
 
 ## Manual operations (as `deploy` on the server, in `/srv/profilo`)
 
