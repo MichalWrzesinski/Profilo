@@ -85,6 +85,11 @@ jobs:
   release:
     name: GitHub release
     needs: deploy
+    # Same guard as deploy (e.g. "Re-run failed jobs" by another account).
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.actor == 'MichalWrzesinski' &&
+      github.triggering_actor == 'MichalWrzesinski'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

@@ -8,7 +8,7 @@
 #                            uploaded by the workflow
 #   current -> releases/<sha>  last successful release
 #   caddy/Caddyfile          the live Caddy configuration (copied from the release)
-#   caddy/upstreams.caddy    which colour serves: api-<colour> and client-<colour>
+#   caddy/upstreams.caddy    which colour Caddy routes to; caddy/live: the colour it loaded
 #   backups/                 database dumps taken before migrations (last KEEP_DUMPS)
 #   .deployed-history        every commit that passed verification here, oldest first
 # Run as the deploy user:  $APP_DIR/releases/<sha>/deploy.sh <sha> [--rollback]
@@ -30,6 +30,9 @@ NEW_DIR="$APP_DIR/releases/$NEW_TAG"
 HISTORY="$APP_DIR/.deployed-history"
 LOCK="$APP_DIR/.deploy.lock"
 UPSTREAMS="$APP_DIR/caddy/upstreams.caddy"
+# The colour Caddy serves, written only after a successful reload (upstreams.caddy may name
+# a colour Caddy never loaded if a run was killed in between).
+LIVE_FILE="$APP_DIR/caddy/live"
 
 log() { echo "[deploy $(date -u +%H:%M:%S)] $*"; }
 
@@ -126,25 +129,34 @@ smoke() {
 # The colour Caddy sends traffic to: blue, green, legacy (services api/client of releases
 # before blue-green) or none (first deployment).
 live_colour() {
-  if [[ -f "$UPSTREAMS" ]]; then
-    grep -oE 'api-(blue|green)' "$UPSTREAMS" | head -n1 | cut -d- -f2
-  elif running api; then
-    echo legacy
-  else
-    echo none
+  local colour=""
+  if [[ -f "$LIVE_FILE" ]]; then
+    colour="$(cat "$LIVE_FILE")"
+  elif [[ -f "$UPSTREAMS" ]]; then
+    colour="$(grep -oE 'api-(blue|green)' "$UPSTREAMS" | head -n1 | cut -d- -f2)" || true
   fi
+  case "$colour" in
+    blue|green|legacy) echo "$colour" ;;
+    *) if running api; then echo legacy; else echo none; fi ;;
+  esac
 }
 
 app_services() {  # app_services <colour>
   case "$1" in
     blue|green) echo "api-$1 client-$1" ;;
     legacy) echo "api client" ;;
+    none) ;;
+    *) log "unknown colour: $1"; return 1 ;;
   esac
 }
 
 write_upstreams() {  # write_upstreams <colour>
   local api=api client=client
-  [[ "$1" != legacy ]] && { api="api-$1"; client="client-$1"; }
+  case "$1" in
+    blue|green) api="api-$1"; client="client-$1" ;;
+    legacy) ;;
+    *) log "unknown colour: $1"; return 1 ;;
+  esac
   install -d -m 755 "$APP_DIR/caddy"
   cat > "$UPSTREAMS.new" <<CADDY
 # Written by deploy.sh: the colour that serves traffic.
@@ -171,10 +183,11 @@ route() {  # route <tag> <colour>
   install -d -m 755 "$APP_DIR/caddy"
   install -m 644 "$APP_DIR/releases/$1/Caddyfile" "$APP_DIR/caddy/Caddyfile.new"
   mv -f "$APP_DIR/caddy/Caddyfile.new" "$APP_DIR/caddy/Caddyfile"
-  write_upstreams "$2"
+  write_upstreams "$2" || return 1
   # `up` recreates Caddy only when its own settings changed (image, ports, variables, mounts).
   compose "$1" up -d --no-deps --wait --wait-timeout 60 caddy || return 1
   compose "$1" exec -T caddy caddy reload --config /etc/caddy/Caddyfile --force >/dev/null || return 1
+  echo "$2" > "$LIVE_FILE"
 }
 
 remove() {  # remove <services…>: stops gracefully (30 s for running requests), then removes
@@ -195,6 +208,7 @@ switch_to() {
   LIVE="$(live_colour)"
   if [[ "$LIVE" == blue ]]; then TARGET=green; else TARGET=blue; fi
   log "live: $LIVE; starting $tag as $TARGET"
+  app_services "$LIVE" >/dev/null || return 1
   # Leftovers of an interrupted run in the idle colour never serve: remove them first.
   # shellcheck disable=SC2046  # service names
   remove $(app_services "$TARGET") || return 1
@@ -275,6 +289,7 @@ except (ResolutionError, CommandError):
 '
 migrate() {
   local revision known=0
+  # One Alembic head (linear history), so alembic_version has a single row.
   if running db; then
     revision="$(compose "$NEW_TAG" exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAq -c \
       "select case when to_regclass('public.alembic_version') is null then '' else (select version_num from alembic_version limit 1) end")" \
@@ -293,6 +308,9 @@ migrate() {
       return 1
     fi
   fi
+  # A dump before every migration that may change the schema (rollback included: the
+  # database may be behind after a restore).
+  dump_database || { log "database dump failed"; return 1; }
   compose "$NEW_TAG" --profile tools run --rm migrate
 }
 
@@ -320,10 +338,6 @@ if [[ "${DEPLOY_SKIP_PULL:-0}" != 1 ]]; then
   fi
 fi
 
-if [[ "$MODE" != --rollback ]] && ! dump_database; then
-  log "database dump failed; the running release was not changed"
-  exit 1
-fi
 # Migrations are backward compatible (backend standard), so the running release keeps working.
 if ! migrate; then
   log "migration failed; the running release was not changed"
