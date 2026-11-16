@@ -133,3 +133,56 @@ Każdy wpis ma te części:
   - QA/Security: recenzje, testy pod obciążeniem, prywatność zgłoszeń błędów.
   - Dev: CLI, Sentry w API i kliencie.
   - PO: treści prawne, zakres danych w zgłoszeniach błędów.
+
+## Po ITER-05 — staging, monitoring i zaległe zadania
+
+- **Iteracja / data / commity:** 2026-11-16. Zadania spoza planu iteracji, zaproponowane wcześniej przez recenzje (TASK-024, TASK-025, TASK-026, TASK-027), konfiguracja usług na stagingu i porządki: PR #54 (2 commity), #55 (2), #56 (1, Dependabot), #57 (6), #58 (1), #59 (4), #60 (2), #61 (1), #62 (2), #63 (2).
+- **Co zrobiono:**
+  - CSP stron z nonce dla skryptów, bez `'unsafe-inline'` (TASK-024);
+  - klucze limitów prób w Valkey jako HMAC zamiast e-maili i adresów IP (TASK-027);
+  - `@types/node` 26 (TASK-026 częściowo; TypeScript 7 i ESLint 10 (TASK-025) czekają na wsparcie w `typescript-eslint` i pluginach Reacta);
+  - 14-dniowa karencja w Dependabocie;
+  - Sentry i Better Stack działają na stagingu (TASK-023 zamknięty);
+  - edytor mieści się na telefonie 320 px;
+  - adres do zgłoszeń nadużyć na stagingu.
+- **Problemy:**
+  - **Sentry, 401 Invalid token:** dwie próby. Najpierw podejrzewałem swój skrypt, który wymuszał `de.sentry.io` (poprawione, bo token organizacji niesie własny adres), ale błąd został; rozwiązał go dopiero nowy token. Kod „handoff” z Sentry wysłałem na prośbę użytkownika, ale instrukcji z odpowiedzi (instalator CLI, logowanie konta) nie wykonałem bez decyzji; użytkownik wybrał konfigurację ręczną.
+  - **Dependabot:** 12 PR z wersjami młodszymi niż 2 tygodnie, w tym alfa Pythona 3.16 i aktualizacja Playwrighta niezgodna z biblioteką w E2E. Zamiast przeglądać je pojedynczo, ustawiłem karencję w konfiguracji i zamknąłem PR z wyjaśnieniem. Pierwszy PR po zmianie (#56) miał już tylko dojrzałe wersje.
+  - **TASK-024:**
+    - pierwszy test scenariusza 2 wisiał: zostawiłem oryginalny nagłówek `content-encoding` przy zmienionej treści, a po poprawce wstrzyknięty skrypt psuł hydrację Reacta. Test czeka więc na `load`, a wstrzyknięcie sprawdza w wysłanym HTML (3 próby);
+    - recenzja znalazła strony wczytywane przez przeglądarkę z wyprzedzeniem bez nonce (nie stawały się interaktywne), lokalny Caddy bez polityki zastępczej, ciche przejście workera na wątek główny i 404 dla ścieżek z kropką.
+  - **TASK-027:** recenzja wskazała 4 limity liczące IPv6 po pojedynczym adresie zamiast po sieci /64 i możliwość powiązania liczników różnych limitów; oba poprawione w tym samym PR.
+  - **Edytor 320 px:**
+    - przyczyną była kolumna siatki `1fr`, która nie jest węższa od najszerszej zawartości, oraz przyciski obok podglądu zdjęcia;
+    - **zmergowałem PR #62 mimo czerwonego E2E**: komenda łączyła oczekiwanie na CI z merge'em bez sprawdzenia wyniku. Nowy test zakładał jedno konto za dużo i zestaw przekroczył limit 10 rejestracji na godzinę. Naprawione w #63 (test w głównym przepływie, 9 rejestracji), które zmergowałem dopiero po zielonym wyniku. Od tej pory merge jest uzależniony od wszystkich sprawdzeń.
+  - **Środowisko i narzędzia:**
+    - dwa razy chwilowo nie działał GitHub (push i logowanie do GHCR przy publikacji obrazu); ponowienie pomogło;
+    - zmienna pętli `path` w zsh nadpisała `PATH`;
+    - gitleaks w hooku czytał `packed-refs` w trakcie ich aktualizacji (jednorazowy błąd, repozytorium sprawdzone przez `fsck`).
+  - **Poczta stagingu:** diagnoza krok po kroku. Dostawca VPS blokuje porty 25, 465 i 587, więc własny serwer poczty na VPS też nie zadziała; port 2525 do usług wysyłki jest otwarty. Użytkownik chce własnej skrzynki zamiast Brevo, więc temat jest wstrzymany.
+- **Decyzje agenta:**
+  - **Karencja w Dependabocie zamiast ręcznego odsiewania PR:** reguła 2 tygodni jest egzekwowana u źródła, a poprawki bezpieczeństwa omijają karencję.
+  - **CSP stron generowany przez Next.js, a w Caddy tylko ścisła polityka zastępcza:** nonce istnieje tylko podczas renderowania strony. Wszystkie strony są renderowane na żądanie.
+  - **HMAC z kluczem serwera zamiast zwykłego skrótu:** zbiór adresów e-mail i IPv4 da się zgadywać.
+  - **Podział TASK-026:** `@types/node` teraz, TypeScript 7 jako BLOCKED. Nie wymuszałem zależności przez `overrides`.
+  - **Poprawka 320 px zrobiona w tej sesji**, a przygotowaną wcześniej osobną sesję (nigdy nie wystartowała) zarchiwizowałem za zgodą użytkownika.
+- **Udział człowieka:**
+  - Konfiguracja kont: Sentry (projekt, DSN, token, ochrona danych, alerty), Better Stack (monitor i test alertu), powiadomienia GitHuba, adres zgłoszeń nadużyć w `.env` na serwerze.
+  - Decyzje: tylko staging (bez produkcji), bez kopii na stagingu, własna poczta zamiast Brevo i wstrzymanie tematu poczty, konfiguracja Sentry ręczna zamiast przez CLI.
+  - Korekty: „pisz po polsku”; wyjaśnienie, że użytkownik przy Sentry kliknął tylko „Create project”; zrzuty ekranu z nowym interfejsem alertów Sentry, w którym moje nazwy opcji nie pasowały.
+- **Co pomogło:**
+  - **Testy E2E z lokalnym Caddy** dały prawdziwy obraz CSP.
+  - **Recenzje subagentów:** w każdym zadaniu co najmniej jeden realny problem.
+  - **Sprawdzanie wieku pakietów i różnic w lock file** w czystym katalogu.
+  - **Pułapki w AGENTS.md:** limit rejestracji w E2E był tam opisany, ale nie przeczytałem go przed dodaniem testu.
+- **Co przeszkadzało:**
+  - Interfejs Sentry zmienił się względem mojej wiedzy (Archive zamiast Ignore, nowy kreator alertów), więc instrukcje wymagały poprawek na podstawie zrzutów ekranu.
+  - Blokady zależności po stronie bibliotek (ESLint 10, TypeScript 7) są poza wpływem projektu.
+  - Dostawca VPS blokuje porty pocztowe bez alternatywy po stronie hostingu poczty.
+  - Komendy łączące oczekiwanie i merge w jednym kroku ukryły czerwony wynik.
+- **Rola:**
+  - Dev: CSP, klucze limitów, edytor.
+  - QA: testy E2E, limit rejestracji.
+  - DevOps: Dependabot, Sentry, Better Stack, poczta.
+  - Security: recenzje CSP i kluczy.
+  - PO: decyzje użytkownika o zakresie (staging, poczta).
