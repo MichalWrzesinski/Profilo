@@ -222,7 +222,8 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .pp { --page-accent: var(--page-accent-granat); min-height: 100vh; background: var(--color-bg); }
 .pp h1 { font-size: clamp(var(--text-2xl), 4.2vw, var(--text-4xl)); font-weight: var(--font-weight-extrabold); line-height: var(--leading-tight); margin-bottom: var(--space-2); }
 .pp .headline { font-size: clamp(18px, 1.6vw, var(--text-lg)); font-weight: var(--font-weight-medium); color: var(--color-text-strong-muted); margin-bottom: var(--space-4); }
-.pp .meta { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); list-style: none; padding: 0; margin: 0 0 var(--space-6); color: var(--color-text-muted); font-size: 15px; }
+/* One detail per line (position, city, phone). */
+.pp .meta { display: flex; flex-direction: column; gap: var(--space-2); list-style: none; padding: 0; margin: 0 0 var(--space-6); color: var(--color-text-muted); font-size: 15px; }
 .pp .meta li { display: flex; align-items: center; gap: var(--space-2); }
 .pp .meta svg { color: var(--page-accent); width: 17px; height: 17px; }
 .pp .contact { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-8); }
@@ -248,7 +249,8 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .pp-classic .main { max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6) var(--space-12); }
 .pp-classic .head { display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: -56px; }
 .pp-classic .avatar { border: 5px solid var(--color-bg); margin-bottom: var(--space-5); }
-.pp-classic .meta, .pp-classic .contact { justify-content: center; }
+.pp-classic .meta { align-items: center; }
+.pp-classic .contact { justify-content: center; }
 .pp-classic .bio { margin-inline: auto; }
 .pp-classic .no-banner .head { margin-top: var(--space-16); }
 
@@ -258,7 +260,8 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .pp-card .vcard { position: relative; width: min(520px, 100%); background: var(--color-surface); border-radius: var(--radius-xl); padding: var(--space-10) var(--space-8) var(--space-6); box-shadow: var(--shadow-lg); text-align: center; }
 .pp-card .avatar { margin: 0 auto var(--space-5); }
 .pp-card h1 { font-size: var(--text-2xl); }
-.pp-card .meta, .pp-card .contact { justify-content: center; }
+.pp-card .meta { align-items: center; }
+.pp-card .contact { justify-content: center; }
 .pp-card .contact .btn { flex: 1 1 160px; }
 .pp-card .bio { text-align: left; font-size: var(--text-base); margin-bottom: var(--space-6); }
 .pp-card .icon-links { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: center; list-style: none; padding: 0; margin: 0 0 var(--space-6); }
