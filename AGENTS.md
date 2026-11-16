@@ -52,7 +52,7 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
   | Path | Tag |
   |---|---|
   | `api/**` (incl. `api/Dockerfile`, migrations, tests) and `docs/api/openapi.yaml` | `[api]` |
-  | `client/**` (incl. `client/Dockerfile`, unit tests) and `docs/design/tokens.css` | `[client]` |
+  | `client/**` (incl. `client/Dockerfile`, unit tests), `docs/design/tokens.css` and `docs/design/components.css` | `[client]` |
   | `e2e/**` (Playwright) | `[client]` |
   | `infra/**`, `.github/**`, `.claude/**`, `docker-compose*.yml`, `Makefile`, `.env.example`, `.pre-commit-config.yaml`, `scripts/**`, other root config files | `[infra]` |
   | `docs/**` (other than above), `README.md`, `AGENTS.md`, `CLAUDE.md` | `[docs]` |
@@ -95,6 +95,7 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 - ESLint stays on 9 (marked unsupported upstream) because `eslint-config-next` 16 depends on `eslint-plugin-import`, `eslint-plugin-react` and `eslint-plugin-jsx-a11y`, which all cap ESLint at 9; Dependabot ignores ESLint majors. Migration: TASK-025.
 - `vitest` and `@vitest/*` must be updated together (Dependabot group `vitest`).
 
+- The Next.js dev server does not pick up changes to `docs/design/tokens.css` or `components.css` (outside `client/`): `docker compose restart client` and reload the page.
 - The client image is built with the repository root as context (`client/Dockerfile`, root `.dockerignore`) because the app imports `docs/design/tokens.css`. Fonts come from `next/font` (self-hosted); do not add the Google Fonts `@import` to the app.
 - Local ports bind to `127.0.0.1` only (8080 app, 8025 Mailpit).
 - The API trusts `X-Forwarded-*` only from `FORWARDED_ALLOW_IPS` (uvicorn default `127.0.0.1`); staging/production must set it to the Caddy container network, otherwise client IPs (rate limits) are wrong.
