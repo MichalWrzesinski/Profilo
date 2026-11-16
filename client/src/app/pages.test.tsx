@@ -46,13 +46,18 @@ describe('public pages', () => {
     expect(screen.queryByText(/\[do uzupełnienia: adres do zgłoszeń nadużyć\]/)).toBeNull();
   });
 
-  it('names the processors and the 30-day backups in the privacy policy', () => {
+  it('names the processors and where the data is kept in the privacy policy', () => {
     render(
       <SessionProvider>
         <PrivacyPage />
       </SessionProvider>,
     );
-    for (const text of ['Hetzner Online GmbH', 'Brevo SAS', '(Sentry)', 'przez 30 dni']) {
+    for (const text of [
+      'SpillHosting AS',
+      'Brevo SAS',
+      '(Sentry)',
+      'Europejskim Obszarze Gospodarczym',
+    ]) {
       expect(screen.getAllByText(new RegExp(text.replace(/[()]/g, '\\$&')))[0]).toBeInTheDocument();
     }
   });
