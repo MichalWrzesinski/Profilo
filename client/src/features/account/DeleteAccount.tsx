@@ -34,7 +34,7 @@ export function DeleteAccount({ publicUrl }: Props) {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (sending.current) return; // a second Enter while the first request runs
-    if (!password) return setError('Wpisz hasło, aby potwierdzić.');
+    if (!password) return setError('Wpisz hasło');
     sending.current = true;
     setBusy(true);
     setError(null);
@@ -54,10 +54,10 @@ export function DeleteAccount({ publicUrl }: Props) {
         return;
       }
       const details = problem as Problem | undefined;
-      if (details?.code === 'invalid_password') setError('Hasło jest nieprawidłowe.');
+      if (details?.code === 'invalid_password') setError('Hasło jest nieprawidłowe');
       else setAlert(problemMessage(details));
     } catch {
-      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie.');
+      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie');
     } finally {
       sending.current = false;
       setBusy(false);

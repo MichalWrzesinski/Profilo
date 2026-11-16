@@ -19,14 +19,14 @@ const schema = z.object({
   displayName: z
     .string()
     .trim()
-    .min(1, 'Wpisz imię i nazwisko lub pseudonim.')
-    .max(60, 'Nazwa może mieć najwyżej 60 znaków.'),
-  email: z.email('Wpisz pełny adres e-mail, np. anna@example.pl.'),
+    .min(1, 'Wpisz imię i nazwisko lub pseudonim')
+    .max(60, 'Nazwa może mieć najwyżej 60 znaków'),
+  email: z.email('Wpisz pełny adres e-mail, np. anna@example.pl'),
   password: z
     .string()
-    .min(10, 'Hasło jest za krótkie. Użyj co najmniej 10 znaków.')
-    .max(128, 'Hasło może mieć najwyżej 128 znaków.'),
-  acceptTerms: z.literal(true, { error: 'Zaakceptuj regulamin, aby założyć konto.' }),
+    .min(10, 'Hasło jest za krótkie. Użyj co najmniej 10 znaków')
+    .max(128, 'Hasło może mieć najwyżej 128 znaków'),
+  acceptTerms: z.literal(true, { error: 'Zaakceptuj regulamin, aby założyć konto' }),
 });
 
 type Values = z.input<typeof schema>;
@@ -83,7 +83,7 @@ export function RegisterForm({ nick }: { nick?: string } = {}) {
     } else if (response.status === 428) {
       setAlert({
         kind: 'error',
-        message: 'Nie udało się potwierdzić, że nie jesteś automatem. Spróbuj ponownie.',
+        message: 'Nie udało się potwierdzić, że nie jesteś automatem. Spróbuj ponownie',
       });
     } else {
       setAlert({ kind: 'error', message: problemMessage(problem) });
@@ -102,14 +102,14 @@ export function RegisterForm({ nick }: { nick?: string } = {}) {
       {submitCount > 0 && errorCount > 0 && (
         <Alert variant="danger">
           Popraw {errorCount}{' '}
-          {plural(errorCount, 'pole zaznaczone', 'pola zaznaczone', 'pól zaznaczonych')} poniżej.
+          {plural(errorCount, 'pole zaznaczone', 'pola zaznaczone', 'pól zaznaczonych')} poniżej
         </Alert>
       )}
 
       <Field
         label="Imię i nazwisko lub pseudonim"
         autoComplete="name"
-        hint="Tak podpiszesz swoją stronę. Zmienisz to w każdej chwili."
+        hint="Tak podpiszesz swoją stronę, ale w każdej chwili możesz to zmienić"
         error={errors.displayName?.message}
         {...register('displayName')}
       />
@@ -117,7 +117,7 @@ export function RegisterForm({ nick }: { nick?: string } = {}) {
         label="E-mail do logowania"
         type="email"
         autoComplete="email"
-        hint="Nie pokażemy go na Twojej stronie."
+        hint="Nie pokażemy go na Twojej stronie"
         error={errors.email?.message}
         {...register('email')}
       />
@@ -125,7 +125,7 @@ export function RegisterForm({ nick }: { nick?: string } = {}) {
         label="Hasło"
         type={showPassword ? 'text' : 'password'}
         autoComplete="new-password"
-        hint="Co najmniej 10 znaków."
+        hint="Co najmniej 10 znaków"
         error={errors.password?.message}
         addon={
           <button

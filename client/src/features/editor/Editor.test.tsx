@@ -374,7 +374,7 @@ describe('Editor', () => {
     await user.type(await input('Firma'), 'Studio');
     await act(() => vi.advanceTimersByTimeAsync(1000));
 
-    expect(screen.getByText('Możesz wpisać najwyżej 500 znaków (teraz 501).')).toBeVisible();
+    expect(screen.getByText('Możesz wpisać najwyżej 500 znaków (teraz 501)')).toBeVisible();
     expect(bio).toHaveAttribute('aria-invalid', 'true');
     await waitFor(() => expect(bodies).toEqual([{ version: 5, company: 'Studio' }]));
     expect(saveState()).toHaveTextContent('Nie zapisano');
@@ -503,12 +503,12 @@ describe('Editor', () => {
       () => json(403, { status: 403, code: 'email_not_confirmed', detail: 'Potwierdź e-mail.' }),
       'Potwierdź e-mail.',
     ],
-    [() => json(500, { status: 500 }), 'Nie udało się opublikować.'],
+    [() => json(500, { status: 500 }), 'Nie udało się opublikować'],
     [
       () => {
         throw new TypeError('Failed to fetch');
       },
-      'Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie.',
+      'Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie',
     ],
   ])('reports a failed publication (%#)', async (publish, message) => {
     const { user } = setup({ profile: owner({ status: 'never_published' }), publish });
@@ -522,12 +522,12 @@ describe('Editor', () => {
     [
       { confirmed: false },
       owner({ status: 'never_published' }),
-      'Potwierdź adres e-mail, żeby opublikować stronę.',
+      'Potwierdź adres e-mail, żeby opublikować stronę',
     ],
     [
       {},
       owner({ status: 'never_published', nick: null }),
-      'Najpierw wybierz adres strony w kreatorze.',
+      'Najpierw wybierz adres strony w kreatorze',
     ],
   ])('explains why publishing is disabled (%#)', async (options, profile, hint) => {
     setup({ ...options, profile });
@@ -638,7 +638,7 @@ describe('Editor', () => {
     expect(publishButton()).toBeDisabled();
 
     await act(async () => release(json(500, { status: 500 })));
-    expect(await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie.')).toBeVisible();
+    expect(await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie')).toBeVisible();
     await act(() => vi.advanceTimersByTimeAsync(1000));
 
     await waitFor(() => expect(bodies).toEqual([{ version: 5, company: 'Studio' }]));

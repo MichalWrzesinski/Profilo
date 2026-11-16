@@ -46,7 +46,7 @@ describe('ResetRequestForm', () => {
       json(429, {
         status: 429,
         code: 'rate_limited',
-        detail: 'Za dużo prób. Spróbuj ponownie później.',
+        detail: 'Za dużo prób. Spróbuj ponownie później',
       }),
     );
 

@@ -13,7 +13,7 @@ export default async function LoginPage({ searchParams }: Props) {
   return (
     <AuthCard
       title="Zaloguj się"
-      lead="Wróć do edycji swojej strony."
+      lead="Wróć do edycji swojej strony"
       topbarAction={
         <Link className="btn btn-primary btn-sm" href="/rejestracja">
           Załóż stronę
@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: Props) {
         </>
       }
     >
-      {potwierdzono === '1' && <Alert variant="success">Adres potwierdzony — zaloguj się.</Alert>}
+      {potwierdzono === '1' && <Alert variant="success">Adres potwierdzony — zaloguj się</Alert>}
       <LoginForm />
     </AuthCard>
   );

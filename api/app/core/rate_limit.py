@@ -60,7 +60,7 @@ async def hit(limit: Limit, subject: str) -> int:
         raise ProblemError(
             429,
             "rate_limited",
-            "Za dużo prób. Spróbuj ponownie później.",
+            "Za dużo prób. Spróbuj ponownie później",
             headers={"Retry-After": str(retry_after)},
         )
     return count

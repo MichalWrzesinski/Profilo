@@ -42,13 +42,11 @@ async def verify_password(password: str, password_hash: str | None) -> bool:
 def policy_errors(password: str) -> list[dict[str, str]]:
     """Field errors in the API format; empty list when the password is acceptable."""
     if len(password) < MIN_LENGTH:
-        return [
-            _error("too_short", f"Hasło jest za krótkie. Użyj co najmniej {MIN_LENGTH} znaków.")
-        ]
+        return [_error("too_short", f"Hasło jest za krótkie. Użyj co najmniej {MIN_LENGTH} znaków")]
     if len(password) > MAX_LENGTH:
-        return [_error("too_long", f"Hasło może mieć najwyżej {MAX_LENGTH} znaków.")]
+        return [_error("too_long", f"Hasło może mieć najwyżej {MAX_LENGTH} znaków")]
     if password.lower() in _common_passwords():
-        return [_error("password_too_common", "To hasło jest zbyt popularne. Wybierz inne.")]
+        return [_error("password_too_common", "To hasło jest zbyt popularne. Wybierz inne")]
     return []
 
 

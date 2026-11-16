@@ -35,7 +35,7 @@ describe('ConfirmEmailBanner', () => {
 
   it.each([
     [202, 'Wysłaliśmy nowy link.'],
-    [429, 'Nowy link możesz wysłać za minutę.'],
+    [429, 'Nowy link możesz wysłać za minutę'],
     [500, 'Nie udało się wysłać linku.'],
   ])('reports the result of resending (%i)', async (status, message) => {
     mockFetch(() => (status === 202 ? new Response(null, { status }) : json(status, { status })));

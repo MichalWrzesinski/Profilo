@@ -136,7 +136,7 @@ export function NickStep() {
       if (!saved) {
         setSaving(false);
         return setError(
-          (patchError as Problem | undefined)?.detail ?? 'Nie udało się zapisać nazwy.',
+          (patchError as Problem | undefined)?.detail ?? 'Nie udało się zapisać nazwy',
         );
       }
       setProfile(saved);
@@ -146,7 +146,7 @@ export function NickStep() {
       result = await api.PUT('/api/v1/me/profile/nick', { body: { nick } });
     } catch {
       setSaving(false);
-      return setError('Nie udało się zapisać adresu. Sprawdź połączenie i spróbuj ponownie.');
+      return setError('Nie udało się zapisać adresu. Sprawdź połączenie i spróbuj ponownie');
     }
     const { data, error: nickError, response } = result;
     setSaving(false);
@@ -160,14 +160,14 @@ export function NickStep() {
     } else if (response.status === 422) {
       setCheck({ state: 'invalid' });
     } else {
-      setError(problem?.detail ?? 'Nie udało się zapisać adresu. Spróbuj ponownie.');
+      setError(problem?.detail ?? 'Nie udało się zapisać adresu. Spróbuj ponownie');
     }
   };
 
   if (!profile && loadFailed) {
     return (
       <main className={styles.main}>
-        <Alert variant="danger">Nie udało się wczytać Twojej strony.</Alert>
+        <Alert variant="danger">Nie udało się wczytać Twojej strony</Alert>
         <button
           type="button"
           className="btn btn-secondary"
@@ -261,7 +261,7 @@ export function NickStep() {
             {check.state === 'available' && (
               <span className="hint is-success">
                 <CheckIcon className="i sm" aria-hidden="true" />
-                Adres wolny. Rezerwujemy go dla Ciebie po przejściu dalej.
+                Adres wolny. Rezerwujemy go dla Ciebie po przejściu dalej
               </span>
             )}
             {check.state === 'invalid' && (
@@ -272,18 +272,18 @@ export function NickStep() {
             )}
             {check.state === 'unknown' && (
               <span className="hint">
-                Nie udało się teraz sprawdzić adresu. Sprawdzimy go, gdy przejdziesz dalej.
+                Nie udało się teraz sprawdzić adresu. Sprawdzimy go, gdy przejdziesz dalej
               </span>
             )}
             {check.state === 'taken' && (
               <span className="hint is-error">
                 <CircleAlert className="i sm" aria-hidden="true" />
-                Ten adres jest już zajęty.
+                Ten adres jest już zajęty
                 {check.suggestions.length > 0 && ' Może któryś z tych?'}
               </span>
             )}
             {locked && (
-              <span className="hint">Adresu nie można zmienić po pierwszej publikacji.</span>
+              <span className="hint">Adresu nie można zmienić po pierwszej publikacji</span>
             )}
           </span>
           {check.state === 'taken' && check.suggestions.length > 0 && (
@@ -301,7 +301,7 @@ export function NickStep() {
             </div>
           )}
           <span id="nick-rule" className="hint">
-            3–40 znaków: małe litery, cyfry i myślniki. Polskie znaki zamienimy automatycznie.
+            3–40 znaków: małe litery, cyfry i myślniki. Polskie znaki zamienimy automatycznie
           </span>
         </div>
       </main>

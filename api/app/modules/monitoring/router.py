@@ -17,7 +17,7 @@ async def browser_errors(request: Request, background: BackgroundTasks) -> Respo
     error reporting is off."""
     body = await request.body()
     if len(body) > tunnel.MAX_ENVELOPE_BYTES:
-        raise ProblemError(413, "payload_too_large", "Zgłoszenie jest za duże.")
+        raise ProblemError(413, "payload_too_large", "Zgłoszenie jest za duże")
     if get_settings().sentry_dsn is None:
         return Response(status_code=204)
     client_ip = request.client.host if request.client else "unknown"

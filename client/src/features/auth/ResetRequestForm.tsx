@@ -11,7 +11,7 @@ import { api, type Problem } from '@/lib/api/client';
 import styles from './auth.module.css';
 import { problemMessage } from './messages';
 
-const schema = z.object({ email: z.email('Wpisz pełny adres e-mail, np. anna@example.pl.') });
+const schema = z.object({ email: z.email('Wpisz pełny adres e-mail, np. anna@example.pl') });
 type Values = z.input<typeof schema>;
 
 /** „Nie pamiętam hasła”: ask for a reset link (ACC-US-4). The answer never says whether
@@ -34,7 +34,7 @@ export function ResetRequestForm() {
       if (response.status === 202) return setSentTo(values.email);
       setAlert(problemMessage(error as Problem | undefined));
     } catch {
-      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie.');
+      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie');
     }
   });
 
@@ -43,9 +43,9 @@ export function ResetRequestForm() {
       <>
         <Alert variant="success">
           Jeśli konto z adresem <b>{sentTo}</b> istnieje, wysłaliśmy na nie link do ustawienia
-          nowego hasła. Link jest ważny przez 1 godzinę.
+          nowego hasła. Link jest ważny przez 1 godzinę
         </Alert>
-        <p className="hint">Nie widzisz wiadomości? Sprawdź folder spam.</p>
+        <p className="hint">Nie widzisz wiadomości? Sprawdź folder spam</p>
         <div className={styles.actions}>
           <button type="button" className="btn btn-secondary" onClick={() => setSentTo(null)}>
             Wyślij jeszcze raz

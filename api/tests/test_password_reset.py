@@ -139,7 +139,7 @@ async def test_used_expired_or_replaced_link_is_refused(
 
     assert response.status_code == 410
     assert response.json()["code"] == "token_expired"
-    assert response.json()["detail"] == "Link wygasł albo został już użyty."
+    assert response.json()["detail"] == "Link wygasł albo został już użyty"
 
 
 async def test_link_is_valid_for_one_hour(

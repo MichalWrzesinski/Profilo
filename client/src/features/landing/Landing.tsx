@@ -34,16 +34,16 @@ export function Landing({ host }: { host: string }) {
               Bezpłatnie · bez kodowania
             </span>
             <h1>
-              Twoja wizytówka w sieci. <em>Gotowa w 5 minut.</em>
+              Twoja wizytówka w sieci <em>gotowa w 5 minut</em>
             </h1>
             <p className={styles.lead}>
-              Jeden stały adres z opisem, kontaktem i linkami do Twoich profili. Wstaw go do CV,
-              stopki e-mail albo na wizytówkę.
+              Jeden stały adres z opisem, kontaktem i linkami do Twoich profili, który łatwo
+              wstawisz do CV, stopki e-mail czy na wizytówkę
             </p>
             <ClaimForm host={host} />
             <p className={`hint ${styles.note}`}>
               <Lightbulb className="i sm" aria-hidden="true" />
-              Adres możesz zmienić aż do pierwszej publikacji.
+              Adres możesz zmienić aż do pierwszej publikacji
             </p>
           </div>
           <div className={styles.device}>

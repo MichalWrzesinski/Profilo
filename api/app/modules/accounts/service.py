@@ -32,8 +32,8 @@ LOGIN_FAILURES = rate_limit.Limit("login_fail", max_hits=5, window_seconds=900)
 # reload) gets a sibling token instead of being treated as reuse (ACC-BR-8).
 REFRESH_REUSE_GRACE = timedelta(seconds=30)
 
-EMAIL_TAKEN_DETAIL = "Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło."
-INVALID_CREDENTIALS_DETAIL = "Nieprawidłowy e-mail lub hasło."
+EMAIL_TAKEN_DETAIL = "Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło"
+INVALID_CREDENTIALS_DETAIL = "Nieprawidłowy e-mail lub hasło"
 
 
 @dataclass(frozen=True)
@@ -92,7 +92,7 @@ async def register(
         raise ProblemError(
             428,
             "challenge_required",
-            "Potwierdzamy, że nie jesteś automatem. To potrwa chwilę.",
+            "Potwierdzamy, że nie jesteś automatem. To potrwa chwilę",
             challenge=proof_of_work.create_challenge(),
         )
     await rate_limit.hit(REGISTER_PER_IP, subject)
@@ -127,7 +127,7 @@ async def login(session: AsyncSession, email: str, password: str, client_ip: str
         raise ProblemError(
             429,
             "rate_limited",
-            "Za dużo nieudanych prób logowania. Spróbuj ponownie później.",
+            "Za dużo nieudanych prób logowania. Spróbuj ponownie później",
             headers={"Retry-After": str(retry_after)},
         )
     # FOR SHARE: a password reset (FOR UPDATE on the account) waits for this login, or this
@@ -225,7 +225,7 @@ async def reset_password(
 # Wrong current passwords per account: the 6th attempt within 15 minutes is refused (429),
 # as for login, so a stolen session cannot guess the password needed to delete the account.
 PASSWORD_CHECKS = rate_limit.Limit("password_check", max_hits=5, window_seconds=900)
-INVALID_PASSWORD_DETAIL = "Hasło jest nieprawidłowe."  # noqa: S105 - a message, not a secret
+INVALID_PASSWORD_DETAIL = "Hasło jest nieprawidłowe"  # noqa: S105 - a message, not a secret
 
 
 async def _locked(session: AsyncSession, account_id: uuid.UUID) -> Account:
@@ -240,7 +240,7 @@ async def _check_password(account: Account, password: str) -> None:
         raise ProblemError(
             429,
             "rate_limited",
-            "Za dużo prób z nieprawidłowym hasłem. Spróbuj ponownie później.",
+            "Za dużo prób z nieprawidłowym hasłem. Spróbuj ponownie później",
             headers={"Retry-After": str(retry_after)},
         )
     if not await passwords.verify_password(password, account.password_hash):
@@ -257,9 +257,7 @@ async def change_password(
     new one (its access token would be refused otherwise)."""
     account = await _locked(session, account_id)
     if account.email_confirmed_at is None:
-        raise ProblemError(
-            403, "email_not_confirmed", "Potwierdź adres e-mail, żeby zmienić hasło."
-        )
+        raise ProblemError(403, "email_not_confirmed", "Potwierdź adres e-mail, żeby zmienić hasło")
     await _check_password(account, current)
     if errors := [{**error, "field": "newPassword"} for error in passwords.policy_errors(new)]:
         raise ProblemError(422, "validation_error", errors=errors)
@@ -271,7 +269,7 @@ async def change_password(
                 {
                     "field": "newPassword",
                     "code": "same_password",
-                    "message": "Nowe hasło musi być inne niż obecne.",
+                    "message": "Nowe hasło musi być inne niż obecne",
                 }
             ],
         )

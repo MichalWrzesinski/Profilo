@@ -3,7 +3,7 @@
  * checked by identical test cases on both sides.
  */
 export const NICK_RULE =
-  '3–40 znaków: małe litery, cyfry i pojedyncze myślniki, bez myślnika na początku i końcu.';
+  '3–40 znaków: małe litery, cyfry i pojedyncze myślniki, bez myślnika na początku i końcu';
 const PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const POLISH: Record<string, string> = {
   ą: 'a',

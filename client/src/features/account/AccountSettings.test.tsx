@@ -75,7 +75,7 @@ describe('change password', () => {
 
     await change(user);
 
-    expect(await screen.findByText('Obecne hasło jest nieprawidłowe.')).toBeVisible();
+    expect(await screen.findByText('Obecne hasło jest nieprawidłowe')).toBeVisible();
     expect(screen.getByLabelText('Obecne hasło')).toHaveAttribute('aria-invalid', 'true');
   });
 
@@ -122,7 +122,7 @@ describe('change password', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Zmień hasło' }));
 
-    expect(await screen.findByText('Wpisz obecne hasło.')).toBeVisible();
+    expect(await screen.findByText('Wpisz obecne hasło')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Pokaż' }));
     expect(screen.getByLabelText('Nowe hasło')).toHaveAttribute('type', 'text');
     expect(fetch.mock.calls.some(([input]) => String(input).includes('/me/password'))).toBe(false);
@@ -169,7 +169,7 @@ describe('delete account', () => {
     await user.type(within(dialog).getByLabelText('Wpisz hasło, aby potwierdzić'), 'zle');
     await user.click(within(dialog).getByRole('button', { name: 'Usuń konto' }));
 
-    expect(await within(dialog).findByText('Hasło jest nieprawidłowe.')).toBeVisible();
+    expect(await within(dialog).findByText('Hasło jest nieprawidłowe')).toBeVisible();
     expect(router.replace).not.toHaveBeenCalled();
   });
 
@@ -197,7 +197,7 @@ describe('delete account', () => {
 
     await user.click(within(dialog).getByRole('button', { name: 'Usuń konto' }));
 
-    expect(within(dialog).getByText('Wpisz hasło, aby potwierdzić.')).toBeVisible();
+    expect(within(dialog).getByText('Wpisz hasło')).toBeVisible();
     expect(fetch.mock.calls.some(([input]) => String(input).includes('/me/deletion'))).toBe(false);
   });
 

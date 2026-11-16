@@ -4,7 +4,7 @@ import { useId, useState } from 'react';
 import { normaliseNickInput } from '@/lib/nick';
 import styles from './Landing.module.css';
 
-const PLACEHOLDER = 'twoje-imie';
+const PLACEHOLDER = 'twoja-nazwa';
 
 /**
  * „Zarezerwuj adres”: the field shows the address as it will be (lower case, hyphens, Polish

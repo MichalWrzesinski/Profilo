@@ -101,12 +101,12 @@ describe('LinksSection', () => {
         }),
       'Możesz dodać najwyżej 20 linków.',
     ],
-    [() => json(500, { status: 500 }), 'Nie udało się zapisać linku. Spróbuj ponownie.'],
+    [() => json(500, { status: 500 }), 'Nie udało się zapisać linku. Spróbuj ponownie'],
     [
       () => {
         throw new TypeError('Failed to fetch');
       },
-      'Nie udało się zapisać linku. Sprawdź połączenie i spróbuj ponownie.',
+      'Nie udało się zapisać linku. Sprawdź połączenie i spróbuj ponownie',
     ],
   ])('reports a failed save (%#)', async (handler, message) => {
     const { user } = setup([LINKEDIN], handler);
@@ -122,7 +122,7 @@ describe('LinksSection', () => {
     await user.click(screen.getByRole('button', { name: 'Dodaj pierwszy link' }));
     await user.click(screen.getByRole('button', { name: 'Zapisz link' }));
 
-    expect(screen.getByText('Wpisz adres strony.')).toBeVisible();
+    expect(screen.getByText('Wpisz adres strony')).toBeVisible();
     expect(bodies).toHaveLength(0);
   });
 
@@ -134,7 +134,7 @@ describe('LinksSection', () => {
     const label = screen.getByLabelText('Etykieta');
     await user.clear(label);
     await user.click(screen.getByRole('button', { name: 'Zapisz link' }));
-    expect(screen.getByText('Wpisz etykietę.')).toBeVisible();
+    expect(screen.getByText('Wpisz etykietę')).toBeVisible();
 
     await user.type(label, 'Mój LinkedIn');
     await user.click(screen.getByRole('button', { name: 'Zapisz link' }));
@@ -246,7 +246,7 @@ describe('LinksSection', () => {
     await user.click(screen.getByLabelText('Opis'));
     release(new Response(null, { status: 500 }));
 
-    await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie.');
+    await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie');
     expect(screen.getByLabelText('Opis')).toHaveFocus();
   });
 
@@ -289,7 +289,7 @@ describe('LinksSection', () => {
 
     await user.click(screen.getByRole('button', { name: 'Usuń LinkedIn' }));
 
-    expect(await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie.')).toBeVisible();
+    expect(await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie')).toBeVisible();
   });
 
   it('moves a link with the arrows and saves the order', async () => {
@@ -330,12 +330,12 @@ describe('LinksSection', () => {
         }),
       'Lista linków się zmieniła — odśwież stronę.',
     ],
-    [() => json(500, { status: 500 }), 'Nie udało się zmienić kolejności linków.'],
+    [() => json(500, { status: 500 }), 'Nie udało się zmienić kolejności linków'],
     [
       () => {
         throw new TypeError('Failed to fetch');
       },
-      'Nie udało się zapisać linków. Sprawdź połączenie i spróbuj ponownie.',
+      'Nie udało się zapisać linków. Sprawdź połączenie i spróbuj ponownie',
     ],
   ])('puts the order back when saving it fails (%#)', async (handler, message) => {
     const { user } = setup([LINKEDIN, GITHUB], handler);
@@ -357,7 +357,7 @@ describe('LinksSection', () => {
     setup(links, () => json(500, {}));
 
     expect(screen.getByRole('button', { name: 'Dodaj link' })).toBeDisabled();
-    expect(screen.getByText('Masz już 20 linków — to najwięcej, ile można dodać.')).toBeVisible();
+    expect(screen.getByText('Masz już 20 linków — to najwięcej, ile można dodać')).toBeVisible();
   });
 
   it('gives the drag handle a Polish name and instructions', () => {

@@ -126,7 +126,7 @@ export function LinksSection({ links, run, busy = false }: Props) {
       try {
         return await change();
       } catch {
-        setError('Nie udało się zapisać linków. Sprawdź połączenie i spróbuj ponownie.');
+        setError('Nie udało się zapisać linków. Sprawdź połączenie i spróbuj ponownie');
         return null;
       }
     });
@@ -141,7 +141,7 @@ export function LinksSection({ links, run, busy = false }: Props) {
       });
       if (!data) {
         setError(
-          (problem as Problem | undefined)?.detail ?? 'Nie udało się zmienić kolejności linków.',
+          (problem as Problem | undefined)?.detail ?? 'Nie udało się zmienić kolejności linków',
         );
       }
       saved = Boolean(data);
@@ -184,7 +184,7 @@ export function LinksSection({ links, run, busy = false }: Props) {
       });
       if (!response.ok) {
         focusNext.current = null;
-        setError('Nie udało się usunąć linku. Spróbuj ponownie.');
+        setError('Nie udało się usunąć linku. Spróbuj ponownie');
         return null;
       }
       // DELETE answers without the profile: read it (twice at most) for the new version.
@@ -192,7 +192,7 @@ export function LinksSection({ links, run, busy = false }: Props) {
         const { data } = await api.GET('/api/v1/me/profile');
         if (data) return data;
       }
-      setError('Link został usunięty, ale nie udało się odświeżyć strony. Odśwież stronę.');
+      setError('Link został usunięty, ale nie udało się odświeżyć strony. Odśwież stronę');
       return null;
     });
   };
@@ -290,10 +290,10 @@ export function LinksSection({ links, run, busy = false }: Props) {
             </button>
           )
         )}
-        {full && <p className="hint">Masz już 20 linków — to najwięcej, ile można dodać.</p>}
+        {full && <p className="hint">Masz już 20 linków — to najwięcej, ile można dodać</p>}
         {shown.length > 1 && (
           <p className="hint" style={{ marginTop: 'var(--space-2)' }}>
-            Przeciągnij, aby zmienić kolejność. Na telefonie użyj strzałek.
+            Przeciągnij, aby zmienić kolejność. Na telefonie użyj strzałek
           </p>
         )}
       </div>
@@ -405,8 +405,8 @@ function LinkForm({ link, onCancel, onSaved, run }: FormProps) {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!url.trim()) return setErrors({ url: 'Wpisz adres strony.' });
-    if (link && !label.trim()) return setErrors({ label: 'Wpisz etykietę.' });
+    if (!url.trim()) return setErrors({ url: 'Wpisz adres strony' });
+    if (link && !label.trim()) return setErrors({ label: 'Wpisz etykietę' });
     setSaving(true);
     setErrors({});
     setGeneral(null);
@@ -431,9 +431,9 @@ function LinkForm({ link, onCancel, onSaved, run }: FormProps) {
         }
         if (Object.keys(fields).length) setErrors(fields);
         else if (response.status === 409 && problem?.detail) setGeneral(problem.detail);
-        else setGeneral('Nie udało się zapisać linku. Spróbuj ponownie.');
+        else setGeneral('Nie udało się zapisać linku. Spróbuj ponownie');
       } catch {
-        setGeneral('Nie udało się zapisać linku. Sprawdź połączenie i spróbuj ponownie.');
+        setGeneral('Nie udało się zapisać linku. Sprawdź połączenie i spróbuj ponownie');
       }
       return null;
     });

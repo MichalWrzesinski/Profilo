@@ -15,8 +15,8 @@ import { problemMessage } from './messages';
 const schema = z.object({
   newPassword: z
     .string()
-    .min(10, 'Hasło jest za krótkie. Użyj co najmniej 10 znaków.')
-    .max(128, 'Hasło może mieć najwyżej 128 znaków.'),
+    .min(10, 'Hasło jest za krótkie. Użyj co najmniej 10 znaków')
+    .max(128, 'Hasło może mieć najwyżej 128 znaków'),
 });
 type Values = z.input<typeof schema>;
 
@@ -24,7 +24,7 @@ function Expired() {
   return (
     <>
       <Alert variant="danger">
-        <b>Link wygasł.</b> Link do zmiany hasła działa przez 1 godzinę i tylko raz.
+        <b>Link wygasł.</b> Link do zmiany hasła działa przez 1 godzinę i tylko raz
       </Alert>
       <Link className="btn btn-primary btn-block" href="/nie-pamietam-hasla">
         Wyślij nowy link
@@ -72,7 +72,7 @@ export function NewPasswordForm() {
       }
       setAlert(problemMessage(problem));
     } catch {
-      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie.');
+      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie');
     }
   });
 
@@ -81,7 +81,7 @@ export function NewPasswordForm() {
     return (
       <>
         <Alert variant="success">
-          <b>Hasło zmienione.</b> Jesteś zalogowany(-a). Wylogowaliśmy Cię na innych urządzeniach.
+          <b>Hasło zmienione.</b> Jesteś zalogowany(-a). Wylogowaliśmy Cię na innych urządzeniach
         </Alert>
         <Link className="btn btn-primary btn-block" href="/panel">
           Przejdź do panelu
@@ -97,7 +97,7 @@ export function NewPasswordForm() {
         label="Nowe hasło"
         type={showPassword ? 'text' : 'password'}
         autoComplete="new-password"
-        hint="Co najmniej 10 znaków. Po zmianie wylogujemy Cię na innych urządzeniach."
+        hint="Co najmniej 10 znaków. Po zmianie wylogujemy Cię na innych urządzeniach"
         error={errors.newPassword?.message}
         addon={
           <button

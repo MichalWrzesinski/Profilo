@@ -763,7 +763,7 @@ export interface components {
                  *         {
                  *           "field": "password",
                  *           "code": "too_short",
-                 *           "message": "Hasło jest za krótkie. Użyj co najmniej 10 znaków."
+                 *           "message": "Hasło jest za krótkie. Użyj co najmniej 10 znaków"
                  *         }
                  *       ]
                  *     }
@@ -850,7 +850,7 @@ export interface operations {
                      *       "title": "Account already exists",
                      *       "status": 409,
                      *       "code": "email_taken",
-                     *       "detail": "Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło."
+                     *       "detail": "Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło"
                      *     }
                      */
                     "application/problem+json": components["schemas"]["Problem"];
@@ -910,7 +910,7 @@ export interface operations {
                      *       "title": "Invalid credentials",
                      *       "status": 401,
                      *       "code": "invalid_credentials",
-                     *       "detail": "Nieprawidłowy e-mail lub hasło."
+                     *       "detail": "Nieprawidłowy e-mail lub hasło"
                      *     }
                      */
                     "application/problem+json": components["schemas"]["Problem"];
@@ -1291,7 +1291,7 @@ export interface operations {
                      *       "title": "Nick unavailable",
                      *       "status": 409,
                      *       "code": "nick_taken",
-                     *       "detail": "Ten adres jest już zajęty.",
+                     *       "detail": "Ten adres jest już zajęty",
                      *       "suggestions": [
                      *         "anna-wisniewska-2",
                      *         "anna-wisniewska-krakow",

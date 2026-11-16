@@ -34,7 +34,7 @@ test('the owner changes the password and then deletes the account', async ({ pag
   await expect(dialog).toContainText(`/user/${nick} przestanie działać od razu`);
   await dialog.getByLabel('Wpisz hasło, aby potwierdzić').fill(TEST_PASSWORD);
   await dialog.getByRole('button', { name: 'Usuń konto' }).click();
-  await expect(dialog.getByText('Hasło jest nieprawidłowe.')).toBeVisible();
+  await expect(dialog.getByText('Hasło jest nieprawidłowe')).toBeVisible();
   expect((await request.get(`/user/${nick}`)).status()).toBe(200);
 
   // Scenario 2: delete with the current password.

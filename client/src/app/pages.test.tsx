@@ -99,7 +99,7 @@ describe('public pages', () => {
       'href',
       '/rejestracja',
     );
-    expect(screen.queryByText('Adres potwierdzony — zaloguj się.') !== null).toBe(notice);
+    expect(screen.queryByText('Adres potwierdzony — zaloguj się') !== null).toBe(notice);
   });
 
   it('renders the confirmation page', () => {

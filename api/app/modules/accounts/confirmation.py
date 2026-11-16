@@ -56,7 +56,7 @@ async def send_email(account: Account, raw_token: str) -> None:
 
 async def resend(session: AsyncSession, account: Account, client_ip: str) -> None:
     if account.email_confirmed_at is not None:
-        raise ProblemError(409, "email_already_confirmed", "Adres e-mail jest już potwierdzony.")
+        raise ProblemError(409, "email_already_confirmed", "Adres e-mail jest już potwierdzony")
     await rate_limit.hit(RESEND_PER_IP, rate_limit.ip_subject(client_ip))
     await rate_limit.hit(RESEND_PER_MINUTE, str(account.id))
     await rate_limit.hit(RESEND_PER_HOUR, str(account.id))
@@ -71,7 +71,7 @@ async def confirm(session: AsyncSession, raw_token: str, client_ip: str) -> None
     (repeated click on the same link); expired, superseded or unknown tokens → 410."""
     await rate_limit.hit(CONFIRM_PER_IP, rate_limit.ip_subject(client_ip))
     now = datetime.now(UTC)
-    expired = ProblemError(410, "token_expired", "Link wygasł albo został już użyty.")
+    expired = ProblemError(410, "token_expired", "Link wygasł albo został już użyty")
     locked = await one_time.lock_with_account(session, raw_token, PURPOSE)
     if locked is None:
         raise expired

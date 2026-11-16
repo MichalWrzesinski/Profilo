@@ -19,8 +19,8 @@ export default async function RegisterPage({ searchParams }: Props) {
       title="Załóż swoją stronę"
       lead={
         nick
-          ? `Zajmie to około 5 minut. Adres „${nick}” sprawdzimy i zarezerwujemy w następnym kroku.`
-          : 'Zajmie to około 5 minut.'
+          ? `Zajmie to około 5 minut. Adres „${nick}” sprawdzimy i zarezerwujemy w następnym kroku`
+          : 'Zajmie to około 5 minut'
       }
       topbarAction={
         <Link className="btn btn-primary btn-sm" href="/logowanie">

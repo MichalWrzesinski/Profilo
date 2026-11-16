@@ -255,7 +255,7 @@ describe('NickStep', () => {
   it.each([
     [
       () => json(200, { nick: 'panel', available: false, reason: 'reserved' }),
-      /Ten adres jest już zajęty\.$/,
+      /Ten adres jest już zajęty$/,
     ],
     [
       () => json(200, { nick: 'panel', available: false, reason: 'invalid_format' }),
@@ -308,7 +308,7 @@ describe('NickStep', () => {
     await user.type(nickInput(), 'x');
     await new Promise((resolve) => setTimeout(resolve, 400));
     await user.type(nickInput(), 'y');
-    expect(await screen.findByText('Ten adres jest już zajęty.')).toBeInTheDocument();
+    expect(await screen.findByText('Ten adres jest już zajęty')).toBeInTheDocument();
 
     releaseOld(json(200, { nick: 'anna-wisniewskax', available: true, suggestions: [] }));
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -323,7 +323,7 @@ describe('NickStep', () => {
       load: () => (fail ? json(500, { status: 500 }) : json(200, profile())),
     });
 
-    expect(await screen.findByText('Nie udało się wczytać Twojej strony.')).toBeInTheDocument();
+    expect(await screen.findByText('Nie udało się wczytać Twojej strony')).toBeInTheDocument();
     fail = false;
     await user.click(screen.getByRole('button', { name: 'Spróbuj ponownie' }));
 
@@ -354,7 +354,7 @@ describe('NickStep', () => {
 
     await user.click(next());
 
-    expect(await screen.findByText('Nie udało się zapisać nazwy.')).toBeInTheDocument();
+    expect(await screen.findByText('Nie udało się zapisać nazwy')).toBeInTheDocument();
   });
 
   it('reports a failed name save without details', async () => {
@@ -364,6 +364,6 @@ describe('NickStep', () => {
 
     await user.click(next());
 
-    expect(await screen.findByText('Nie udało się zapisać nazwy.')).toBeInTheDocument();
+    expect(await screen.findByText('Nie udało się zapisać nazwy')).toBeInTheDocument();
   });
 });

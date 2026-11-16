@@ -318,7 +318,7 @@ async def test_one_upload_per_account_at_a_time(client: AsyncClient) -> None:
     free = await upload(client, auth, images.jpeg())
 
     assert busy.status_code == 429
-    assert busy.json()["detail"] == "Poczekaj, aż poprzedni obraz się wgra."
+    assert busy.json()["detail"] == "Poczekaj, aż poprzedni obraz się wgra"
     assert free.status_code == 200
     assert await get_valkey().get(f"upload:{me['id']}") is None  # released
 

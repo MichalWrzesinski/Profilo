@@ -85,7 +85,7 @@ class DraftPatch(ApiModel):
     def _not_null(cls, value: str | None) -> str | None:
         # Optional to send, but cannot be cleared: the page always has a layout and a colour.
         if value is None:
-            raise PydanticCustomError("required", "Wybierz jedną z opcji.")
+            raise PydanticCustomError("required", "Wybierz jedną z opcji")
         return value
 
 
@@ -140,13 +140,13 @@ class LinkPatch(ApiModel):
     @classmethod
     def _url_not_null(cls, value: str | None) -> str | None:
         if value is None:
-            raise PydanticCustomError("invalid_url", "Wpisz adres strony.")
+            raise PydanticCustomError("invalid_url", "Wpisz adres strony")
         return value
 
     @model_validator(mode="after")
     def _has_a_change(self) -> LinkPatch:
         if not self.model_fields_set:
-            raise PydanticCustomError("missing", "Podaj adres albo etykietę.")
+            raise PydanticCustomError("missing", "Podaj adres albo etykietę")
         return self
 
 

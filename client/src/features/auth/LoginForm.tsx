@@ -14,8 +14,8 @@ import styles from './auth.module.css';
 import { problemMessage } from './messages';
 
 const schema = z.object({
-  email: z.email('Wpisz pełny adres e-mail, np. anna@example.pl.'),
-  password: z.string().min(1, 'Wpisz hasło.'),
+  email: z.email('Wpisz pełny adres e-mail, np. anna@example.pl'),
+  password: z.string().min(1, 'Wpisz hasło'),
 });
 
 type Values = z.input<typeof schema>;

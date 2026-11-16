@@ -7,9 +7,9 @@ import { useSession } from '@/lib/session';
 type State = 'idle' | 'sending' | 'sent' | 'wait' | 'error';
 
 const MESSAGES: Partial<Record<State, string>> = {
-  sent: 'Wysłaliśmy nowy link. Poprzednie linki już nie działają.',
-  wait: 'Nowy link możesz wysłać za minutę.',
-  error: 'Nie udało się wysłać linku. Spróbuj ponownie za chwilę.',
+  sent: 'Wysłaliśmy nowy link. Poprzednie linki już nie działają',
+  wait: 'Nowy link możesz wysłać za minutę',
+  error: 'Nie udało się wysłać linku. Spróbuj ponownie za chwilę',
 };
 
 /** Warning banner shown in the panel until the login e-mail is confirmed (ACC-BR-4). */
@@ -31,7 +31,7 @@ export function ConfirmEmailBanner() {
   return (
     <div className="alert alert-warning banner" role="status">
       <span className="grow">
-        <b>Potwierdź e-mail, żeby opublikować stronę.</b> Wysłaliśmy link na {account.email}.
+        <b>Potwierdź e-mail, żeby opublikować stronę.</b> Wysłaliśmy link na {account.email}
         {MESSAGES[state] && <> {MESSAGES[state]}</>}
       </span>
       <button

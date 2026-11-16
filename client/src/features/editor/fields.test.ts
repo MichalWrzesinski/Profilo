@@ -38,9 +38,9 @@ describe('editor fields', () => {
   });
 
   it.each([
-    [{ displayName: '' }, 'displayName', 'Wpisz nazwę.'],
-    [{ bio: 'x'.repeat(501) }, 'bio', 'Możesz wpisać najwyżej 500 znaków (teraz 501).'],
-    [{ headline: 'x'.repeat(81) }, 'headline', 'Możesz wpisać najwyżej 80 znaków (teraz 81).'],
+    [{ displayName: '' }, 'displayName', 'Wpisz nazwę'],
+    [{ bio: 'x'.repeat(501) }, 'bio', 'Możesz wpisać najwyżej 500 znaków (teraz 501)'],
+    [{ headline: 'x'.repeat(81) }, 'headline', 'Możesz wpisać najwyżej 80 znaków (teraz 81)'],
     [
       { publicEmail: 'anna@' },
       'publicEmail',
@@ -48,7 +48,7 @@ describe('editor fields', () => {
     ],
     [{ bio: 'x'.repeat(500) }, 'bio', null],
     [{ bio: '😀'.repeat(300) }, 'bio', null],
-    [{ bio: '😀'.repeat(501) }, 'bio', 'Możesz wpisać najwyżej 500 znaków (teraz 501).'],
+    [{ bio: '😀'.repeat(501) }, 'bio', 'Możesz wpisać najwyżej 500 znaków (teraz 501)'],
     [{ publicEmail: '' }, 'publicEmail', null],
   ] as const)('validates %o', (change, key, message) => {
     expect(validate({ ...base, ...change }, key)).toBe(message);

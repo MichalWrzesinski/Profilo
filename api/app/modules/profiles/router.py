@@ -187,7 +187,7 @@ async def _read_upload(request: Request) -> bytes:
             raise ProblemError(
                 422,
                 "validation_error",
-                errors=[{"field": "file", "code": "required", "message": "Wybierz plik."}],
+                errors=[{"field": "file", "code": "required", "message": "Wybierz plik"}],
             )
         data = await upload.read(processing.MAX_BYTES + 1)
     finally:

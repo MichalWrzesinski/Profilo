@@ -14,7 +14,7 @@ describe('Home', () => {
     );
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'Twoja wizytówka w sieci. Gotowa w 5 minut.',
+      'Twoja wizytówka w sieci gotowa w 5 minut',
     );
     const field = screen.getByRole('textbox', { name: 'Wybrany adres strony' });
     expect(field).toHaveAttribute('name', 'adres');
@@ -22,7 +22,7 @@ describe('Home', () => {
     expect(form).toHaveAttribute('action', '/rejestracja');
     expect(form).toHaveAttribute('method', 'get');
     expect(within(form).getByText('/user/')).toBeInTheDocument();
-    expect(field).toHaveAccessibleDescription('profilo.pl/user/twoje-imie');
+    expect(field).toHaveAccessibleDescription('profilo.pl/user/twoja-nazwa');
     expect(screen.getByTitle('Przykładowa strona w Profilo')).toHaveAttribute('src', '/przyklad');
   });
 

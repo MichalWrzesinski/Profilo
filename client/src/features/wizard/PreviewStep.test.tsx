@@ -116,18 +116,18 @@ describe('PreviewStep', () => {
   it.each([
     [
       () => json(409, { status: 409, code: 'draft_conflict', current: owner({ version: 9 }) }),
-      'Strona zmieniła się w innym oknie. Sprawdź podgląd i opublikuj ponownie.',
+      'Strona zmieniła się w innym oknie. Sprawdź podgląd i opublikuj ponownie',
     ],
     [
       () => json(403, { status: 403, code: 'email_not_confirmed', detail: 'Potwierdź e-mail.' }),
       'Potwierdź e-mail.',
     ],
-    [() => json(500, { status: 500 }), 'Nie udało się opublikować. Spróbuj ponownie.'],
+    [() => json(500, { status: 500 }), 'Nie udało się opublikować. Spróbuj ponownie'],
     [
       () => {
         throw new TypeError('Failed to fetch');
       },
-      'Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie.',
+      'Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie',
     ],
   ])('reports a failed publication (%#)', async (publish, message) => {
     const { user } = setup({ publish });
