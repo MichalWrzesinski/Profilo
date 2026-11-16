@@ -63,6 +63,8 @@ Review (subagent, code review + security), round 1 — fixed:
 
 Round 2 — fixed: the throttle grouped every unhandled exception under one key (`unhandled_exception`), so a new bug could hide behind another for 10 minutes → the key includes the exception type and the line that raised it (test with two different exceptions); the tunnel logs a warning once per window when its cap is reached; the *Sentry release* job checks for `/opt/sourcemaps` explicitly instead of treating any copy failure as an old image; scoped package paths (`node_modules/@sentry/…`) are no longer taken for e-mail addresses; tests replace the modules' clock instead of the global `time.monotonic` (which would also stop asyncio's clock).
 
+On staging after the merge (`ec84ddf`): deployment, *Sentry release* (skipped: no token) and `deploy/staging` green; in the browser no console errors, source maps not served (404), and an error thrown in the page was posted to `/api/v1/monitoring/sentry` (204, dropped — staging has no DSN).
+
 Not verified: real Sentry ingestion and the *Sentry release* job (no Sentry account yet); Better Stack monitors and scenario 2 (no account; configuration in the runbook — with a 3-minute check interval on a plan the alert comes later than 2 minutes).
 
 Needs from the user: Sentry (EU) and Better Stack accounts; `STAGING_SENTRY_DSN`, `STAGING_SENTRY_AUTH_TOKEN`, `PROD_SENTRY_DSN`, `PROD_SENTRY_AUTH_TOKEN`, variables `SENTRY_ORG`, `SENTRY_PROJECT`; Better Stack monitors and heartbeat (`PROD_BACKUP_HEARTBEAT_URL`); GitHub failure e-mails (runbook *Monitoring*).
