@@ -35,7 +35,9 @@ docker create --name profilo-sourcemaps "$image" >/dev/null
 # built before TASK-023 (a rollback, an old staging commit) have no maps: release only.
 maps=true
 docker cp profilo-sourcemaps:/app/client/.next/static "$work/static"
-if ! docker cp profilo-sourcemaps:/opt/sourcemaps/. "$work/static/" 2>/dev/null; then
+if docker run --rm --entrypoint test "$image" -d /opt/sourcemaps; then
+  docker cp profilo-sourcemaps:/opt/sourcemaps/. "$work/static/"  # any failure fails the job
+else
   maps=false
   echo "::notice::the client image of $SHA has no source maps (built before TASK-023)"
 fi
