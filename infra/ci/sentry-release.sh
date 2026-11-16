@@ -5,6 +5,8 @@
 # Never in ci.yml (AGENTS.md). Without a token it is skipped, unless SENTRY_REQUIRED=true.
 #
 #   SHA ENV_NAME SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT [SENTRY_URL] [SENTRY_REQUIRED]
+#   SENTRY_URL only for a user token or a self-hosted Sentry: an organisation token
+#   (sntrys_…) carries its own address and region, which sentry-cli uses.
 #   GHCR_USER GHCR_TOKEN (pulling the client image)
 set -euo pipefail
 
@@ -19,8 +21,11 @@ fi
 [[ "${SHA:-}" =~ ^[0-9a-f]{40}$ ]] || fail "invalid commit SHA"
 [[ "${SENTRY_ORG:-}" =~ ^[a-z0-9_-]+$ && "${SENTRY_PROJECT:-}" =~ ^[a-z0-9_-]+$ ]] \
   || fail "SENTRY_ORG and SENTRY_PROJECT must be Sentry slugs"
-url="${SENTRY_URL:-https://de.sentry.io/}"
-[[ "$url" =~ ^https://[a-z0-9.-]+/?$ ]] || fail "invalid SENTRY_URL"
+url_env=()
+if [[ -n "${SENTRY_URL:-}" ]]; then
+  [[ "$SENTRY_URL" =~ ^https://[a-z0-9.-]+/?$ ]] || fail "invalid SENTRY_URL"
+  url_env=(-e SENTRY_URL)
+fi
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"; docker rm -f profilo-sourcemaps >/dev/null 2>&1 || true' EXIT
@@ -45,10 +50,11 @@ echo "$(find "$work/static" -name '*.map' | wc -l) source maps"
 echo "::endgroup::"
 
 cli() {
-  docker run --rm -e SENTRY_AUTH_TOKEN -e SENTRY_ORG -e SENTRY_PROJECT -e SENTRY_URL="$url" \
+  docker run --rm -e SENTRY_AUTH_TOKEN -e SENTRY_ORG -e SENTRY_PROJECT "${url_env[@]}" \
     -v "$work:/work" -w /work "$CLI_IMAGE" "$@"
 }
 echo "::group::Sentry release $SHA ($ENV_NAME)"
+cli info  # server, organisation and token validity (the token itself is not printed)
 cli releases new "$SHA"
 # Links the release to the commit (needs the GitHub integration in Sentry; optional).
 cli releases set-commits "$SHA" --commit "MichalWrzesinski/Profilo@$SHA" \
