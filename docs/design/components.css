@@ -14,7 +14,6 @@ h1, h2, h3, h4, p { margin: 0; }
 h1, h2, h3, h4 { color: var(--color-heading); line-height: var(--leading-snug); letter-spacing: var(--tracking-tight); }
 a { color: var(--color-blue-700); text-underline-offset: 3px; }
 /* Plain (underlined) text links turn to the logo-dot orange on hover; styled links (buttons, cards) keep their own. */
-a:not([class]) { transition: color var(--duration-fast); }
 a:not([class]):hover { color: var(--color-accent); }
 :focus-visible { outline: 3px solid var(--color-focus); outline-offset: var(--focus-offset); border-radius: 4px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -109,7 +108,7 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .alert .btn { margin-left: auto; }
 .banner { border-radius: 0; border-width: 0 0 var(--border-width); padding: var(--space-3) var(--space-6); align-items: center; flex-wrap: wrap; }
 /* The banner's own button: its border colour, darkening to its text colour on hover. */
-.alert-warning .btn-ghost { background: #F3DDB4; color: var(--color-warning); }
+.alert-warning .btn-ghost { background: #F3DDB4; color: var(--color-warning); transition: background var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard); }
 .alert-warning .btn-ghost:hover:not(:disabled) { background: var(--color-warning); color: var(--color-warning-bg); }
 .alert-warning .btn-ghost.is-loading::after { border-color: var(--color-warning) var(--color-warning) transparent transparent; }
 .toast { position: fixed; left: 50%; bottom: var(--space-6); transform: translateX(-50%); display: flex; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-navy-900); color: #fff; box-shadow: var(--shadow-lg); font-size: var(--text-sm); font-weight: var(--font-weight-medium); z-index: 20; max-width: calc(100% - 32px); }

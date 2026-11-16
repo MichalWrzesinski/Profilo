@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { normaliseNickInput } from '@/lib/nick';
 import styles from './Landing.module.css';
 
@@ -14,6 +14,7 @@ const PLACEHOLDER = 'twoje-imie';
  */
 export function ClaimForm({ host }: { host: string }) {
   const [value, setValue] = useState('');
+  const addressId = useId();
   return (
     <>
       <form className={styles.claim} action="/rejestracja" method="get">
@@ -24,7 +25,7 @@ export function ClaimForm({ host }: { host: string }) {
             name="adres"
             placeholder={PLACEHOLDER}
             aria-label="Wybrany adres strony"
-            aria-describedby="claim-address"
+            aria-describedby={addressId}
             autoComplete="off"
             autoCapitalize="none"
             spellCheck={false}
@@ -37,7 +38,7 @@ export function ClaimForm({ host }: { host: string }) {
           Zarezerwuj adres
         </button>
       </form>
-      <p id="claim-address" className={styles.address}>
+      <p id={addressId} className={styles.address}>
         {host}/user/<b>{value || PLACEHOLDER}</b>
       </p>
     </>
