@@ -27,6 +27,11 @@ export default async function RegisterPage({ searchParams }: Props) {
           Zaloguj się
         </Link>
       }
+      footer={
+        <>
+          Masz już konto? <Link href="/logowanie">Zaloguj się</Link>
+        </>
+      }
     >
       <RegisterForm nick={nick || undefined} />
     </AuthCard>
