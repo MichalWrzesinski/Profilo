@@ -2,6 +2,10 @@
 :80 {
 	encode zstd gzip
 
+	# The servers' fallback policy (infra/server/Caddyfile), so E2E runs under it too: pages
+	# send their own with a script nonce (client/src/proxy.ts).
+	header ?Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+
 	# Request size: 10 MB images (plus multipart overhead), 1 MB for everything else.
 	@upload path /api/v1/me/profile/images/*
 	request_body @upload {
