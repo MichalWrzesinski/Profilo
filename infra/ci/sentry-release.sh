@@ -31,9 +31,14 @@ image="ghcr.io/michalwrzesinski/profilo-client:$SHA"
 docker pull --quiet "$image" >/dev/null
 docker logout ghcr.io >/dev/null
 docker create --name profilo-sourcemaps "$image" >/dev/null
-# Scripts (with debug IDs) and their maps side by side, as sentry-cli expects them.
+# Scripts (with debug IDs) and their maps side by side, as sentry-cli expects them. Images
+# built before TASK-023 (a rollback, an old staging commit) have no maps: release only.
+maps=true
 docker cp profilo-sourcemaps:/app/client/.next/static "$work/static"
-docker cp profilo-sourcemaps:/opt/sourcemaps/. "$work/static/"
+if ! docker cp profilo-sourcemaps:/opt/sourcemaps/. "$work/static/" 2>/dev/null; then
+  maps=false
+  echo "::notice::the client image of $SHA has no source maps (built before TASK-023)"
+fi
 echo "$(find "$work/static" -name '*.map' | wc -l) source maps"
 echo "::endgroup::"
 
@@ -46,7 +51,7 @@ cli releases new "$SHA"
 # Links the release to the commit (needs the GitHub integration in Sentry; optional).
 cli releases set-commits "$SHA" --commit "MichalWrzesinski/Profilo@$SHA" \
   || echo "::warning::commits not linked (Sentry GitHub integration missing?)"
-cli sourcemaps upload --release "$SHA" static
+[[ "$maps" == true ]] && cli sourcemaps upload --release "$SHA" static
 cli releases finalize "$SHA"
 cli deploys new --release "$SHA" -e "$ENV_NAME"
 echo "::endgroup::"
