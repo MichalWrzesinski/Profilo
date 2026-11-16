@@ -1,14 +1,19 @@
 version: 2
+# Every update waits 14 days after its release (project rule: no dependency younger than two
+# weeks; a broken or compromised release is usually withdrawn within that time). Security
+# updates are not delayed by the cooldown.
 updates:
   - package-ecosystem: uv
     directory: /api
     schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 14 }
     groups:
       python-minor-patch: { update-types: [minor, patch] }
 
   - package-ecosystem: npm
     directory: /client
     schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 14 }
     open-pull-requests-limit: 10
     groups:
       # Packages that must move together (peer dependencies).
@@ -22,11 +27,19 @@ updates:
   - package-ecosystem: docker
     directories: [/api, /client]
     schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 14 }
+    ignore:
+      # A new Python minor (e.g. 3.16, published as alphas first) is a planned change, not a
+      # weekly bump; patch releases of the current minor still come.
+      - dependency-name: python
+        update-types: [version-update:semver-minor, version-update:semver-major]
 
   - package-ecosystem: docker-compose
     directories: [/, /infra/server]
     schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 14 }
 
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 14 }
