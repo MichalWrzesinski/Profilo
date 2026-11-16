@@ -9,7 +9,7 @@ API_TEST_RUN := $(COMPOSE) run --rm $(AS_HOST) -e ENVIRONMENT=test -e VALKEY_URL
 CLIENT_RUN := $(COMPOSE) run --rm --no-deps $(AS_HOST) client
 
 .DEFAULT_GOAL := help
-.PHONY: help env up down logs migrate seed test test-api test-client lint lint-api lint-client \
+.PHONY: help env up down logs migrate test test-api test-client lint lint-api lint-client \
 	format contract check audit secrets images ci e2e api-shell hooks
 
 help: ## Show available commands
@@ -18,9 +18,9 @@ help: ## Show available commands
 env: ## Create .env from .env.example if missing
 	@test -f .env || (cp .env.example .env && echo "Created .env from .env.example")
 
-up: env ## Build and start everything, run migrations and seed (http://localhost:8080)
+up: env ## Build and start everything and run migrations (http://localhost:8080)
 	$(COMPOSE) up -d --build --wait
-	$(MAKE) migrate seed
+	$(MAKE) migrate
 	@echo "Profilo: http://localhost:8080  ·  Mailpit: http://localhost:8025"
 
 down: ## Stop all containers
@@ -31,9 +31,6 @@ logs: ## Follow logs of all services
 
 migrate: env ## Apply database migrations
 	$(COMPOSE) exec -T api alembic upgrade head
-
-seed: ## Load demo data (none yet; added with the first features)
-	@echo "No demo data yet."
 
 test: test-api test-client ## Run all tests with coverage (threshold 95 %)
 
