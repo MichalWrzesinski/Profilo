@@ -32,11 +32,13 @@ for (const path of ['/', '/regulamin', '/prywatnosc']) {
 test('legal pages name the operator and mark what is still to be supplied', async ({ page }) => {
   for (const path of ['/regulamin', '/prywatnosc']) {
     await open(page, path);
-    await expect(page.getByText('Wersja robocza.')).toBeVisible();
+    await expect(page.getByText('Wersja demonstracyjna.')).toBeVisible();
     await expect(page.getByText(/Michał Wrzesiński Webhome/).first()).toBeVisible();
   }
-  // The privacy policy still waits for the processor confirmations.
-  await expect(page.getByText('[do uzupełnienia: dostawca poczty operatora]')).toBeVisible();
+  // The privacy policy still waits for the server location and processor confirmations.
+  await expect(
+    page.getByText('[do uzupełnienia: potwierdzenie lokalizacji serwera]'),
+  ).toBeVisible();
   await page.getByRole('link', { name: 'Regulamin' }).last().click();
   await expect(page).toHaveURL(/\/regulamin$/);
 });

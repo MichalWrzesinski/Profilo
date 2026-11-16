@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 import { HydrationMarker } from '@/components/HydrationMarker';
+import { PrivacyNotice } from '@/components/PrivacyNotice';
 import { SessionProvider } from '@/lib/session';
 import './globals.css';
 
@@ -37,6 +38,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <HydrationMarker />
         <SessionProvider>{children}</SessionProvider>
+        <PrivacyNotice />
       </body>
     </html>
   );

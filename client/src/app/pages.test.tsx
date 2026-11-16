@@ -27,7 +27,7 @@ describe('public pages', () => {
       </SessionProvider>,
     );
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument();
-    expect(screen.getByText('Wersja robocza.')).toBeInTheDocument();
+    expect(screen.getByText('Wersja demonstracyjna.')).toBeInTheDocument();
     // Operator data filled in; a missing value would be marked (TASK-019 scenario 2).
     expect(screen.getAllByText(/Michał Wrzesiński Webhome/)[0]).toBeInTheDocument();
     expect(screen.getAllByText(/9671286620/)[0]).toBeInTheDocument();
@@ -46,13 +46,18 @@ describe('public pages', () => {
     expect(screen.queryByText(/\[do uzupełnienia: adres do zgłoszeń nadużyć\]/)).toBeNull();
   });
 
-  it('names the processors and the 30-day backups in the privacy policy', () => {
+  it('names the processors and where the data is kept in the privacy policy', () => {
     render(
       <SessionProvider>
         <PrivacyPage />
       </SessionProvider>,
     );
-    for (const text of ['Hetzner Online GmbH', 'Brevo SAS', '(Sentry)', 'przez 30 dni']) {
+    for (const text of [
+      'SpillHosting AS',
+      'Brevo SAS',
+      '(Sentry)',
+      'Europejskim Obszarze Gospodarczym',
+    ]) {
       expect(screen.getAllByText(new RegExp(text.replace(/[()]/g, '\\$&')))[0]).toBeInTheDocument();
     }
   });

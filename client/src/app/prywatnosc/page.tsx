@@ -101,10 +101,10 @@ export default function PrivacyPage() {
             Konto, którego e-mail nie zostanie potwierdzony w ciągu 7 dni, usuwamy automatycznie.
           </li>
           <li>
-            Kopie zapasowe bazy danych i zdjęć przechowujemy przez 30 dni, więc usunięte dane
-            znikają z nich najpóźniej po 30 dniach. Kopie nie są używane do niczego poza
-            odtworzeniem serwisu po awarii.{' '}
-            <Placeholder value={null} label="potwierdzenie po wdrożeniu kopii zapasowych" />
+            Dostawca serwera codziennie wykonuje kopię zapasową całego serwera, więc usunięte dane
+            znikają z kopii po upływie okresu ich przechowywania u dostawcy:{' '}
+            <Placeholder value={null} label="okres przechowywania kopii u dostawcy serwera" />.
+            Kopie nie są używane do niczego poza odtworzeniem serwisu po awarii.
           </li>
           <li>
             Adres Twojej strony (nick) po usunięciu konta jest zablokowany przez 30 dni, żeby nikt
@@ -128,10 +128,12 @@ export default function PrivacyPage() {
         </p>
         <ul>
           <li>
-            <b>Hetzner Online GmbH</b> (Niemcy) — serwery i kopie zapasowe.
+            <b>SpillHosting AS</b> (DoomHosting, Norwegia) — serwer, na którym działa serwis, jego
+            kopie zapasowe i skrzynka pocztowa operatora.
           </li>
           <li>
-            <b>Brevo SAS</b> (Francja) — wysyłka wiadomości e-mail o koncie.
+            <b>Brevo SAS</b> (Francja) — wysyłka wiadomości e-mail o koncie.{' '}
+            <Placeholder value={null} label="potwierdzenie umowy powierzenia z Brevo" />
           </li>
           <li>
             <b>Functional Software, Inc. (Sentry)</b> — informacje o błędach aplikacji, w regionie
@@ -141,16 +143,13 @@ export default function PrivacyPage() {
             usuwamy ze zgłoszenia adresy e-mail, hasła, tokeny, numery telefonów i adresy IP.{' '}
             <Placeholder value={null} label="potwierdzenie umowy powierzenia z Sentry" />
           </li>
-          <li>
-            Dostawca skrzynki do zgłoszeń nadużyć i korespondencji —{' '}
-            <Placeholder value={null} label="dostawca poczty operatora" />.
-          </li>
         </ul>
         <p>
-          Dane serwisu przechowujemy w Unii Europejskiej. Jeśli któryś dostawca przekazywałby dane
-          poza Europejski Obszar Gospodarczy, odbywa się to na podstawie standardowych klauzul
+          Dane serwisu przechowujemy w Europejskim Obszarze Gospodarczym: u dostawcy serwera z
+          Norwegii (państwo EOG, w którym obowiązuje RODO) i w regionie UE Sentry. Jeśli któryś
+          dostawca przekazywałby dane poza EOG, odbywa się to na podstawie standardowych klauzul
           umownych zatwierdzonych przez Komisję Europejską.{' '}
-          <Placeholder value={null} label="potwierdzenie regionów i umów powierzenia" />
+          <Placeholder value={null} label="potwierdzenie lokalizacji serwera" />
         </p>
         <p>
           Dane z opublikowanej strony są publiczne: widzi je każdy, kto zna jej adres, a
@@ -185,10 +184,17 @@ export default function PrivacyPage() {
       <Section id="cookies" title="7. Pliki cookie i pamięć przeglądarki">
         <p>
           Używamy tylko niezbędnego pliku cookie sesji (<code>profilo_rt</code>), który utrzymuje
-          zalogowanie przez 30 dni od ostatniej aktywności. W pamięci przeglądarki zapisujemy
-          niezapisane jeszcze zmiany w edytorze i czyścimy je przy wylogowaniu. Nie używamy
-          ciasteczek reklamowych ani analitycznych, dlatego nie prosimy o zgodę.
+          zalogowanie przez 30 dni od ostatniej aktywności. W pamięci przeglądarki zapisujemy:
         </p>
+        <ul>
+          <li>niezapisane jeszcze zmiany w edytorze — czyścimy je przy wylogowaniu,</li>
+          <li>
+            informację, że w tej przeglądarce ktoś jest zalogowany — dzięki niej strona główna
+            pokazuje „Moje konto”; usuwamy ją przy wylogowaniu,
+          </li>
+          <li>informację, że zamknąłeś okno o plikach cookie i danych osobowych.</li>
+        </ul>
+        <p>Nie używamy ciasteczek reklamowych ani analitycznych, dlatego nie prosimy o zgodę.</p>
       </Section>
 
       <Section id="zmiany" title="8. Zmiany polityki">

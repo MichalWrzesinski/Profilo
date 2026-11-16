@@ -7,7 +7,7 @@ import styles from './LegalDocument.module.css';
 
 type Props = { title: string; children: ReactNode };
 
-/** Text of a legal page: header, version, draft notice and the sections. */
+/** Text of a legal page: header, version, demo notice and the sections. */
 export function LegalDocument({ title, children }: Props) {
   return (
     <>
@@ -17,8 +17,9 @@ export function LegalDocument({ title, children }: Props) {
           <h1>{title}</h1>
           <p className="muted">{LEGAL_VERSION}</p>
           <Alert variant="warning">
-            <b>Wersja robocza.</b> Tekst czeka na weryfikację prawną. Miejsca do uzupełnienia są
-            wyróżnione.
+            <b>Wersja demonstracyjna.</b> Ten serwis jest wersją demo oprogramowania Profilo. Konta,
+            strony i wszystkie dane mogą zostać usunięte bez uprzedzenia i bez podania przyczyny
+            podczas resetu lub czyszczenia platformy
           </Alert>
           {children}
         </article>
