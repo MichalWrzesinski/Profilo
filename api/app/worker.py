@@ -5,9 +5,11 @@ from celery.schedules import crontab
 
 import app.models  # noqa: F401 - all models, as in the API (tasks flush ORM objects)
 from app.core.logging import configure_logging
+from app.core.monitoring import init_sentry
 from app.core.settings import get_settings
 
 settings = get_settings()
+init_sentry("worker")  # Celery integration: failed tasks are reported
 configure_logging(settings.log_level)
 
 celery_app = Celery("profilo", broker=str(settings.valkey_url))

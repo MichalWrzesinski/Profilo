@@ -3,11 +3,13 @@
 import re
 import uuid
 
+import sentry_sdk
 import structlog
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.errors import problem_response
 from app.core.logging import log
+from app.core.monitoring import forget_request_secrets
 
 REQUEST_ID_HEADER = "X-Request-ID"
 _VALID_REQUEST_ID = re.compile(r"[A-Za-z0-9._-]{1,64}")
@@ -37,6 +39,8 @@ class RequestContextMiddleware:
         rid = _request_id(scope)
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(request_id=rid)
+        sentry_sdk.get_isolation_scope().set_tag("request_id", rid)  # no-op without Sentry
+        forget_request_secrets()
         started = False
 
         async def send_with_id(message: Message) -> None:

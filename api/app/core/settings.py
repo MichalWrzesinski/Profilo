@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # User images (media module): an fsspec URL; a volume on servers, memory:// in tests.
     media_url: str = "file:///data/media"
 
+    # Error reporting (core.monitoring): off without a DSN; the release is the commit SHA.
+    sentry_dsn: SecretStr | None = None
+    sentry_release: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:

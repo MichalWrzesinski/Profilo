@@ -2,12 +2,14 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import EmailStr, Field, StringConstraints
+from pydantic import AfterValidator, EmailStr, Field, StringConstraints
 
+from app.core.monitoring import redact
 from app.core.schemas import ApiModel
 
 # Passwords are taken exactly as typed: no whitespace stripping (ApiModel strips strings).
-Password = Annotated[str, StringConstraints(strip_whitespace=False)]
+# Every password in a request is marked secret for error reports (core.monitoring).
+Password = Annotated[str, StringConstraints(strip_whitespace=False), AfterValidator(redact)]
 
 
 class RegisterRequest(ApiModel):

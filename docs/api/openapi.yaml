@@ -497,6 +497,22 @@ paths:
           description: 'Entries. `Cache-Control: no-store`.'
           content: { application/json: { schema: { $ref: '#/components/schemas/Sitemap' } } }
 
+  /api/v1/monitoring/sentry:
+    post:
+      tags: [system]
+      operationId: reportBrowserError
+      summary: Browser error report (Sentry envelope), scrubbed and forwarded to Sentry; dropped when error reporting is off (TASK-023)
+      security: []
+      requestBody:
+        required: true
+        content: { text/plain: { schema: { type: string, maxLength: 204800 } } }
+      responses:
+        '204': { description: Accepted (also when dropped). }
+        '413':
+          description: Report larger than 200 KB (`payload_too_large`).
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
   /media/{imageId}/{size}.webp:
     get:
       tags: [public]
