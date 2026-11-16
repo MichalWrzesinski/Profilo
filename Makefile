@@ -69,9 +69,10 @@ audit: env ## Known vulnerabilities: fails on runtime deps and on high/critical 
 secrets: ## Scan the whole git history for secrets (gitleaks)
 	$(COMPOSE) run --rm --no-deps gitleaks git --redact --no-banner /repo
 
-images: ## Build production images (api, client)
+images: ## Build production images (api, client, backup)
 	docker build --target prod -t profilo-api:prod api
 	docker build --target prod -f client/Dockerfile -t profilo-client:prod .
+	docker build -t profilo-backup:prod infra/backup
 
 ci: check audit secrets images ## Everything the CI `check` job runs
 

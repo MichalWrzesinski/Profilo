@@ -82,6 +82,14 @@ jobs:
           cache-from: type=gha,scope=profilo-client
           cache-to: type=gha,mode=max,scope=profilo-client
 
+      - name: Build backup image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: infra/backup
+          push: false
+          cache-from: type=gha,scope=profilo-backup
+          cache-to: type=gha,mode=max,scope=profilo-backup
+
       - name: Stop containers
         if: always()
         run: docker compose down -v
@@ -161,9 +169,15 @@ jobs:
           - image: profilo-api
             context: api
             file: api/Dockerfile
+            target: prod
           - image: profilo-client
             context: .
             file: client/Dockerfile
+            target: prod
+          - image: profilo-backup
+            context: infra/backup
+            file: infra/backup/Dockerfile
+            target: ""
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -181,7 +195,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
-          target: prod
+          target: ${{ matrix.target }}
           push: true
           tags: ghcr.io/michalwrzesinski/${{ matrix.image }}:${{ github.sha }}
           labels: |

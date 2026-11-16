@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+# Off-site backups of the production database and media (TASK-022, deployment standard).
+#
+#   profilo-backup schedule       loop: daily backup at BACKUP_AT, monthly restore test on
+#                                 RESTORE_TEST_DAY at RESTORE_TEST_AT (UTC); the container's
+#                                 default command
+#   profilo-backup backup         one backup now: database dump + media, then retention
+#   profilo-backup restore-test   restores the latest database snapshot into a temporary
+#                                 database, compares row counts, checks part of the data
+#   profilo-backup snapshots      lists the snapshots
+#   profilo-backup dump-db        writes the latest database dump to stdout (for a restore)
+#   profilo-backup restic <args>  any restic command on the repository (e.g. restore media)
+#
+# Repository: restic (AES-256, deduplicated) over SFTP, e.g. a Hetzner Storage Box in another
+# location. Retention: every snapshot of the last BACKUP_KEEP_DAYS days (30, privacy policy).
+# Any failure sends an alert e-mail to ALERT_EMAIL (SMTP settings of the application).
+#
+# Settings (environment): BACKUP_REPOSITORY (sftp:user@host:/path), BACKUP_SFTP_PORT,
+# BACKUP_HOST (snapshot host name), ALERT_EMAIL, PGHOST/PGUSER/PGPASSWORD/PGDATABASE,
+# SMTP_HOST/SMTP_PORT/SMTP_SSL/SMTP_STARTTLS/SMTP_USERNAME/SMTP_PASSWORD/MAIL_FROM.
+# Files in /run/backup (read-only, written by the deploy workflow): restic-password,
+# ssh_key, known_hosts.
+set -euo pipefail
+
+SECRETS=/run/backup
+STATE=/state
+MEDIA=/data/media
+KEEP_DAYS="${BACKUP_KEEP_DAYS:-30}"
+BACKUP_AT="${BACKUP_AT:-02:30}"
+RESTORE_TEST_DAY="${RESTORE_TEST_DAY:-01}"
+RESTORE_TEST_AT="${RESTORE_TEST_AT:-04:30}"
+export TZ=UTC
+export RESTIC_PASSWORD_FILE="$SECRETS/restic-password"
+export RESTIC_CACHE_DIR="$STATE/cache"
+
+log() { echo "[backup $(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"; }
+
+# restic <args…>: SFTP through ssh with the pinned host key and the deploy-provided key only.
+restic_() {
+  local target port
+  target="${BACKUP_REPOSITORY#sftp:}"
+  target="${target%%:*}"
+  port="${BACKUP_SFTP_PORT:-23}"
+  restic --repo "$BACKUP_REPOSITORY" \
+    -o sftp.command="ssh -p $port -i $SECRETS/ssh_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$SECRETS/known_hosts -o ConnectTimeout=20 -o ServerAliveInterval=30 $target -s sftp" \
+    "$@"
+}
+
+check_settings() {
+  [[ "${BACKUP_REPOSITORY:-}" =~ ^sftp:[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:/[A-Za-z0-9._/-]+$ ]] \
+    || { log "BACKUP_REPOSITORY must look like sftp:user@host:/path"; return 1; }
+  [[ "${BACKUP_SFTP_PORT:-23}" =~ ^[0-9]{1,5}$ ]] || { log "invalid BACKUP_SFTP_PORT"; return 1; }
+  local f
+  for f in restic-password ssh_key known_hosts; do
+    [[ -s "$SECRETS/$f" ]] || { log "missing $SECRETS/$f (written by the deploy workflow)"; return 1; }
+  done
+}
+
+# alert <subject> <body file>: e-mail to ALERT_EMAIL through the application's SMTP account.
+# The password goes through a netrc file, never the command line.
+alert() {
+  local subject="$1" body="$2" from scheme url netrc message
+  if [[ -z "${ALERT_EMAIL:-}" || -z "${SMTP_HOST:-}" ]]; then
+    log "no ALERT_EMAIL or SMTP settings: alert not sent ($subject)"
+    return 1
+  fi
+  from="${MAIL_FROM:-}"
+  [[ "$from" =~ \<([^>]+)\> ]] && from="${BASH_REMATCH[1]}"
+  scheme=smtp
+  [[ "${SMTP_SSL:-false}" == true ]] && scheme=smtps
+  url="$scheme://$SMTP_HOST:${SMTP_PORT:-587}"
+  netrc="$(mktemp)"
+  message="$(mktemp)"
+  if [[ -n "${SMTP_USERNAME:-}" ]]; then
+    printf 'machine %s login %s password %s\n' "$SMTP_HOST" "$SMTP_USERNAME" "${SMTP_PASSWORD:-}" > "$netrc"
+  fi
+  {
+    printf 'From: %s\r\nTo: %s\r\nSubject: [Profilo %s] %s\r\nDate: %s\r\n' \
+      "${MAIL_FROM:-$from}" "$ALERT_EMAIL" "${BACKUP_HOST:-server}" "$subject" "$(date -R)"
+    printf 'Content-Type: text/plain; charset=utf-8\r\n\r\n'
+    sed 's/$/\r/' "$body"
+  } > "$message"
+  local tls=()
+  [[ "$scheme" == smtp && "${SMTP_STARTTLS:-false}" == true ]] && tls=(--ssl-reqd)
+  local ok=0
+  curl -sS --max-time 60 "${tls[@]}" --netrc-optional --netrc-file "$netrc" \
+    --mail-from "$from" --mail-rcpt "$ALERT_EMAIL" --upload-file "$message" "$url" || ok=$?
+  rm -f "$netrc" "$message"
+  if [[ "$ok" != 0 ]]; then
+    log "alert e-mail failed (curl exit $ok): $subject"
+    return 1
+  fi
+  log "alert e-mail sent: $subject"
+}
+
+# run_job <name> <function>: runs a job with its output in a log file; on failure the log
+# goes out as an alert. The result is kept in $STATE for monitoring (TASK-023).
+run_job() {
+  local name="$1" fn="$2" out status=0
+  mkdir -p "$STATE"
+  out="$(mktemp)"
+  # A separate process: inside `… || status=$?` bash ignores `set -e` in functions, so a
+  # failing step would not stop the job.
+  "$0" "__$fn" > >(tee "$out") 2>&1 || status=$?
+  sleep 1  # let tee flush
+  if [[ "$status" == 0 ]]; then
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$STATE/last-$name-ok"
+    [[ "$name" == restore-test ]] && alert "monthly restore test passed" "$out" || true
+  else
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$STATE/last-$name-failed"
+    log "$name FAILED (exit $status)"
+    alert "$name FAILED" "$out" || true
+  fi
+  rm -f "$out"
+  return "$status"
+}
+
+ensure_repository() {
+  local status=0
+  restic_ cat config >/dev/null 2>&1 || status=$?
+  case "$status" in
+    0) ;;
+    10) log "creating the repository $BACKUP_REPOSITORY"; restic_ init ;;  # 10: does not exist
+    *) log "repository not reachable (restic exit $status)"; restic_ cat config >/dev/null; return 1 ;;
+  esac
+}
+
+do_backup() {
+  check_settings
+  ensure_repository
+  log "database dump → snapshot (tag db)"
+  # restic runs pg_dump itself and keeps no snapshot when it fails (a piped dump would leave
+  # a truncated snapshot as the latest one).
+  restic_ backup --stdin-from-command --stdin-filename profilo.dump \
+    --tag db --host "${BACKUP_HOST:-profilo}" --quiet -- pg_dump --format=custom
+  log "media → snapshot (tag media)"
+  restic_ backup "$MEDIA" --tag media --host "${BACKUP_HOST:-profilo}" --quiet
+  log "retention: snapshots of the last $KEEP_DAYS days"
+  restic_ forget --group-by host,tags --keep-within "${KEEP_DAYS}d" --prune --quiet
+  restic_ snapshots --latest 1 --compact
+}
+
+do_restore_test() {
+  check_settings
+  local db
+  db="restore_test_$(date -u +%Y%m%d%H%M%S)"
+  # shellcheck disable=SC2064  # the name is fixed now
+  trap "dropdb --if-exists '$db' >/dev/null 2>&1 || true" RETURN
+  # Leftovers of a test that was interrupted (container recreated by a deployment).
+  psql -tAq -c "select datname from pg_database where datname like 'restore\_test\_%'" \
+    | while read -r old; do log "dropping leftover $old"; dropdb --if-exists "$old"; done
+  log "latest database snapshot → temporary database $db"
+  restic_ snapshots --tag db --latest 1 --compact
+  createdb "$db"
+  restic_ dump --tag db latest /profilo.dump | pg_restore --no-owner --exit-on-error -d "$db"
+  log "row counts (restored / live now):"
+  local tables table restored live empty=1
+  tables="$(psql -d "$db" -tAq -c "select tablename from pg_tables where schemaname = 'public' order by 1")"
+  [[ -n "$tables" ]] || { log "the restored database has no tables"; return 1; }
+  for table in $tables; do
+    restored="$(psql -d "$db" -tAq -c "select count(*) from public.\"$table\"")"
+    live="$(psql -tAq -c "select count(*) from public.\"$table\"" 2>/dev/null || echo '?')"
+    printf '  %-28s %8s / %s\n' "$table" "$restored" "$live"
+    [[ "$restored" != 0 ]] && empty=0
+  done
+  psql -d "$db" -tAq -c "select version_num from alembic_version" | sed 's/^/  alembic_version: /'
+  (( empty == 0 )) || log "note: every restored table is empty"
+  log "media: files in the latest snapshot / on the server now"
+  printf '  %s / %s\n' \
+    "$(restic_ ls --json --tag media latest | grep -c '"type":"file"' || true)" \
+    "$(find "$MEDIA" -type f | wc -l)"
+  log "repository check with 5% of the data read back"
+  restic_ check --read-data-subset=5% --quiet
+  log "restore test passed"
+}
+
+schedule() {
+  check_settings || log "settings incomplete: every job will fail and alert until fixed"
+  log "scheduler: backup daily at $BACKUP_AT UTC, restore test on day $RESTORE_TEST_DAY at $RESTORE_TEST_AT UTC"
+  mkdir -p "$STATE"
+  while true; do
+    local today month now
+    today="$(date -u +%F)"
+    month="$(date -u +%Y-%m)"
+    now="$(date -u +%H:%M)"
+    # Due once the time has passed (also after a restart), at most once a day / month. The
+    # mark is written when the job has finished (passed or failed): a job interrupted by a
+    # deployment (the container is recreated) runs again after the restart.
+    if [[ ! "$now" < "$BACKUP_AT" && "$(cat "$STATE/backup-day" 2>/dev/null)" != "$today" ]]; then
+      run_job backup do_backup || true
+      echo "$today" > "$STATE/backup-day"
+    fi
+    if [[ "$(date -u +%d)" == "$RESTORE_TEST_DAY" && ! "$now" < "$RESTORE_TEST_AT" \
+          && "$(cat "$STATE/restore-test-month" 2>/dev/null)" != "$month" ]]; then
+      run_job restore-test do_restore_test || true
+      echo "$month" > "$STATE/restore-test-month"
+    fi
+    sleep 30
+  done
+}
+
+case "${1:-schedule}" in
+  schedule) schedule ;;
+  backup) run_job backup do_backup ;;
+  restore-test) run_job restore-test do_restore_test ;;
+  snapshots) check_settings && restic_ snapshots ;;
+  dump-db) check_settings >&2 && restic_ dump --tag db latest /profilo.dump ;;
+  restic) shift; check_settings && restic_ "$@" ;;
+  __do_backup) do_backup ;;
+  __do_restore_test) do_restore_test ;;
+  *) echo "usage: profilo-backup schedule|backup|restore-test|snapshots|dump-db|restic <args>" >&2; exit 2 ;;
+esac
