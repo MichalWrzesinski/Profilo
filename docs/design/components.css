@@ -148,8 +148,10 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 
 /* ---------- Menu ---------- */
 .menu { min-width: 240px; padding: var(--space-2); background: var(--color-surface); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
-.menu a { display: flex; align-items: center; gap: var(--space-3); padding: 10px var(--space-3); border-radius: var(--radius-sm); color: var(--color-heading); text-decoration: none; font-size: var(--text-sm); font-weight: var(--font-weight-medium); }
-.menu a:hover { background: var(--color-blue-100); }
+/* Menu entries look the same whether they are links or buttons. */
+.menu a, .menu button { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: 10px var(--space-3); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-heading); text-decoration: none; text-align: left; cursor: pointer; font: var(--font-weight-medium) var(--text-sm)/var(--leading-normal) var(--font-sans); }
+.menu a:hover, .menu button:hover { background: var(--color-blue-100); }
+.menu a[aria-current="page"] { font-weight: var(--font-weight-semibold); }
 .menu hr { border: 0; border-top: var(--border-width) solid var(--color-border); margin: var(--space-2) 0; }
 .menu a.danger { color: var(--color-danger); }
 

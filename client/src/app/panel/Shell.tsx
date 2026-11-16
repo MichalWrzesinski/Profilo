@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { Brand } from '@/components/Brand';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
@@ -9,6 +9,7 @@ import { useRequireSession } from '@/lib/useRequireSession';
 
 export default function PanelLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { status, signOut } = useRequireSession();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -28,7 +29,7 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
         <div style={{ position: 'relative' }}>
           <button
             type="button"
-            className="btn btn-ghost btn-sm"
+            className="btn btn-primary btn-sm"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
@@ -41,18 +42,26 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
               role="menu"
               style={{ position: 'absolute', right: 0, top: '110%' }}
             >
-              <Link
-                role="menuitem"
-                className="btn btn-ghost btn-block"
-                href="/panel/konto"
-                onClick={() => setMenuOpen(false)}
-              >
-                Ustawienia konta
-              </Link>
+              {[
+                { href: '/panel', label: 'Panel' },
+                { href: '/panel/konto', label: 'Ustawienia konta' },
+              ].map(({ href, label }) => (
+                <Link
+                  key={href}
+                  role="menuitem"
+                  className="menu-item"
+                  href={href}
+                  aria-current={pathname === href ? 'page' : undefined}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {label}
+                </Link>
+              ))}
+              <hr />
               <button
                 type="button"
                 role="menuitem"
-                className="btn btn-ghost btn-block"
+                className="menu-item"
                 onClick={async () => {
                   await signOut();
                   router.replace('/logowanie');

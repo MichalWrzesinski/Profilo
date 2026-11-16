@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { router } from '@/test/navigation';
+import { router, pathname } from '@/test/navigation';
 import { json, mockFetch, SESSION } from '@/test/fetch';
 import { tokenStore } from '@/lib/api/client';
 import { SessionProvider } from '@/lib/session';
@@ -59,6 +59,7 @@ describe('Panel', () => {
   });
 
   it('links to the account settings and closes the menu', async () => {
+    pathname.current = '/panel';
     mockFetch(() => json(200, SESSION));
     renderPanel();
     const user = userEvent.setup();
@@ -66,6 +67,9 @@ describe('Panel', () => {
     await user.click(await screen.findByRole('button', { name: 'Menu' }));
     const settings = screen.getByRole('menuitem', { name: 'Ustawienia konta' });
     expect(settings).toHaveAttribute('href', '/panel/konto');
+    // Back to the panel from any page of it; the current page is marked.
+    expect(screen.getByRole('menuitem', { name: 'Panel' })).toHaveAttribute('href', '/panel');
+    expect(screen.getByRole('menuitem', { name: 'Panel' })).toHaveAttribute('aria-current', 'page');
     await user.click(settings);
 
     expect(screen.queryByRole('menu')).toBeNull();
