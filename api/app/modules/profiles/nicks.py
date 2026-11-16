@@ -28,15 +28,19 @@ def normalise(text: str) -> str:
     return _HYPHENS.sub("-", cleaned).strip("-")
 
 
-_INPUT_SEPARATORS = re.compile(r"[\s_./\\,;:+&|]+")
+_INPUT_INVALID = re.compile(r"[^a-z0-9\-\s_./\\,;:+&|]")
+# A separator next to a hyphen adds none: typing „anna-” and then a space or „&” keeps „anna-”.
+_INPUT_SEPARATORS = re.compile(r"[-\s_./\\,;:+&|]*[\s_./\\,;:+&|][-\s_./\\,;:+&|]*")
 
 
 def normalise_input(text: str) -> str:
     """Normalisation applied to what the owner types (PRF-BR-3): as PRF-BR-2, but hyphens
     typed by the owner are kept as they are (leading, trailing, doubled) so the owner sees
-    the rule (TASK-006 scenario 4). Only leading whitespace is trimmed, like the client,
+    the rule (TASK-006 scenario 4). Separators, with the hyphens and dropped characters
+    around them, become one hyphen. Only leading whitespace is trimmed, like the client,
     which must let the owner type a space before the next word."""
-    return _INVALID.sub("", _INPUT_SEPARATORS.sub("-", _ascii_lower(text.lstrip())))
+    kept = _INPUT_INVALID.sub("", _ascii_lower(text.lstrip()))
+    return _INPUT_SEPARATORS.sub("-", kept)
 
 
 def propose(display_name: str) -> str | None:
