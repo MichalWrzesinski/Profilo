@@ -116,7 +116,7 @@ describe('RegisterForm', () => {
 
     await user.click(screen.getByRole('button', { name: 'Załóż konto' }));
 
-    expect(await screen.findByText('Popraw 4 pola zaznaczone poniżej.')).toBeInTheDocument();
+    expect(await screen.findByText('Popraw 4 pola zaznaczone poniżej')).toBeInTheDocument();
     expect(screen.getByText('Wpisz pełny adres e-mail, np. anna@example.pl')).toBeInTheDocument();
     expect(
       screen.getByText('Hasło jest za krótkie. Użyj co najmniej 10 znaków'),
@@ -173,7 +173,7 @@ describe('RegisterForm', () => {
       json(429, {
         status: 429,
         code: 'rate_limited',
-        detail: 'Za dużo prób. Spróbuj ponownie później.',
+        detail: 'Za dużo prób. Spróbuj ponownie później',
       }),
     );
     const user = setup();

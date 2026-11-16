@@ -33,7 +33,7 @@ export function PublishedScreen() {
       </header>
       <main className={styles.done}>
         {failed ? (
-          <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę.</Alert>
+          <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę</Alert>
         ) : !profile ? (
           <p className="muted" role="status">
             Wczytywanie…

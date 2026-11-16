@@ -9,7 +9,7 @@ export function BlockedNotice() {
       <span className="grow">
         <b>Strona zablokowana — skontaktuj się z nami.</b> Odwiedzający widzą zamiast niej
         informację, że strona nie istnieje. Uzasadnienie otrzymasz e-mailem;{' '}
-        <Link href="/regulamin#zgloszenia">jak się odwołać</Link>.
+        <Link href="/regulamin#zgloszenia">jak się odwołać</Link>
       </span>
     </div>
   );

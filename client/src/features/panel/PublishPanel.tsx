@@ -37,7 +37,7 @@ export function PublishPanel() {
   }, []);
 
   if (loadFailed) {
-    return <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę.</Alert>;
+    return <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę</Alert>;
   }
   if (!profile) {
     return (
@@ -72,11 +72,11 @@ export function PublishPanel() {
       const details = problem as (Problem & { current?: OwnerProfile }) | undefined;
       if (details?.code === 'draft_conflict' && details.current) {
         setProfile(details.current);
-        return setError('Strona zmieniła się w innym oknie. Sprawdź ją i opublikuj ponownie.');
+        return setError('Strona zmieniła się w innym oknie. Sprawdź ją i opublikuj ponownie');
       }
-      setError(details?.detail ?? 'Nie udało się zapisać zmiany. Spróbuj ponownie.');
+      setError(details?.detail ?? 'Nie udało się zapisać zmiany. Spróbuj ponownie');
     } catch {
-      setError('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie.');
+      setError('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie');
     } finally {
       setBusy(false);
     }

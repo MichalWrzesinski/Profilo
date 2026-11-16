@@ -323,7 +323,7 @@ describe('NickStep', () => {
       load: () => (fail ? json(500, { status: 500 }) : json(200, profile())),
     });
 
-    expect(await screen.findByText('Nie udało się wczytać Twojej strony.')).toBeInTheDocument();
+    expect(await screen.findByText('Nie udało się wczytać Twojej strony')).toBeInTheDocument();
     fail = false;
     await user.click(screen.getByRole('button', { name: 'Spróbuj ponownie' }));
 
@@ -354,7 +354,7 @@ describe('NickStep', () => {
 
     await user.click(next());
 
-    expect(await screen.findByText('Nie udało się zapisać nazwy.')).toBeInTheDocument();
+    expect(await screen.findByText('Nie udało się zapisać nazwy')).toBeInTheDocument();
   });
 
   it('reports a failed name save without details', async () => {
@@ -364,6 +364,6 @@ describe('NickStep', () => {
 
     await user.click(next());
 
-    expect(await screen.findByText('Nie udało się zapisać nazwy.')).toBeInTheDocument();
+    expect(await screen.findByText('Nie udało się zapisać nazwy')).toBeInTheDocument();
   });
 });

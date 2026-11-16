@@ -67,10 +67,10 @@ export function ImagesSection({ profile, run, busy = false }: Props) {
             ? TOO_LARGE
             : (problem?.errors?.[0]?.message ??
                 problem?.detail ??
-                'Nie udało się wgrać obrazu. Spróbuj ponownie.'),
+                'Nie udało się wgrać obrazu. Spróbuj ponownie'),
         );
       } catch {
-        fail(kind, 'Nie udało się wgrać obrazu. Sprawdź połączenie i spróbuj ponownie.');
+        fail(kind, 'Nie udało się wgrać obrazu. Sprawdź połączenie i spróbuj ponownie');
       } finally {
         setProgress((current) => ({ ...current, [kind]: undefined }));
       }
@@ -119,7 +119,7 @@ export function ImagesSection({ profile, run, busy = false }: Props) {
       } catch {
         // reported below
       }
-      fail(kind, 'Nie udało się usunąć obrazu. Spróbuj ponownie.');
+      fail(kind, 'Nie udało się usunąć obrazu. Spróbuj ponownie');
       return null;
     });
 

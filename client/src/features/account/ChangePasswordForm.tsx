@@ -54,7 +54,7 @@ export function ChangePasswordForm() {
       }
       setAlert(problemMessage(problem));
     } catch {
-      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie.');
+      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie');
     }
   });
 
@@ -67,7 +67,7 @@ export function ChangePasswordForm() {
         <form method="post" onSubmit={onSubmit} noValidate>
           {done && (
             <Alert variant="success">
-              Hasło zmienione. Wylogowaliśmy Cię na innych urządzeniach.
+              Hasło zmienione. Wylogowaliśmy Cię na innych urządzeniach
             </Alert>
           )}
           {alert && <Alert variant="danger">{alert}</Alert>}

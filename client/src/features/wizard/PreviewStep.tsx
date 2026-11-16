@@ -34,7 +34,7 @@ export function PreviewStep() {
   if (loadFailed) {
     return (
       <main className={styles.main}>
-        <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę.</Alert>
+        <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę</Alert>
       </main>
     );
   }
@@ -69,12 +69,12 @@ export function PreviewStep() {
       const details = problem as (Problem & { current?: OwnerProfile }) | undefined;
       if (details?.code === 'draft_conflict' && details.current) {
         setProfile(details.current);
-        setError('Strona zmieniła się w innym oknie. Sprawdź podgląd i opublikuj ponownie.');
+        setError('Strona zmieniła się w innym oknie. Sprawdź podgląd i opublikuj ponownie');
       } else {
-        setError(details?.detail ?? 'Nie udało się opublikować. Spróbuj ponownie.');
+        setError(details?.detail ?? 'Nie udało się opublikować. Spróbuj ponownie');
       }
     } catch {
-      setError('Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie.');
+      setError('Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie');
     }
     setPublishing(false);
   };

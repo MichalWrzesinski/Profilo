@@ -51,7 +51,7 @@ export function Editor({ variant = 'editor' }: { variant?: Variant }) {
   if (failed) {
     return (
       <main className={styles.message}>
-        <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę.</Alert>
+        <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę</Alert>
       </main>
     );
   }
@@ -206,10 +206,9 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
         draft.applyPublished(data);
         // First publication: the „Opublikowano” screen with the address and the QR code.
         if (!profile.nickLocked) router.push('/opublikowano');
-      } else
-        setPublishError((error as Problem | undefined)?.detail ?? 'Nie udało się opublikować.');
+      } else setPublishError((error as Problem | undefined)?.detail ?? 'Nie udało się opublikować');
     } catch {
-      setPublishError('Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie.');
+      setPublishError('Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie');
     } finally {
       setPublishing(false);
     }
@@ -319,7 +318,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
           <CircleAlert className="i" aria-hidden="true" />
           <span className="grow">
             <b>Nie udało się zapisać zmian.</b> Sprawdź połączenie z internetem — Twoje zmiany są
-            bezpieczne w tej karcie.
+            bezpieczne w tej karcie
           </span>
           <button type="button" className="btn btn-secondary btn-sm" onClick={draft.retry}>
             Spróbuj ponownie
@@ -331,7 +330,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
           <CircleAlert className="i" aria-hidden="true" />
           <span className="grow">
             <b>Szkic zmienił się w innym oknie — odśwież.</b> Twoje ostatnie zmiany z tej karty nie
-            zostały zapisane.
+            zostały zapisane
           </span>
           <button type="button" className="btn btn-secondary btn-sm" onClick={draft.reload}>
             Odśwież

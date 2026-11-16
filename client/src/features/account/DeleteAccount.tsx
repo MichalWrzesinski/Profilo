@@ -57,7 +57,7 @@ export function DeleteAccount({ publicUrl }: Props) {
       if (details?.code === 'invalid_password') setError('Hasło jest nieprawidłowe');
       else setAlert(problemMessage(details));
     } catch {
-      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie.');
+      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie');
     } finally {
       sending.current = false;
       setBusy(false);

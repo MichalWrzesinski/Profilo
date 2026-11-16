@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: Props) {
         </>
       }
     >
-      {potwierdzono === '1' && <Alert variant="success">Adres potwierdzony — zaloguj się.</Alert>}
+      {potwierdzono === '1' && <Alert variant="success">Adres potwierdzony — zaloguj się</Alert>}
       <LoginForm />
     </AuthCard>
   );

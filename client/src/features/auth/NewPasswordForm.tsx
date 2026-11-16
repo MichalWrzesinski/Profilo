@@ -24,7 +24,7 @@ function Expired() {
   return (
     <>
       <Alert variant="danger">
-        <b>Link wygasł.</b> Link do zmiany hasła działa przez 1 godzinę i tylko raz.
+        <b>Link wygasł.</b> Link do zmiany hasła działa przez 1 godzinę i tylko raz
       </Alert>
       <Link className="btn btn-primary btn-block" href="/nie-pamietam-hasla">
         Wyślij nowy link
@@ -72,7 +72,7 @@ export function NewPasswordForm() {
       }
       setAlert(problemMessage(problem));
     } catch {
-      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie.');
+      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie');
     }
   });
 
@@ -81,7 +81,7 @@ export function NewPasswordForm() {
     return (
       <>
         <Alert variant="success">
-          <b>Hasło zmienione.</b> Jesteś zalogowany(-a). Wylogowaliśmy Cię na innych urządzeniach.
+          <b>Hasło zmienione.</b> Jesteś zalogowany(-a). Wylogowaliśmy Cię na innych urządzeniach
         </Alert>
         <Link className="btn btn-primary btn-block" href="/panel">
           Przejdź do panelu

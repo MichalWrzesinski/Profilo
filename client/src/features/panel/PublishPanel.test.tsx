@@ -158,12 +158,12 @@ describe('PublishPanel', () => {
       () => json(403, { status: 403, code: 'email_not_confirmed', detail: 'Potwierdź e-mail.' }),
       'Potwierdź e-mail.',
     ],
-    [() => json(500, { status: 500 }), 'Nie udało się zapisać zmiany. Spróbuj ponownie.'],
+    [() => json(500, { status: 500 }), 'Nie udało się zapisać zmiany. Spróbuj ponownie'],
     [
       () => {
         throw new TypeError('Failed to fetch');
       },
-      'Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie.',
+      'Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie',
     ],
   ])('reports a failed publication (%#)', async (publish, message) => {
     const { user } = setup(owner(), { publish });

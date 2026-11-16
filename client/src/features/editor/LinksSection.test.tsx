@@ -101,12 +101,12 @@ describe('LinksSection', () => {
         }),
       'Możesz dodać najwyżej 20 linków.',
     ],
-    [() => json(500, { status: 500 }), 'Nie udało się zapisać linku. Spróbuj ponownie.'],
+    [() => json(500, { status: 500 }), 'Nie udało się zapisać linku. Spróbuj ponownie'],
     [
       () => {
         throw new TypeError('Failed to fetch');
       },
-      'Nie udało się zapisać linku. Sprawdź połączenie i spróbuj ponownie.',
+      'Nie udało się zapisać linku. Sprawdź połączenie i spróbuj ponownie',
     ],
   ])('reports a failed save (%#)', async (handler, message) => {
     const { user } = setup([LINKEDIN], handler);
@@ -246,7 +246,7 @@ describe('LinksSection', () => {
     await user.click(screen.getByLabelText('Opis'));
     release(new Response(null, { status: 500 }));
 
-    await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie.');
+    await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie');
     expect(screen.getByLabelText('Opis')).toHaveFocus();
   });
 
@@ -289,7 +289,7 @@ describe('LinksSection', () => {
 
     await user.click(screen.getByRole('button', { name: 'Usuń LinkedIn' }));
 
-    expect(await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie.')).toBeVisible();
+    expect(await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie')).toBeVisible();
   });
 
   it('moves a link with the arrows and saves the order', async () => {
@@ -330,12 +330,12 @@ describe('LinksSection', () => {
         }),
       'Lista linków się zmieniła — odśwież stronę.',
     ],
-    [() => json(500, { status: 500 }), 'Nie udało się zmienić kolejności linków.'],
+    [() => json(500, { status: 500 }), 'Nie udało się zmienić kolejności linków'],
     [
       () => {
         throw new TypeError('Failed to fetch');
       },
-      'Nie udało się zapisać linków. Sprawdź połączenie i spróbuj ponownie.',
+      'Nie udało się zapisać linków. Sprawdź połączenie i spróbuj ponownie',
     ],
   ])('puts the order back when saving it fails (%#)', async (handler, message) => {
     const { user } = setup([LINKEDIN, GITHUB], handler);

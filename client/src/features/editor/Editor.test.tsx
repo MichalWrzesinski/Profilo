@@ -503,12 +503,12 @@ describe('Editor', () => {
       () => json(403, { status: 403, code: 'email_not_confirmed', detail: 'Potwierdź e-mail.' }),
       'Potwierdź e-mail.',
     ],
-    [() => json(500, { status: 500 }), 'Nie udało się opublikować.'],
+    [() => json(500, { status: 500 }), 'Nie udało się opublikować'],
     [
       () => {
         throw new TypeError('Failed to fetch');
       },
-      'Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie.',
+      'Nie udało się opublikować. Sprawdź połączenie i spróbuj ponownie',
     ],
   ])('reports a failed publication (%#)', async (publish, message) => {
     const { user } = setup({ profile: owner({ status: 'never_published' }), publish });
@@ -638,7 +638,7 @@ describe('Editor', () => {
     expect(publishButton()).toBeDisabled();
 
     await act(async () => release(json(500, { status: 500 })));
-    expect(await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie.')).toBeVisible();
+    expect(await screen.findByText('Nie udało się usunąć linku. Spróbuj ponownie')).toBeVisible();
     await act(() => vi.advanceTimersByTimeAsync(1000));
 
     await waitFor(() => expect(bodies).toEqual([{ version: 5, company: 'Studio' }]));

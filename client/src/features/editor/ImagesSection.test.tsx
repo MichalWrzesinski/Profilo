@@ -191,7 +191,7 @@ describe('ImagesSection', () => {
       },
       'Obraz jest za mały.',
     ],
-    [{ status: 500, body: null }, 'Nie udało się wgrać obrazu. Spróbuj ponownie.'],
+    [{ status: 500, body: null }, 'Nie udało się wgrać obrazu. Spróbuj ponownie'],
   ])('shows the API answer and keeps the previous image (%#)', async (result, message) => {
     upload.mockResolvedValue(result);
     const { user } = setup(profile({ background: BACKGROUND }));
@@ -209,7 +209,7 @@ describe('ImagesSection', () => {
     await user.upload(screen.getByLabelText('Dodaj grafikę tła'), file('tlo.jpg', 'image/jpeg'));
 
     expect(
-      await screen.findByText('Nie udało się wgrać obrazu. Sprawdź połączenie i spróbuj ponownie.'),
+      await screen.findByText('Nie udało się wgrać obrazu. Sprawdź połączenie i spróbuj ponownie'),
     ).toBeVisible();
   });
 
@@ -234,7 +234,7 @@ describe('ImagesSection', () => {
 
     await user.click(screen.getByRole('button', { name: 'Usuń grafikę' }));
 
-    expect(await screen.findByText('Nie udało się usunąć obrazu. Spróbuj ponownie.')).toBeVisible();
+    expect(await screen.findByText('Nie udało się usunąć obrazu. Spróbuj ponownie')).toBeVisible();
   });
 
   it('waits while another change runs', () => {

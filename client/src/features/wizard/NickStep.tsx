@@ -136,7 +136,7 @@ export function NickStep() {
       if (!saved) {
         setSaving(false);
         return setError(
-          (patchError as Problem | undefined)?.detail ?? 'Nie udało się zapisać nazwy.',
+          (patchError as Problem | undefined)?.detail ?? 'Nie udało się zapisać nazwy',
         );
       }
       setProfile(saved);
@@ -146,7 +146,7 @@ export function NickStep() {
       result = await api.PUT('/api/v1/me/profile/nick', { body: { nick } });
     } catch {
       setSaving(false);
-      return setError('Nie udało się zapisać adresu. Sprawdź połączenie i spróbuj ponownie.');
+      return setError('Nie udało się zapisać adresu. Sprawdź połączenie i spróbuj ponownie');
     }
     const { data, error: nickError, response } = result;
     setSaving(false);
@@ -160,14 +160,14 @@ export function NickStep() {
     } else if (response.status === 422) {
       setCheck({ state: 'invalid' });
     } else {
-      setError(problem?.detail ?? 'Nie udało się zapisać adresu. Spróbuj ponownie.');
+      setError(problem?.detail ?? 'Nie udało się zapisać adresu. Spróbuj ponownie');
     }
   };
 
   if (!profile && loadFailed) {
     return (
       <main className={styles.main}>
-        <Alert variant="danger">Nie udało się wczytać Twojej strony.</Alert>
+        <Alert variant="danger">Nie udało się wczytać Twojej strony</Alert>
         <button
           type="button"
           className="btn btn-secondary"

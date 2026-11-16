@@ -34,7 +34,7 @@ export function ResetRequestForm() {
       if (response.status === 202) return setSentTo(values.email);
       setAlert(problemMessage(error as Problem | undefined));
     } catch {
-      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie.');
+      setAlert('Nie udało się połączyć. Sprawdź połączenie i spróbuj ponownie');
     }
   });
 
@@ -43,7 +43,7 @@ export function ResetRequestForm() {
       <>
         <Alert variant="success">
           Jeśli konto z adresem <b>{sentTo}</b> istnieje, wysłaliśmy na nie link do ustawienia
-          nowego hasła. Link jest ważny przez 1 godzinę.
+          nowego hasła. Link jest ważny przez 1 godzinę
         </Alert>
         <p className="hint">Nie widzisz wiadomości? Sprawdź folder spam</p>
         <div className={styles.actions}>

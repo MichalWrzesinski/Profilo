@@ -70,7 +70,7 @@ describe('ConfirmEmail', () => {
     });
     const user = userEvent.setup();
 
-    expect(await screen.findByText('Link wygasł albo został już użyty.')).toBeInTheDocument();
+    expect(await screen.findByText('Link wygasł albo został już użyty')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Wyślij nowy link' }));
 
     expect(await screen.findByText(/Wysłaliśmy nowy link/)).toBeInTheDocument();
@@ -91,7 +91,7 @@ describe('ConfirmEmail', () => {
   it('treats a missing token as expired without calling the API', async () => {
     const fetch = setup({}, '');
 
-    expect(await screen.findByText('Link wygasł albo został już użyty.')).toBeInTheDocument();
+    expect(await screen.findByText('Link wygasł albo został już użyty')).toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
   });
 

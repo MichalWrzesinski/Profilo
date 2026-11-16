@@ -114,7 +114,7 @@ describe('NewPasswordForm', () => {
 
   it.each([
     [
-      () => json(429, { status: 429, detail: 'Za dużo prób. Spróbuj ponownie później.' }),
+      () => json(429, { status: 429, detail: 'Za dużo prób. Spróbuj ponownie później' }),
       'Za dużo prób.',
     ],
     [

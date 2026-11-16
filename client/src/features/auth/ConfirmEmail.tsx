@@ -63,7 +63,7 @@ export function ConfirmEmail() {
   if (state === 'confirmed') {
     return (
       <>
-        <Alert variant="success">Adres potwierdzony. Możesz już opublikować swoją stronę.</Alert>
+        <Alert variant="success">Adres potwierdzony. Możesz już opublikować swoją stronę</Alert>
         <Link className="btn btn-primary btn-block" href="/panel">
           Przejdź do panelu
         </Link>
@@ -71,12 +71,12 @@ export function ConfirmEmail() {
     );
   }
   if (state === 'resent') {
-    return <Alert variant="success">Wysłaliśmy nowy link. Sprawdź skrzynkę.</Alert>;
+    return <Alert variant="success">Wysłaliśmy nowy link. Sprawdź skrzynkę</Alert>;
   }
   if (state === 'already') {
     return (
       <>
-        <Alert variant="success">Twój adres jest już potwierdzony.</Alert>
+        <Alert variant="success">Twój adres jest już potwierdzony</Alert>
         <Link className="btn btn-primary btn-block" href="/panel">
           Przejdź do panelu
         </Link>
@@ -84,10 +84,10 @@ export function ConfirmEmail() {
     );
   }
   const messages: Partial<Record<State, string>> = {
-    expired: 'Link wygasł albo został już użyty.',
-    wait: 'Nowy link możesz wysłać za minutę.',
-    resendError: 'Nie udało się wysłać nowego linku. Spróbuj ponownie za chwilę.',
-    error: 'Nie udało się potwierdzić adresu. Spróbuj ponownie za chwilę.',
+    expired: 'Link wygasł albo został już użyty',
+    wait: 'Nowy link możesz wysłać za minutę',
+    resendError: 'Nie udało się wysłać nowego linku. Spróbuj ponownie za chwilę',
+    error: 'Nie udało się potwierdzić adresu. Spróbuj ponownie za chwilę',
   };
   return (
     <>

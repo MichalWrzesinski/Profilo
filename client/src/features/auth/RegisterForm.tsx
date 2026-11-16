@@ -83,7 +83,7 @@ export function RegisterForm({ nick }: { nick?: string } = {}) {
     } else if (response.status === 428) {
       setAlert({
         kind: 'error',
-        message: 'Nie udało się potwierdzić, że nie jesteś automatem. Spróbuj ponownie.',
+        message: 'Nie udało się potwierdzić, że nie jesteś automatem. Spróbuj ponownie',
       });
     } else {
       setAlert({ kind: 'error', message: problemMessage(problem) });
@@ -102,7 +102,7 @@ export function RegisterForm({ nick }: { nick?: string } = {}) {
       {submitCount > 0 && errorCount > 0 && (
         <Alert variant="danger">
           Popraw {errorCount}{' '}
-          {plural(errorCount, 'pole zaznaczone', 'pola zaznaczone', 'pól zaznaczonych')} poniżej.
+          {plural(errorCount, 'pole zaznaczone', 'pola zaznaczone', 'pól zaznaczonych')} poniżej
         </Alert>
       )}
 

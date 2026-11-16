@@ -29,7 +29,7 @@ export function AppearanceStep() {
   if (failed) {
     return (
       <main className={styles.main}>
-        <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę.</Alert>
+        <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę</Alert>
       </main>
     );
   }
@@ -66,7 +66,7 @@ function Pickers({ initial, storageKey }: { initial: OwnerProfile; storageKey: s
         {draft.status === 'error' && (
           <Alert variant="danger">
             <span className={styles.alertRow}>
-              Nie udało się zapisać wyboru. Sprawdź połączenie.
+              Nie udało się zapisać wyboru. Sprawdź połączenie
               <button type="button" className="btn btn-secondary btn-sm" onClick={draft.retry}>
                 Spróbuj ponownie
               </button>
@@ -76,7 +76,7 @@ function Pickers({ initial, storageKey }: { initial: OwnerProfile; storageKey: s
         {draft.status === 'conflict' && (
           <Alert variant="danger">
             <span className={styles.alertRow}>
-              Szkic zmienił się w innym oknie — odśwież.
+              Szkic zmienił się w innym oknie — odśwież
               <button type="button" className="btn btn-secondary btn-sm" onClick={draft.reload}>
                 Odśwież
               </button>
