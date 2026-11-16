@@ -13,6 +13,8 @@ body {
 h1, h2, h3, h4, p { margin: 0; }
 h1, h2, h3, h4 { color: var(--color-heading); line-height: var(--leading-snug); letter-spacing: var(--tracking-tight); }
 a { color: var(--color-blue-700); text-underline-offset: 3px; }
+/* Plain (underlined) text links turn to the logo-dot orange on hover; styled links (buttons, cards) keep their own. */
+a:not([class]):hover { color: var(--color-accent); }
 :focus-visible { outline: 3px solid var(--color-focus); outline-offset: var(--focus-offset); border-radius: 4px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 svg.i { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -68,6 +70,8 @@ svg.i.sm { width: 16px; height: 16px; }
 .input:disabled, .input.is-disabled { background: var(--color-bg); color: var(--color-text-muted); cursor: not-allowed; }
 textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading-normal); }
 .hint { font-size: var(--text-sm); color: var(--color-text-muted); display: flex; gap: var(--space-2); align-items: flex-start; }
+/* The icon sits in the middle of the first line, not at its top. */
+.hint > svg.i.sm { margin-top: calc((var(--leading-normal) * 1em - 16px) / 2); }
 .hint.is-error { color: var(--color-danger); font-weight: var(--font-weight-semibold); }
 .hint.is-success { color: var(--color-success); font-weight: var(--font-weight-semibold); }
 .counter { font-size: var(--text-xs); color: var(--color-text-muted); justify-self: end; }
@@ -103,6 +107,10 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .alert .grow { flex: 1; }
 .alert .btn { margin-left: auto; }
 .banner { border-radius: 0; border-width: 0 0 var(--border-width); padding: var(--space-3) var(--space-6); align-items: center; flex-wrap: wrap; }
+/* The banner's own button: its border colour, darkening to its text colour on hover. */
+.alert-warning .btn-ghost { background: #F3DDB4; color: var(--color-warning); transition: background var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard); }
+.alert-warning .btn-ghost:hover:not(:disabled) { background: var(--color-warning); color: var(--color-warning-bg); }
+.alert-warning .btn-ghost.is-loading::after { border-color: var(--color-warning) var(--color-warning) transparent transparent; }
 .toast { position: fixed; left: 50%; bottom: var(--space-6); transform: translateX(-50%); display: flex; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-navy-900); color: #fff; box-shadow: var(--shadow-lg); font-size: var(--text-sm); font-weight: var(--font-weight-medium); z-index: 20; max-width: calc(100% - 32px); }
 .toast .btn { color: #fff; }
 .toast.is-static { position: static; transform: none; display: inline-flex; }
@@ -224,7 +232,7 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .pp .links { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); list-style: none; padding: 0; margin: var(--space-4) 0 var(--space-10); }
 .pp footer { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); padding-top: var(--space-5); border-top: var(--border-width) solid var(--color-border); font-size: 13px; color: var(--color-text-muted); }
 .pp footer a { color: inherit; text-decoration: none; }
-.pp footer a:hover { text-decoration: underline; }
+.pp footer a:hover { color: inherit; text-decoration: underline; }
 .pp footer .made { font-weight: var(--font-weight-semibold); color: var(--color-text-strong-muted); display: inline-flex; gap: 6px; align-items: center; }
 
 /* Split */
