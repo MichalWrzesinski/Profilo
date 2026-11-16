@@ -13,13 +13,17 @@ x-api: &api
   image: ghcr.io/michalwrzesinski/profilo-api:${IMAGE_TAG:?IMAGE_TAG is required}
   env_file:
     - ${APP_DIR:?APP_DIR is required}/.env
-    # Runtime secrets written by the deploy workflow (SMTP; later Sentry, Storage Box).
+    # Runtime secrets written by the deploy workflow (SMTP).
     - path: ${APP_DIR:?APP_DIR is required}/.env.secrets
+      required: false
+    # SENTRY_DSN (TASK-023), written by the deploy workflow; without it reporting is off.
+    - path: ${APP_DIR:?APP_DIR is required}/.env.monitoring
       required: false
   environment:
     # Trust X-Forwarded-* only from Caddy (fixed address below; AGENTS.md pitfalls). Behind
     # the host's nginx also from the Docker gateway it connects through (proxied mode).
     FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-172.28.0.10}
+    SENTRY_RELEASE: ${IMAGE_TAG}
   restart: unless-stopped
   logging: *logging
   networks: [internal]
@@ -101,12 +105,18 @@ services:
     image: ghcr.io/michalwrzesinski/profilo-client:${IMAGE_TAG:?IMAGE_TAG is required}
     profiles: [blue]
     restart: unless-stopped
+    # Only SENTRY_DSN (not the application's other secrets).
+    env_file:
+      - path: ${APP_DIR:?APP_DIR is required}/.env.monitoring
+        required: false
     environment: &client_env
       # The API of the same colour (same release).
       API_INTERNAL_URL: http://api-blue:8000
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required}
       # Operator address for abuse reports (PUB-BR-10); empty shows the placeholder.
       ABUSE_EMAIL: ${ABUSE_EMAIL:-}
+      SENTRY_RELEASE: ${IMAGE_TAG}
+      SENTRY_ENVIRONMENT: ${ENVIRONMENT:-production}
     logging: *logging
     networks: [internal]
 

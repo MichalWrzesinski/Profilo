@@ -89,6 +89,9 @@ jobs:
           SMTP_SECURITY: ${{ vars.STAGING_SMTP_SECURITY || 'starttls' }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
+          # Error reporting (TASK-023).
+          MONITORING_REQUIRED: 'false'
+          SENTRY_DSN: ${{ secrets.STAGING_SENTRY_DSN }}
         run: bash "$RUNNER_TEMP/deploy-remote.sh"
 
   verified:
@@ -109,3 +112,31 @@ jobs:
         run: |
           gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=success -f context=deploy/staging \
             -f description="Deployed and verified on staging" -f target_url="$RUN_URL" >/dev/null
+
+  sentry:
+    name: Sentry release
+    needs: deploy
+    if: needs.deploy.outputs.skip != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Its own job: the Sentry token never reaches the server; the registry token only reads.
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Release, source maps, deployment
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha || inputs.sha }}
+          ENV_NAME: staging
+          SENTRY_REQUIRED: 'false'
+          SENTRY_AUTH_TOKEN: ${{ secrets.STAGING_SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          SENTRY_URL: ${{ vars.SENTRY_URL }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: bash infra/ci/sentry-release.sh

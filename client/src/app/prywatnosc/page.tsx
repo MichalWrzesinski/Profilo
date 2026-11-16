@@ -134,12 +134,12 @@ export default function PrivacyPage() {
             <b>Brevo SAS</b> (Francja) — wysyłka wiadomości e-mail o koncie.
           </li>
           <li>
-            <b>Functional Software, Inc. (Sentry)</b> — planowane zbieranie informacji o błędach
-            aplikacji.{' '}
-            <Placeholder
-              value={null}
-              label="potwierdzenie przed uruchomieniem: region danych UE, zakres danych (bez haseł, treści stron i adresów IP), umowa powierzenia"
-            />
+            <b>Functional Software, Inc. (Sentry)</b> — informacje o błędach aplikacji, w regionie
+            danych UE. Zgłoszenie błędu zawiera opis błędu, adres podstrony, kilkanaście ostatnio
+            otwartych podstron serwisu i zapytań do serwera (same adresy) oraz nazwę i wersję
+            przeglądarki i systemu; nie zapisujemy kliknięć ani treści formularzy. Przed wysłaniem
+            usuwamy ze zgłoszenia adresy e-mail, hasła, tokeny, numery telefonów i adresy IP.{' '}
+            <Placeholder value={null} label="potwierdzenie umowy powierzenia z Sentry" />
           </li>
           <li>
             Dostawca skrzynki do zgłoszeń nadużyć i korespondencji —{' '}

@@ -236,6 +236,9 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | `e2e/tests/seo.spec.ts` | Preview tags, og:image 200, sitemap entry; after unpublishing gone from the sitemap and 404; panel pages `noindex` | TASK-013 |
 | `infra/` | Local Caddy config, PostgreSQL init (test database) | TASK-001 |
 | `infra/server/` | Server bootstrap (`bootstrap.sh`, `setup-shared-host.sh`), staging/production Compose stack, Caddyfile with TLS and security headers, `deploy.sh`: pre-migration dump, migrations unless the database is ahead, blue-green switch (`api-`/`client-blue|green`, Caddy pointed at the ready colour via `caddy/upstreams.caddy`), smoke tests, instant switch back on failure, `--rollback` to a release in `.deployed-history` | TASK-003, TASK-021 |
+| `api/app/core/monitoring.py`, `api/app/modules/monitoring/` | Sentry setup, event scrubbing, error-level logs as events; browser error tunnel (`POST /api/v1/monitoring/sentry`) | TASK-023 |
+| `client/src/instrumentation*.ts`, `client/src/lib/monitoring/` | Sentry in the Next.js server and the browser (tunnel), client-side scrubbing | TASK-023 |
+| `infra/ci/sentry-release.sh` | Sentry release, source maps from the client image, deployment record (deploy workflows) | TASK-023 |
 | `infra/backup/` | Backup image (PostgreSQL client + restic + curl) and `profilo-backup` (scheduler, backup, restore test, alerts, `dump-db`, `restic`) | TASK-022 |
 | `infra/ci/deploy-remote.sh` | Runner side of all deploy workflows: SSH with pinned host key, upload of the commit's stack files, runtime secrets, GHCR login, `deploy.sh`, external smoke tests | TASK-021 |
 | `.github/workflows/` | `ci.yml` (check, publish), `deploy-staging.yml` (sets the commit status `deploy/staging`), `deploy-production.yml` (user only; requires `deploy/staging`; release tag `production-*`), `rollback-production.yml` (only `production-*` releases) | TASK-002, TASK-003, TASK-021 |

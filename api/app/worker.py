@@ -1,14 +1,30 @@
 """Celery application: `celery -A app.worker worker` and `celery -A app.worker beat`."""
 
-from celery import Celery
+from celery import Celery, signals
 from celery.schedules import crontab
 
 import app.models  # noqa: F401 - all models, as in the API (tasks flush ORM objects)
 from app.core.logging import configure_logging
+from app.core.monitoring import init_sentry
 from app.core.settings import get_settings
 
 settings = get_settings()
 configure_logging(settings.log_level)
+
+
+# Sentry starts in the worker and beat processes only (the API imports this module for its
+# tasks and has its own setup); the Celery integration reports failed tasks.
+def start_worker_monitoring(**_: object) -> None:
+    init_sentry("worker")
+
+
+def start_beat_monitoring(**_: object) -> None:
+    init_sentry("beat")
+
+
+signals.celeryd_init.connect(start_worker_monitoring, weak=False)
+signals.beat_init.connect(start_beat_monitoring, weak=False)
+
 
 celery_app = Celery("profilo", broker=str(settings.valkey_url))
 celery_app.conf.update(

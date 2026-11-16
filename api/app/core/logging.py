@@ -3,6 +3,8 @@ import sys
 
 import structlog
 
+from app.core.monitoring import report_errors
+
 
 def configure_logging(level: str) -> None:
     """Structured JSON logs on stdout; request id is bound via contextvars."""
@@ -14,6 +16,7 @@ def configure_logging(level: str) -> None:
     structlog.configure(
         processors=[
             *shared,
+            report_errors,  # before format_exc_info: needs the exception object
             structlog.processors.format_exc_info,
             structlog.processors.JSONRenderer(),
         ],

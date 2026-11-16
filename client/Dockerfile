@@ -27,7 +27,13 @@ COPY --from=deps /repo/client/node_modules ./node_modules
 COPY docs/design/tokens.css docs/design/components.css /repo/docs/design/
 COPY docs/api/nick-cases.json /repo/docs/api/
 COPY client/ ./
-RUN npm run build
+# Source maps (TASK-023): debug IDs tie each script to its map (no Sentry token needed);
+# the maps then leave the served directory — the deploy workflows upload them to Sentry.
+RUN npm run build \
+  && npx sentry-cli sourcemaps inject .next/static \
+  && cd .next/static \
+  && find . -name '*.map' -exec sh -c 'mkdir -p "/sourcemaps/$(dirname "$1")" && mv "$1" "/sourcemaps/$1"' _ {} \; \
+  && mkdir -p /sourcemaps
 
 # Production image: Next.js standalone server only.
 FROM node:26.13.0-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS prod
@@ -36,6 +42,8 @@ WORKDIR /app
 COPY --from=build --chown=node:node /repo/client/.next/standalone ./
 COPY --from=build --chown=node:node /repo/client/.next/static ./client/.next/static
 COPY --from=build --chown=node:node /repo/client/public ./client/public
+# Not served (Next.js serves only .next/static and public); read by the deploy workflows.
+COPY --from=build /sourcemaps /opt/sourcemaps
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \

@@ -1,0 +1,6 @@
+{"event_id":"0f1e2d3c4b5a69788796a5b4c3d2e1f0","sent_at":"2026-11-16T08:30:17.639Z","dsn":"https://public@sentry.invalid/undefined1"}
+{"type":"event"}
+{"event_id":"0f1e2d3c4b5a69788796a5b4c3d2e1f0","platform":"javascript","level":"error","exception":{"values":[{"type":"TypeError","value":"x is undefined for anna.kowalska@example.com\nsecond line","stacktrace":{"frames":[{"filename":"app:///_next/static/chunks/a.js","function":"onClick","lineno":1,"colno":2}]}}]},"request":{"url":"https://profilo.pl/nowe-haslo?token=abcdef","headers":{"User-Agent":"Firefox"}},"user":{"ip_address":"{{auto}}"},"sdk":{"name":"sentry.javascript.nextjs","version":"11.10.0"}}
+{"type":"attachment","length":11,"filename":"a.txt"}
+line1
+line2

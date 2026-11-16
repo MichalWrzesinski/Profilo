@@ -89,6 +89,10 @@ jobs:
           BACKUP_KNOWN_HOSTS: ${{ secrets.PROD_BACKUP_KNOWN_HOSTS }}
           BACKUP_PASSWORD: ${{ secrets.PROD_BACKUP_PASSWORD }}
           ALERT_EMAIL: ${{ vars.PROD_ALERT_EMAIL }}
+          BACKUP_HEARTBEAT_URL: ${{ secrets.PROD_BACKUP_HEARTBEAT_URL }}
+          # Error reporting (TASK-023).
+          MONITORING_REQUIRED: 'true'
+          SENTRY_DSN: ${{ secrets.PROD_SENTRY_DSN }}
         run: bash "$RUNNER_TEMP/deploy-remote.sh"
 
   release:
@@ -129,3 +133,34 @@ jobs:
             echo "### Production serves \`${SHA:0:7}\`"
             echo "https://$DOMAIN — release [$tag]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$tag)"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  sentry:
+    name: Sentry release
+    needs: deploy
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.actor == 'MichalWrzesinski' &&
+      github.triggering_actor == 'MichalWrzesinski'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Its own job: the Sentry token never reaches the server; the registry token only reads.
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Release, source maps, deployment
+        env:
+          SHA: ${{ inputs.sha }}
+          ENV_NAME: production
+          SENTRY_REQUIRED: 'true'
+          SENTRY_AUTH_TOKEN: ${{ secrets.PROD_SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          SENTRY_URL: ${{ vars.SENTRY_URL }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: bash infra/ci/sentry-release.sh

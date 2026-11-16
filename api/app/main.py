@@ -7,11 +7,13 @@ from app.core.db import dispose_engine
 from app.core.errors import register_error_handlers
 from app.core.health import router as health_router
 from app.core.logging import configure_logging, log
+from app.core.monitoring import init_sentry
 from app.core.request_context import RequestContextMiddleware
 from app.core.settings import get_settings
 from app.core.valkey import close_valkey
 from app.modules.accounts.router import router as accounts_router
 from app.modules.media.router import router as media_router
+from app.modules.monitoring.router import router as monitoring_router
 from app.modules.profiles.router import router as profiles_router
 
 
@@ -25,6 +27,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    init_sentry("api")  # before the app is built, so the framework integrations attach
     configure_logging(settings.log_level)
     local = settings.environment in ("local", "test")
     app = FastAPI(
@@ -41,6 +44,7 @@ def create_app() -> FastAPI:
     app.include_router(accounts_router)
     app.include_router(profiles_router)
     app.include_router(media_router)
+    app.include_router(monitoring_router)
     return app
 
 
