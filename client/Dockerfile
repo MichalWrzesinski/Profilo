@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
 # Build context: repository root (the app imports docs/design/tokens.css; nick tests read docs/api/nick-cases.json).
-FROM node:26.13.0-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS base
+FROM node:26.13.1-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /repo/client
 
@@ -36,7 +36,7 @@ RUN npm run build \
   && mkdir -p /sourcemaps
 
 # Production image: Next.js standalone server only.
-FROM node:26.13.0-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS prod
+FROM node:26.13.1-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS prod
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 WORKDIR /app
 COPY --from=build --chown=node:node /repo/client/.next/standalone ./
