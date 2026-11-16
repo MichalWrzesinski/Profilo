@@ -1,13 +1,13 @@
 /**
- * Operator details used by the legal pages, the footer and abuse reports. The user supplies
- * the real ones before production (docs/product/overview.md#constraints); until then every
- * value is a placeholder and is shown marked as such.
+ * Operator details used by the legal pages, the footer and abuse reports (supplied by the
+ * user on 2026-11-16). A null value is shown as a marked placeholder.
  */
 export const OPERATOR = {
-  name: null as string | null, // company or person running Profilo
-  address: null as string | null,
-  taxId: null as string | null, // NIP
-  contactEmail: null as string | null,
+  name: 'Michał Wrzesiński Webhome' as string | null, // company or person running Profilo
+  address: 'Karasiowa 7, 85-435 Bydgoszcz' as string | null,
+  taxId: '9671286620' as string | null, // NIP
+  // Also for complaints, appeals and the DSA point of contact (terms §5–§7).
+  contactEmail: 'profilo@gitpush.app' as string | null,
 };
 
 /** Shown while ABUSE_EMAIL is not configured: a non-deliverable address (RFC 2606), so

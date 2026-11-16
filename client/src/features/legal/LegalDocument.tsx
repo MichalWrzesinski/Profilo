@@ -17,8 +17,8 @@ export function LegalDocument({ title, children }: Props) {
           <h1>{title}</h1>
           <p className="muted">{LEGAL_VERSION}</p>
           <Alert variant="warning">
-            <b>Wersja robocza.</b> Tekst czeka na weryfikację prawną i dane operatora. Miejsca do
-            uzupełnienia są wyróżnione.
+            <b>Wersja robocza.</b> Tekst czeka na weryfikację prawną. Miejsca do uzupełnienia są
+            wyróżnione.
           </Alert>
           {children}
         </article>
