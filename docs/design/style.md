@@ -59,6 +59,8 @@ Informal "ty", short, no jargon, always the next step.
 - Confirmation: „Gotowe! Twoja strona jest już online: profilo.pl/user/anna-wisniewska”
 - Empty state: „Nie masz jeszcze linków. Dodaj LinkedIn, portfolio albo stronę firmy, żeby łatwiej było Cię znaleźć.”
 
+Punctuation (owner's review, 2026-11-16): hints under fields, validation messages, alerts, banners and error messages (client and API `detail`/`message`) end without a full stop; a full stop between two sentences stays („Za dużo prób. Spróbuj ponownie później”). The leads of the login and registration pages too (owner's request); other leads, body text, legal pages, e-mails and page metadata keep normal punctuation. Pydantic's built-in (English) validation messages never reach the user: `app.core.errors` replaces them with Polish ones.
+
 ## Logo and identity
 
 Files in `brand/`: `logo.svg` (icon + wordmark), `icon.svg` / `favicon.svg` (rounded icon), `icon-square.svg` (full-bleed source for app icons), `favicon.ico` (32 px), `apple-touch-icon.png` (180 px), `icon-192.png`, `icon-512.png` (PWA / Open Graph fallback).
