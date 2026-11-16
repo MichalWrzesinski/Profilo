@@ -136,12 +136,17 @@ async def test_second_resend_within_a_minute_is_refused(client: AsyncClient) -> 
 
 
 async def test_resend_is_capped_per_hour(client: AsyncClient) -> None:
+    from app.core import rate_limit
     from app.core.valkey import get_valkey
+    from app.modules.accounts.confirmation import RESEND_PER_MINUTE
 
     session = await register(client)
     statuses = []
     for _ in range(6):
-        await get_valkey().delete(f"rl:confirm_resend:{session['account']['id']}")  # skip 1/min
+        # Skip the 1-per-minute limit.
+        await get_valkey().delete(
+            rate_limit.counter_key(RESEND_PER_MINUTE, str(session["account"]["id"]))
+        )
         response = await client.post("/api/v1/auth/email-confirmations", headers=auth(session))
         statuses.append(response.status_code)
 

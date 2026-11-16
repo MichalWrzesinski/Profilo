@@ -482,7 +482,7 @@ async def og_card(session: AsyncSession, nick: str, client_ip: str) -> bytes:
     key = f"og:{og_image.VERSION}:{page.profile_id}:{page.snapshot.draft_version}"
     if (cached := await _cache_get(key)) is not None:
         return cached
-    await rate_limit.hit(OG_RENDERS, client_ip)  # only renders cost CPU
+    await rate_limit.hit(OG_RENDERS, rate_limit.ip_subject(client_ip))  # only renders cost CPU
     avatar: bytes | None = None
     if content.avatar:
         image = await media.get_image(session, content.avatar.id)
