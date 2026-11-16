@@ -33,7 +33,7 @@ Operations for staging and production. Files: `infra/server/` (`compose.yml`, `C
 
 ## Shared host (the server's own nginx serves 80/443)
 
-Staging runs on a VPS shared with other projects (Debian 13, nginx with certbot, Docker already installed). `bootstrap.sh` must **not** run there: it changes the firewall and SSH for the whole server. Instead Profilo's Caddy listens only on `127.0.0.1:8090` without TLS (`TLS_MODE=proxied`, `compose.proxied.yml`), and the host's nginx terminates TLS for the domain and forwards to it. Caddy still sets HSTS, CSP and the other headers; it trusts `X-Forwarded-For` only from the Docker gateway nginx connects through, and nginx replaces (never appends) that header with the visitor's address.
+Staging runs on a VPS shared with other projects (Debian 13, nginx with certbot, Docker already installed). `bootstrap.sh` must **not** run there: it changes the firewall and SSH for the whole server. Instead Profilo's Caddy listens only on `127.0.0.1:8090` without TLS (`TLS_MODE=proxied`, `compose.proxied.yml`), and the host's nginx terminates TLS for the domain and forwards to it. Caddy still sets HSTS, the fallback CSP and the other headers (pages send their own CSP with a script nonce); it trusts `X-Forwarded-For` only from the Docker gateway nginx connects through, and nginx replaces (never appends) that header with the visitor's address.
 
 Once, on your computer and on the server (example values: `profilo.gitpush.app`, `/srv/Profilo`, user `profilo_deploy`, port 8090; `SERVER` = the server's address, `you` = your sudo account):
 

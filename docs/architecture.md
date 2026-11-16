@@ -21,7 +21,7 @@ flowchart LR
 
 | Container | Responsibility |
 |---|---|
-| `caddy` | TLS (Let's Encrypt), HSTS, CSP and other headers, routing, gzip/zstd |
+| `caddy` | TLS (Let's Encrypt), HSTS and other headers, strict fallback CSP (pages send their own with a script nonce), routing, gzip/zstd |
 | `client` | Next.js: landing, legal pages, `/user/{nick}` (SSR, no cache), owner panel (client components) |
 | `api` | FastAPI `/api/v1/**`, `/media/**`, `/health`, `/ready` |
 | `worker` | Celery tasks: e-mails, image processing, cleanup |
@@ -175,7 +175,7 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 |---|---|---|
 | Login, registration, reset | Credential stuffing, enumeration, mailbombing | Rate limits per IP and per e-mail in Valkey; identical responses for login and reset; registration may reveal an existing e-mail (409 `email_taken`, pointing to login and reset) but has a low per-IP limit (10 per hour; IPv6 counted per /64) and a self-hosted proof-of-work challenge (ALTCHA format, no third-party processor) from the 4th attempt per IP per hour; challenge events are logged without IP or e-mail |
 | Session | Token theft | Short access token, rotating refresh with reuse detection, revoke all on password change/reset |
-| Profile content | Stored XSS, phishing links | React escaping; URLs restricted to `http`/`https`; `rel="nofollow ugc noopener noreferrer"`; strict CSP |
+| Profile content | Stored XSS, phishing links | React escaping; URLs restricted to `http`/`https`; `rel="nofollow ugc noopener noreferrer"`; strict CSP (scripts only with a per-request nonce) |
 | Image upload | Malicious files, metadata leaks | Content sniffing, size and pixel limits, re-encoding, EXIF removal, random keys, no direct file serving |
 | Nick | Takeover of shared addresses, impersonation | Nick locked after first publication; 30-day quarantine after deletion; reserved list |
 | Unpublish / block | Stale content visible | No caching of public pages; snapshot visibility checked on every request |
@@ -239,6 +239,7 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | `api/app/core/monitoring.py`, `api/app/modules/monitoring/` | Sentry setup, event scrubbing, error-level logs as events; browser error tunnel (`POST /api/v1/monitoring/sentry`) | TASK-023 |
 | `client/src/instrumentation*.ts`, `client/src/lib/monitoring/` | Sentry in the Next.js server and the browser (tunnel), client-side scrubbing | TASK-023 |
 | `infra/ci/sentry-release.sh` | Sentry release, source maps from the client image, deployment record (deploy workflows) | TASK-023 |
+| `client/src/proxy.ts`, `client/src/lib/csp.ts` | Per-request nonce and the page Content-Security-Policy (scripts by nonce, framable pages) | TASK-024 |
 | `infra/backup/` | Backup image (PostgreSQL client + restic + curl) and `profilo-backup` (scheduler, backup, restore test, alerts, `dump-db`, `restic`) | TASK-022 |
 | `infra/ci/deploy-remote.sh` | Runner side of all deploy workflows: SSH with pinned host key, upload of the commit's stack files, runtime secrets, GHCR login, `deploy.sh`, external smoke tests | TASK-021 |
 | `.github/workflows/` | `ci.yml` (check, publish), `deploy-staging.yml` (sets the commit status `deploy/staging`), `deploy-production.yml` (user only; requires `deploy/staging`; release tag `production-*`), `rollback-production.yml` (only `production-*` releases) | TASK-002, TASK-003, TASK-021 |
