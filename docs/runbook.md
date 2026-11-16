@@ -202,7 +202,7 @@ Save the printed key in your password manager, then set the variables `PROD_BACK
 | Secret | `STAGING_SENTRY_DSN`, `PROD_SENTRY_DSN` | the project's DSN (*Client Keys*); may be the same |
 | Secret | `STAGING_SENTRY_AUTH_TOKEN`, `PROD_SENTRY_AUTH_TOKEN` | an organisation auth token (scopes `project:releases`, `org:read`) |
 | Variable | `SENTRY_ORG`, `SENTRY_PROJECT` | the slugs, e.g. `profilo` |
-| Variable (optional) | `SENTRY_URL` | default `https://de.sentry.io/` |
+| Variable (optional) | `SENTRY_URL` | only for a user token or self-hosted Sentry; an organisation token (`sntrys_…`) carries its own address and region |
 
 Staging works without them (no reports). Production refuses to deploy without `PROD_SENTRY_DSN` (checked before anything changes); a missing `PROD_SENTRY_AUTH_TOKEN` fails only the *Sentry release* job, after the deployment — production then serves the release without source maps in Sentry; set the token and rerun that job. Images built before TASK-023 have no source maps: the job records the release and deployment only.
 
