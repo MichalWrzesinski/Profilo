@@ -448,6 +448,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/monitoring/sentry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Browser error report (Sentry envelope), scrubbed and forwarded to Sentry; dropped when error reporting is off (TASK-023) */
+        post: operations["reportBrowserError"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/media/{imageId}/{size}.webp": {
         parameters: {
             query?: never;
@@ -1723,6 +1740,38 @@ export interface operations {
                     "application/json": components["schemas"]["Sitemap"];
                 };
             };
+        };
+    };
+    reportBrowserError: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "text/plain": string;
+            };
+        };
+        responses: {
+            /** @description Accepted (also when dropped). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Report larger than 200 KB (`payload_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getImage: {

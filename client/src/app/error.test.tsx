@@ -1,13 +1,18 @@
+import * as Sentry from '@sentry/nextjs';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ErrorPage from './error';
 
+vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
+
 describe('error page', () => {
-  it('explains the failure in Polish and retries', async () => {
+  it('explains the failure in Polish, reports it and retries', async () => {
     const reset = vi.fn();
-    render(<ErrorPage error={new Error('API down')} reset={reset} />);
+    const error = new Error('API down');
+    render(<ErrorPage error={error} reset={reset} />);
 
     expect(screen.getByRole('heading', { name: 'Nie udało się wczytać strony' })).toBeVisible();
+    expect(Sentry.captureException).toHaveBeenCalledWith(error);
     await userEvent.click(screen.getByRole('button', { name: 'Spróbuj ponownie' }));
     expect(reset).toHaveBeenCalled();
   });

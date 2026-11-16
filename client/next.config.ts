@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   // Dev server only: the E2E browser reaches the app through Caddy as http://caddy.
   allowedDevOrigins: ['caddy'],
   reactStrictMode: true,
+  // Source maps for Sentry (TASK-023): built, given debug IDs and moved out of the served
+  // directory in the production image (client/Dockerfile); uploaded by the deploy workflows.
+  productionBrowserSourceMaps: true,
 };
 
 export default nextConfig;
