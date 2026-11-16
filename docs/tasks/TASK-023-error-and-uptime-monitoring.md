@@ -52,6 +52,15 @@ Verified:
 - Tunnel: an envelope serialised by `@sentry/core` 11.10 itself (fixture) is read correctly (an item without length, an attachment with length and a newline); only error events are forwarded, scrubbed, with the server's DSN and release; 413, 429, drop without DSN, forward failure logged as a warning (never an error, which would loop).
 - Client: scrubber, server and browser initialisation (off without DSN / outside production; tunnel; sessions and tracing removed), error page reports. `make check` green (API 446 tests, client 454, coverage over 95 %); production images build.
 
+Review (subagent, code review + security), round 1 — fixed:
+- error-level logs could use up the Sentry quota in an outage (one event per request while Valkey is down; the tunnel's per-IP limit fails open too) → each kind of entry at most once per 10 min per process with a count of those left out, the tunnel at most 60 events per 10 min per process independent of Valkey, Sentry spike protection in the runbook (tested with a fake clock);
+- e-mail pattern ASCII only → internationalised addresses too, e.g. PostgreSQL's `Key (email)=(józef@żółw.pl)`;
+- deeply nested JSON raised `RecursionError` in the tunnel (500 + an event) → caught; the browser can no longer set `fingerprint`, `level` or tags;
+- *Sentry release* failed for images built before this task (no `/opt/sourcemaps`) → records the release without maps;
+- runbook overstated the production check (the token is checked after the deployment) → corrected;
+- the privacy policy did not mention breadcrumbs → clicks (`dom`) and console breadcrumbs off, at most 20, the policy names recent pages and API addresses;
+- nits: Sentry started twice in the API (worker module imported for its tasks) → worker and beat start it from Celery signals; tuples, sets and other objects scrubbed too (repr); short-password limit documented; a failed e-mail reported twice — documented.
+
 Not verified: real Sentry ingestion and the *Sentry release* job (no Sentry account yet); Better Stack monitors and scenario 2 (no account; configuration in the runbook — with a 3-minute check interval on a plan the alert comes later than 2 minutes).
 
 Needs from the user: Sentry (EU) and Better Stack accounts; `STAGING_SENTRY_DSN`, `STAGING_SENTRY_AUTH_TOKEN`, `PROD_SENTRY_DSN`, `PROD_SENTRY_AUTH_TOKEN`, variables `SENTRY_ORG`, `SENTRY_PROJECT`; Better Stack monitors and heartbeat (`PROD_BACKUP_HEARTBEAT_URL`); GitHub failure e-mails (runbook *Monitoring*).

@@ -204,7 +204,9 @@ Save the printed key in your password manager, then set the variables `PROD_BACK
 | Variable | `SENTRY_ORG`, `SENTRY_PROJECT` | the slugs, e.g. `profilo` |
 | Variable (optional) | `SENTRY_URL` | default `https://de.sentry.io/` |
 
-Staging works without them (no reports); production refuses to deploy without `PROD_SENTRY_DSN` and `PROD_SENTRY_AUTH_TOKEN`.
+Staging works without them (no reports). Production refuses to deploy without `PROD_SENTRY_DSN` (checked before anything changes); a missing `PROD_SENTRY_AUTH_TOKEN` fails only the *Sentry release* job, after the deployment — production then serves the release without source maps in Sentry; set the token and rerun that job. Images built before TASK-023 have no source maps: the job records the release and deployment only.
+
+**Volume** — each kind of error-level log entry is reported at most once per 10 minutes per process (with the number left out since, `not_reported_since_last`), and the tunnel forwards at most 60 browser events per 10 minutes per process: an outage that logs on every request cannot use up the quota. Also switch on *Spike Protection* in the Sentry organisation settings. A failed e-mail appears twice (the Celery task's exception and `email_failed` with the template).
 
 **Better Stack (once)** — *Uptime* → *Monitors* → *Create monitor* for `https://<staging domain>/ready` and `https://<production domain>/ready`: alert when "URL becomes unavailable" (any status other than 200), e-mail to you, check frequency 30 s or 1 min and confirmation period 2 min — scenario: `/ready` failing for 2 minutes sends an e-mail (the plan must allow that frequency; with 3-minute checks the alert comes later). *Heartbeats* → *Create heartbeat* "Profilo backups", expected every 1 day, grace period 2 hours; its URL goes into `PROD_BACKUP_HEARTBEAT_URL` (the backup pings it after each daily run and `…/fail` after a failure).
 
@@ -213,6 +215,7 @@ Staging works without them (no reports); production refuses to deploy without `P
 | Task | Command / place |
 |---|---|
 | Test event from the API (after a deployment) | `dc exec api-$(live) python -c "import app.main, sentry_sdk; sentry_sdk.capture_message('profilo test'); sentry_sdk.flush()"` — appears in Sentry with the release and environment |
+| Test event from the worker | `dc exec worker python -c "from app.core.monitoring import init_sentry; import sentry_sdk; init_sentry('worker'); sentry_sdk.capture_message('profilo worker test'); sentry_sdk.flush()"` |
 | An error's details in the logs | the `request_id` tag of the Sentry event = `request_id` in `dc logs api-$(live)` and in Caddy's access log |
 
 ## Manual operations (as `deploy` on the server, in `/srv/profilo`)
