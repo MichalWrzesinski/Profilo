@@ -11,6 +11,7 @@
 #   SHA DOMAIN SSH_HOST SSH_USER APP_DIR SSH_KEY KNOWN_HOSTS
 #   SMTP_HOST SMTP_PORT SMTP_SECURITY SMTP_USERNAME SMTP_PASSWORD MAIL_FROM
 #   GHCR_USER GHCR_TOKEN
+#   Error reporting: SENTRY_DSN (optional; MONITORING_REQUIRED=true makes it required)
 #   Off-site backups (production): BACKUP_REQUIRED (true: fail without them),
 #   BACKUP_REPOSITORY (sftp:user@host:/path), BACKUP_SFTP_PORT, BACKUP_SSH_KEY,
 #   BACKUP_KNOWN_HOSTS, BACKUP_PASSWORD (restic encryption key), ALERT_EMAIL
@@ -41,6 +42,14 @@ case "${SMTP_SECURITY:-}" in
   *) fail "SMTP security must be starttls or ssl" ;;
 esac
 [[ "$GHCR_USER" =~ ^[A-Za-z0-9-]+$ ]] || fail "invalid GHCR user"
+if [[ -n "${SENTRY_DSN:-}" ]]; then
+  [[ "$SENTRY_DSN" =~ ^https://[A-Za-z0-9]+@[A-Za-z0-9.-]+/[0-9]+$ ]] || fail "invalid Sentry DSN"
+elif [[ "${MONITORING_REQUIRED:-false}" == true ]]; then
+  fail "error reporting is required for $ENV_NAME: set the Sentry DSN (docs/runbook.md, Monitoring)"
+fi
+if [[ -n "${BACKUP_HEARTBEAT_URL:-}" ]]; then
+  [[ "$BACKUP_HEARTBEAT_URL" =~ ^https://[A-Za-z0-9.-]+/[A-Za-z0-9._/-]+$ ]] || fail "invalid backup heartbeat URL"
+fi
 backups=false
 if [[ -n "${BACKUP_REPOSITORY:-}" ]]; then
   [[ "$BACKUP_REPOSITORY" =~ ^sftp:[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:/[A-Za-z0-9._/-]+$ ]] \
@@ -84,6 +93,13 @@ endgroup
     | ssh server "umask 077 && cat > '$APP_DIR/.env.secrets'"
   endgroup
 
+  # Error reporting: only SENTRY_DSN, in a file of its own (the client reads only this one).
+  if [[ -n "${SENTRY_DSN:-}" ]]; then
+    printf 'SENTRY_DSN=%s\n' "$SENTRY_DSN" | ssh server "umask 077 && cat > '$APP_DIR/.env.monitoring'"
+  else
+    ssh server "rm -f '$APP_DIR/.env.monitoring'"
+  fi
+
   # Backup settings and keys: a directory of their own, read-only in the backup container.
   # Without settings any earlier ones are removed, so the backup service stops (deploy.sh).
   if [[ "$backups" == true ]]; then
@@ -93,7 +109,8 @@ endgroup
     printf '%s\n' "$BACKUP_KNOWN_HOSTS" | ssh server "umask 077 && cat > '$APP_DIR/backup/keys/known_hosts'"
     printf '%s' "$BACKUP_PASSWORD" | ssh server "umask 077 && cat > '$APP_DIR/backup/keys/restic-password'"
     printf '%s\n' "BACKUP_REPOSITORY=$BACKUP_REPOSITORY" "BACKUP_SFTP_PORT=${BACKUP_SFTP_PORT:-23}" \
-      "ALERT_EMAIL=$ALERT_EMAIL" | ssh server "umask 077 && cat > '$APP_DIR/backup/config'"
+      "ALERT_EMAIL=$ALERT_EMAIL" "BACKUP_HEARTBEAT_URL=${BACKUP_HEARTBEAT_URL:-}" \
+      | ssh server "umask 077 && cat > '$APP_DIR/backup/config'"
     endgroup
   else
     ssh server "rm -f '$APP_DIR/backup/config'"

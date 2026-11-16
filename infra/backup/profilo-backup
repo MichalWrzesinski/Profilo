@@ -16,7 +16,7 @@
 # Any failure sends an alert e-mail to ALERT_EMAIL (SMTP settings of the application).
 #
 # Settings (environment): BACKUP_REPOSITORY (sftp:user@host:/path), BACKUP_SFTP_PORT,
-# BACKUP_HOST (snapshot host name), ALERT_EMAIL, PGHOST/PGUSER/PGPASSWORD/PGDATABASE,
+# BACKUP_HOST (snapshot host name), ALERT_EMAIL, BACKUP_HEARTBEAT_URL (optional), PGHOST/PGUSER/PGPASSWORD/PGDATABASE,
 # SMTP_HOST/SMTP_PORT/SMTP_SSL/SMTP_STARTTLS/SMTP_USERNAME/SMTP_PASSWORD/MAIL_FROM.
 # Files in /run/backup (read-only, written by the deploy workflow): restic-password,
 # ssh_key, known_hosts.
@@ -107,6 +107,15 @@ alert() {
   log "alert e-mail sent: $subject"
 }
 
+# heartbeat [fail]: tells the uptime monitor (Better Stack heartbeat, BACKUP_HEARTBEAT_URL)
+# that the daily backup ran — or failed; a missing ping alerts even when this server is down.
+heartbeat() {
+  [[ -n "${BACKUP_HEARTBEAT_URL:-}" ]] || return 0
+  local url="$BACKUP_HEARTBEAT_URL"
+  [[ "${1:-}" == fail ]] && url="${url%/}/fail"
+  curl -fsS --max-time 15 --retry 3 -o /dev/null "$url" || log "heartbeat not delivered"
+}
+
 # run_job <name> <function>: runs a job with its output in a log file; on failure the log
 # goes out as an alert. The result is kept in $STATE for monitoring (TASK-023).
 run_job() {
@@ -124,10 +133,12 @@ run_job() {
   if [[ "$status" == 0 ]]; then
     date -u +%Y-%m-%dT%H:%M:%SZ > "$STATE/last-$name-ok"
     rm -f "$STATE/last-$name-failed"
+    [[ "$name" == backup ]] && heartbeat
     [[ "$name" == restore-test ]] && alert "monthly restore test passed" "$out" || true
   else
     date -u +%Y-%m-%dT%H:%M:%SZ > "$STATE/last-$name-failed"
     rm -f "$STATE/last-$name-ok"
+    [[ "$name" == backup ]] && heartbeat fail
     log "$name FAILED (exit $status)"
     alert "$name FAILED" "$out" || true
   fi
