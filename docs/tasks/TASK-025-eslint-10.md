@@ -33,4 +33,5 @@ The client lints with a supported ESLint major version without peer-dependency o
 Trigger: upstream support for ESLint 10 in the three plugins (checked in the dependency-updates review, 2026-11-10: all cap ESLint at ^9).
 
 ## Report
-Filled in by development after the task.
+
+**Checked 2026-11-16, still waiting.** The newest releases older than two weeks still cap ESLint at 9: `eslint-plugin-import` 2.32.0 (`^9`), `eslint-plugin-react` 7.37.5 (`^9.7`), `eslint-plugin-jsx-a11y` 6.10.2 (`^9`); `eslint-config-next` 16.4.4, `eslint-plugin-react-hooks` 7.1.1 and `typescript-eslint` 8.72.1 already accept 10. Nothing to change until the three plugins do (or the import plugin is replaced).

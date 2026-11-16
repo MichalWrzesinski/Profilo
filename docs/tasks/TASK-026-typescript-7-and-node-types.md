@@ -1,7 +1,7 @@
 ---
 id: TASK-026
 title: TypeScript 7 and Node 26 type definitions
-status: PROPOSED
+status: BLOCKED
 priority: low
 iteration: ITER-05
 depends_on: []
@@ -33,4 +33,8 @@ The client type-checks with the current TypeScript major and type definitions ma
 Found in the dependency-updates review (2026-11-10): Dependabot's open-PR limit hid these updates; limit raised to 10.
 
 ## Report
-Filled in by development after the task.
+
+**Partly done (2026-11-16): `@types/node` 26; TypeScript 7 blocked.**
+- `@types/node` 24.19.2 → 26.6.6 (released 2026-10-28; with `undici-types` 8.9.0), installed in a clean copy so no other package moved. `make lint-client` (including `tsc`) and the 463 client tests pass, and the production image builds. Scenario 2: a component with a wrong prop type still fails `tsc`.
+- TypeScript 7 (7.0.2, released 2026-07-08) is blocked: `typescript-eslint` — also its newest release older than two weeks, 8.72.1 — accepts only `typescript >=4.8.4 <6.1.0`, and `eslint-config-next` lints through it. Forcing it with `overrides` would be the peer-dependency workaround TASK-025 rules out. Trigger: a `typescript-eslint` release that supports TypeScript 7.
+- Dependabot PR #16 (`@types/node`) is superseded by this change; #17 (TypeScript 7) is closed until the trigger.
