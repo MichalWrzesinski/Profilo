@@ -133,6 +133,11 @@ Only the user starts *Deploy production* (AGENTS.md). Both production workflows 
 | Variable | `PROD_DOMAIN` | e.g. `profilo.pl` |
 | Variable | `PROD_MAIL_FROM` | e.g. `Profilo <no-reply@profilo.pl>` — an address the SMTP account may send as (SPF, DKIM) |
 | Variable (optional) | `PROD_SSH_USER`, `PROD_APP_DIR`, `PROD_SMTP_HOST`, `PROD_SMTP_PORT`, `PROD_SMTP_SECURITY` | defaults `deploy`, `/srv/profilo`, Brevo, `587`, `starttls` |
+| Variable | `PROD_BACKUP_REPOSITORY` | e.g. `sftp:u123456@u123456.your-storagebox.de:/profilo` (*Backups* below) |
+| Variable (optional) | `PROD_BACKUP_SFTP_PORT` | default `23` (Storage Box) |
+| Secret | `PROD_BACKUP_SSH_KEY`, `PROD_BACKUP_KNOWN_HOSTS` | private key `profilo-backup` and `ssh-keyscan -p 23 u123456.your-storagebox.de` |
+| Secret | `PROD_BACKUP_PASSWORD` | backup encryption key: `openssl rand -hex 32` — **also keep it outside GitHub** (password manager): without it the backups cannot be read |
+| Variable | `PROD_ALERT_EMAIL` | where failed backups and the monthly restore report go |
 
 Check that the server can reach the SMTP port (*Shared host* step 9) before the first deployment.
 
@@ -143,6 +148,42 @@ Check that the server can reach the SMTP port (*Shared host* step 9) before the 
 The status `deploy/staging` is only ever set (never withdrawn) and any account with write access could set it; it is a check against mistakes, not a security boundary — only the owner can start production.
 
 **Later rollback** — Actions → *Rollback production* with the SHA of an earlier `production-*` release. The database stays as it is (it is ahead of the release, so no migration and no dump run; after a restored dump the database may be behind — then it is dumped and migrated; migrations are backward compatible, so the older release works with it), the release starts in the idle colour and takes over as in a deployment. It is refused unless the commit has a `production-*` tag and appears in the server's `.deployed-history`. The agent may start it without consent and informs the user at once: cause, version restored, state of the application. Restoring the database from a dump loses data written since and needs the user's consent (deployment standard).
+
+## Backups (production)
+
+The `backup` service (image `profilo-backup`, `infra/backup/`) runs on the production server whenever the deploy workflow delivered its settings (`$APP_DIR/backup/config` and `backup/keys/`; production requires them, staging has none — test data only):
+
+- **daily at 02:30 UTC**: `pg_dump` of the database and the `media` volume as restic snapshots (AES-256, deduplicated) over SFTP to the repository in `PROD_BACKUP_REPOSITORY`, in another location than the server; then snapshots more than 30 days older than the newest one are removed and their data deleted from the repository (`--max-unused 0`; privacy policy: deleted data leaves the backups after at most 30 days — as long as the daily backup runs; while it fails nothing is removed and an alert goes out every day). A dump that fails leaves no snapshot;
+- **monthly on the 1st at 04:30 UTC**: restore test — fails if the newest `db` or `media` snapshot is older than 36 h (daily backups broken), then the latest database snapshot into a temporary database `restore_test_<time>` on the production PostgreSQL, row counts per table (restored / live), media file count, `restic check` reading back 5 % of the data; the temporary database is dropped, also when the test fails. It fails if the restored database or the media snapshot is empty while the server has data. The report goes to `PROD_ALERT_EMAIL`;
+- **any failure** (repository unreachable, dump failed, check failed) sends an alert to `PROD_ALERT_EMAIL` with the job's log, through the application's SMTP account. A deployment stops a running job cleanly (repository unlocked) and it runs again after the container restarts. Results: `/state/last-backup-ok|failed`, `last-restore-test-ok|failed` in the `backup_state` volume (for monitoring, TASK-023).
+
+**Storage Box (once)** — Hetzner Storage Box (e.g. BX11) in another location than the server (e.g. Helsinki when the server is in Falkenstein), SSH support switched on. Then, on your computer:
+
+```bash
+ssh-keygen -t ed25519 -N "" -C "profilo-backup" -f profilo-backup
+```
+```bash
+cat profilo-backup.pub | ssh -p 23 u123456@u123456.your-storagebox.de install-ssh-key
+```
+```bash
+ssh-keyscan -p 23 u123456.your-storagebox.de | gh secret set PROD_BACKUP_KNOWN_HOSTS
+```
+```bash
+gh secret set PROD_BACKUP_SSH_KEY < profilo-backup
+```
+```bash
+openssl rand -hex 32 | tee /dev/tty | gh secret set PROD_BACKUP_PASSWORD
+```
+Save the printed key in your password manager, then set the variables `PROD_BACKUP_REPOSITORY` and `PROD_ALERT_EMAIL` and delete `profilo-backup` from your computer. The repository is created at the first backup (right after the first deployment, as 02:30 has passed). Any SFTP server works the same way; another provider than Hetzner must be named in the privacy policy.
+
+| Task | Command (on the server, `dc` helper below) |
+|---|---|
+| Backup now | `dc exec backup profilo-backup backup` |
+| Restore test now | `dc exec backup profilo-backup restore-test` |
+| List snapshots | `dc exec backup profilo-backup snapshots` |
+| Logs | `dc logs --tail=100 backup` |
+| Restore the database from the latest off-site backup — **only with the user's consent** (data written since the backup is lost) | `dc stop api-$(live) client-$(live) worker beat`, then `dc exec -T backup profilo-backup dump-db > /tmp/restore.dump` and `dc exec -T db pg_restore -U profilo -d profilo --clean --if-exists < /tmp/restore.dump`, then `dc start api-$(live) client-$(live) worker beat`, delete `/tmp/restore.dump`. An older snapshot: `profilo-backup restic snapshots --tag db`, then `profilo-backup restic dump <id> /profilo.dump` |
+| Restore media — same consent | `dc run --rm --no-deps -v profilo_media:/restore/data/media backup restic restore --host profilo --tag media latest --target /restore` (the service itself mounts the volume read-only) |
 
 ## Manual operations (as `deploy` on the server, in `/srv/profilo`)
 

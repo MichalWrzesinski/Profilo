@@ -11,6 +11,8 @@
 #   caddy/upstreams.caddy    which colour Caddy routes to; caddy/live: the colour it loaded
 #   backups/                 database dumps taken before migrations (last KEEP_DUMPS)
 #   .deployed-history        every commit that passed verification here, oldest first
+#   backup/config, backup/keys/  off-site backup settings and keys (production; written by
+#                            the deploy workflow) — the backup service runs only if present
 # Run as the deploy user:  $APP_DIR/releases/<sha>/deploy.sh <sha> [--rollback]
 #   --rollback  only a commit from .deployed-history; no dump
 # Migrations run only when the database is not ahead of the release: an older release
@@ -33,6 +35,15 @@ UPSTREAMS="$APP_DIR/caddy/upstreams.caddy"
 # The colour Caddy serves, written only after a successful reload (upstreams.caddy may name
 # a colour Caddy never loaded if a run was killed in between).
 LIVE_FILE="$APP_DIR/caddy/live"
+# background_of <tag>: background services of a release — the backup service only where the
+# workflow configured backups and the release has it (releases before TASK-022 do not).
+background_of() {
+  local services="worker beat"
+  if [[ -f "$APP_DIR/backup/config" ]] && grep -q '^  backup:' "$APP_DIR/releases/$1/compose.yml"; then
+    services+=" backup"
+  fi
+  echo "$services"
+}
 
 log() { echo "[deploy $(date -u +%H:%M:%S)] $*"; }
 
@@ -248,7 +259,8 @@ switch_back() {
   # shellcheck disable=SC2046
   remove $(app_services "$TARGET") || true
   if [[ "$BACKGROUND_SWITCHED" == 1 ]]; then
-    compose "$PREV_TAG" up -d --no-deps --wait --wait-timeout 180 worker beat || return 1
+    # shellcheck disable=SC2046  # service names
+    compose "$PREV_TAG" up -d --no-deps --wait --wait-timeout 180 $(background_of "$PREV_TAG") || return 1
   fi
   smoke && touch "$APP_DIR/releases/$PREV_TAG" && log "previous release $PREV_TAG serves again"
 }
@@ -321,7 +333,8 @@ cleanup_old_releases() {
     | awk -v keep="$KEEP_RELEASES" 'NR > keep {print $2}' | while read -r old; do
       [[ "$old" == "$NEW_TAG" ]] && continue
       docker image rm "ghcr.io/michalwrzesinski/profilo-api:$old" \
-        "ghcr.io/michalwrzesinski/profilo-client:$old" >/dev/null 2>&1 || true
+        "ghcr.io/michalwrzesinski/profilo-client:$old" \
+        "ghcr.io/michalwrzesinski/profilo-backup:$old" >/dev/null 2>&1 || true
       rm -rf "${APP_DIR:?}/releases/$old"
     done
 }
@@ -332,7 +345,9 @@ else
   log "deploying $NEW_TAG (previous: ${PREV_TAG:-none})"
 fi
 if [[ "${DEPLOY_SKIP_PULL:-0}" != 1 ]]; then
-  if ! compose "$NEW_TAG" pull --quiet api-blue client-blue; then
+  # shellcheck disable=SC2207  # service names
+  pull=(api-blue client-blue $(background_of "$NEW_TAG" | grep -o backup || true))
+  if ! compose "$NEW_TAG" pull --quiet "${pull[@]}"; then
     log "pulling images failed; the running release was not changed"
     exit 1
   fi
@@ -345,12 +360,20 @@ if ! migrate; then
 fi
 
 # Background services take no requests: replaced in place once the site is verified
-# (Celery finishes running tasks; exactly one beat must run).
+# (Celery finishes running tasks; exactly one beat and one backup scheduler must run).
 BACKGROUND_SWITCHED=0
 background() {
+  local services
+  services="$(background_of "$NEW_TAG")"
   BACKGROUND_SWITCHED=1
-  compose "$NEW_TAG" up -d --no-deps --wait --wait-timeout 180 worker beat \
-    || { log "worker or beat of $NEW_TAG did not become healthy"; return 1; }
+  # shellcheck disable=SC2086  # service names
+  compose "$NEW_TAG" up -d --no-deps --wait --wait-timeout 180 $services \
+    || { log "$services of $NEW_TAG did not become healthy"; return 1; }
+  # Backups switched off (no backup/config any more): no stale backup container.
+  if [[ "$services" != *backup* ]]; then
+    [[ -f "$APP_DIR/backup/config" ]] && log "warning: release $NEW_TAG has no backup service — off-site backups stop until a newer release is deployed"
+    remove backup
+  fi
 }
 
 if switch_to "$NEW_TAG" && smoke && background; then

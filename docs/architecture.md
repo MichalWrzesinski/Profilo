@@ -167,7 +167,7 @@ Public read path: `GET /api/v1/public/profiles/{nick}` → `profiles` by nick wh
 | Photos | `images`, media volume | EXIF removed; served only for owner or visible pages; deleted with the account |
 | IP addresses | Valkey rate-limit keys | TTL ≤ 1 h; not stored in the database; logs keep IP only in Caddy access logs, 14 days |
 
-Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed immediately (backups age out after 30 days — stated in the privacy policy).
+Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed immediately (backups age out after 30 days — stated in the privacy policy; restic `forget --keep-within 30d --prune`, TASK-022).
 
 ## Higher-risk flows
 
@@ -236,5 +236,6 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | `e2e/tests/seo.spec.ts` | Preview tags, og:image 200, sitemap entry; after unpublishing gone from the sitemap and 404; panel pages `noindex` | TASK-013 |
 | `infra/` | Local Caddy config, PostgreSQL init (test database) | TASK-001 |
 | `infra/server/` | Server bootstrap (`bootstrap.sh`, `setup-shared-host.sh`), staging/production Compose stack, Caddyfile with TLS and security headers, `deploy.sh`: pre-migration dump, migrations unless the database is ahead, blue-green switch (`api-`/`client-blue|green`, Caddy pointed at the ready colour via `caddy/upstreams.caddy`), smoke tests, instant switch back on failure, `--rollback` to a release in `.deployed-history` | TASK-003, TASK-021 |
+| `infra/backup/` | Backup image (PostgreSQL client + restic + curl) and `profilo-backup` (scheduler, backup, restore test, alerts, `dump-db`, `restic`) | TASK-022 |
 | `infra/ci/deploy-remote.sh` | Runner side of all deploy workflows: SSH with pinned host key, upload of the commit's stack files, runtime secrets, GHCR login, `deploy.sh`, external smoke tests | TASK-021 |
 | `.github/workflows/` | `ci.yml` (check, publish), `deploy-staging.yml` (sets the commit status `deploy/staging`), `deploy-production.yml` (user only; requires `deploy/staging`; release tag `production-*`), `rollback-production.yml` (only `production-*` releases) | TASK-002, TASK-003, TASK-021 |

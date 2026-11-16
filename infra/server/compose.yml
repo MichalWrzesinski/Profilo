@@ -117,6 +117,39 @@ services:
       <<: *client_env
       API_INTERNAL_URL: http://api-green:8000
 
+  # Production only (profile; deploy.sh starts it when $APP_DIR/backup/config exists): daily
+  # encrypted off-site backups of the database and media, monthly restore test, alert
+  # e-mails (infra/backup, TASK-022). Gets only what it needs: database login, SMTP, its own
+  # settings and keys.
+  backup:
+    image: ghcr.io/michalwrzesinski/profilo-backup:${IMAGE_TAG:?IMAGE_TAG is required}
+    profiles: [backup]
+    restart: unless-stopped
+    # tini as PID 1 forwards SIGTERM to the scheduler, which stops a running job cleanly
+    # (restic removes its repository lock) within the grace period.
+    init: true
+    stop_grace_period: 30s
+    env_file:
+      - path: ${APP_DIR:?APP_DIR is required}/.env.secrets
+        required: false
+      - path: ${APP_DIR:?APP_DIR is required}/backup/config
+        required: false
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:?}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      PGDATABASE: ${POSTGRES_DB:?}
+      # Fixed: retention groups snapshots by host and tag, a changed name would never be pruned.
+      BACKUP_HOST: profilo
+    volumes:
+      - media:/data/media:ro
+      - backup_state:/state
+      - ${APP_DIR:?APP_DIR is required}/backup/keys:/run/backup:ro
+    logging: *logging
+    networks: [internal]
+    depends_on:
+      db: { condition: service_healthy }
+
   db:
     image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
     restart: unless-stopped
@@ -161,3 +194,4 @@ volumes:
   valkeydata:
   caddy_data:
   caddy_config:
+  backup_state:
