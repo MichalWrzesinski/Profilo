@@ -165,7 +165,7 @@ Public read path: `GET /api/v1/public/profiles/{nick}` → `profiles` by nick wh
 | Refresh / one-time tokens | `refresh_tokens`, `one_time_tokens` | Stored as hashes only |
 | Public e-mail, phone, name, bio, city, company, position | `profiles`, `published_profiles` | Public only when the owner fills them in and publishes; deleted with the account |
 | Photos | `images`, media volume | EXIF removed; served only for owner or visible pages; deleted with the account |
-| IP addresses | Valkey rate-limit keys | TTL ≤ 1 h; not stored in the database; logs keep IP only in Caddy access logs, 14 days |
+| IP addresses | Valkey rate-limit keys (as a keyed hash, TASK-027) | TTL ≤ 1 h; not stored in the database; logs keep IP only in Caddy access logs, 14 days |
 
 Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed immediately (backups age out after 30 days — stated in the privacy policy; restic `forget --keep-within 30d --prune`, TASK-022).
 
@@ -197,7 +197,7 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | `api/app/modules/<module>/` | Product modules (empty packages until their tasks) | — |
 | `api/alembic/` | Migrations (`0001`: citext extension) | TASK-001 |
 | `api/tests/` | pytest; integration tests use the `profilo_test` database | TASK-001 |
-| `api/app/core/auth.py`, `core/rate_limit.py`, `core/schemas.py` | Bearer-token dependency, Valkey fixed-window limits (fail open), camelCase API base model | TASK-004 |
+| `api/app/core/auth.py`, `core/rate_limit.py`, `core/schemas.py` | Bearer-token dependency, Valkey fixed-window limits (fail open; keys hold an HMAC of the subject, never an e-mail or IP), camelCase API base model | TASK-004, TASK-027 |
 | `api/app/modules/accounts/` | Accounts and refresh tokens: models, Argon2id + common-password policy, JWT and rotating refresh tokens with reuse detection, service, router (`/accounts`, `/auth/*`, `/me`) | TASK-004 |
 | `api/app/modules/profiles/` | Profile model (draft), `create_profile_for` | TASK-004 |
 | `api/app/modules/profiles/nicks.py`, `service.py`, `router.py` | Nick rules (PRF-BR-2, mirrored in `client/src/lib/nick.ts`; shared test cases in `docs/api/nick-cases.json`), reserved nicks (`0004` seeds system and offensive words; offensive ones also block nicks containing them), suggestions, availability, suggestion and save (shared 120/min limit), `PUT /me/profile/nick`; `GET`/`PATCH /me/profile` with optimistic locking and E.164 phones | TASK-006 |
