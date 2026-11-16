@@ -1,7 +1,7 @@
 ---
 id: TASK-024
 title: CSP nonces instead of 'unsafe-inline' scripts
-status: IN_PROGRESS
+status: DONE
 priority: medium
 iteration: ITER-05
 depends_on: [TASK-003]
@@ -34,7 +34,7 @@ Proposed by TASK-003 (review): the current CSP allows `'unsafe-inline'` scripts 
 
 ## Report
 
-**Done locally; staging check after the merge.** Delivered:
+**Done.** Verified on staging after the merge (`dd278c3`): `/`, `/rejestracja`, `/przyklad`, `/podglad` send a nonce policy with `'strict-dynamic'` (`frame-ancestors 'self'` only for the last two), the API and files get Caddy's strict fallback; in the browser the home page and registration hydrate, the example iframe renders, and no CSP violation is reported. (The first CI run on main failed on a GHCR TLS timeout while publishing the backup image; rerun green.) Delivered:
 - `client/src/proxy.ts` (Next.js 16 Proxy): a 16-byte random nonce per page request, set on the request (Next.js reads it and puts it on its own scripts) and in the response's `Content-Security-Policy`; not for the API, media, Next.js assets and files, nor for prefetches.
 - `client/src/lib/csp.ts`: `script-src 'nonce-…' 'strict-dynamic'` (plus `'unsafe-eval'` only in development, for React's debug stacks), `worker-src 'self'` (`'strict-dynamic'` makes browsers ignore `'self'` for scripts, and the registration proof-of-work runs in a web worker), `style-src 'self' 'unsafe-inline'` without a nonce (a nonce there would disable `'unsafe-inline'` for the inline styles — out of scope), `frame-ancestors 'self'` only for `/podglad` and `/przyklad` (moved from Caddy).
 - Root layout: `await connection()` — every page renders per request (HTML generated at build time cannot carry a nonce). Most pages were dynamic already (`force-dynamic`).
