@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { PNG } from 'pngjs';
-import { confirmationPath, open, recordViolations, TEST_PASSWORD } from './helpers';
+import {
+  confirmationPath,
+  expectNoSidewaysScroll,
+  open,
+  recordViolations,
+  TEST_PASSWORD,
+} from './helpers';
 
 // Main flow (docs/design/flows.md): register → nick → content → preview → confirm e-mail
 // (Mailpit) → publish → public page; the preview must match the public page.
@@ -130,5 +136,21 @@ test('a new owner publishes a page that looks exactly like the preview', async (
     'https://linkedin.com/in/ewa-testowa',
   );
   expect(await pageHtml(page)).toBe(previewHtml);
+
+  // The private pages fit a 320 px phone (same owner: the suite's registrations from one
+  // address are limited — AGENTS.md).
+  await page.setViewportSize({ width: 320, height: 800 });
+  for (const path of ['/panel', '/edytor', '/panel/konto']) {
+    await open(page, path);
+    await page.waitForLoadState('networkidle');
+    await expectNoSidewaysScroll(page, path);
+  }
+  await open(page, '/edytor');
+  await page.getByRole('tab', { name: 'Podgląd' }).click();
+  await expect(
+    page.frameLocator('iframe[title="Podgląd wersji roboczej"]').locator('h1'),
+  ).toHaveText(name);
+  await expectNoSidewaysScroll(page, '/edytor (preview tab)');
+
   expect(found).toEqual([]); // the whole flow ran under the page CSP (TASK-024)
 });
