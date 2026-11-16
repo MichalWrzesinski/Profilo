@@ -109,7 +109,7 @@ export function RegisterForm({ nick }: { nick?: string } = {}) {
       <Field
         label="Imię i nazwisko lub pseudonim"
         autoComplete="name"
-        hint="Tak podpiszesz swoją stronę. Zmienisz to w każdej chwili."
+        hint="Tak podpiszesz swoją stronę, ale w każdej chwili możesz to zmienić"
         error={errors.displayName?.message}
         {...register('displayName')}
       />
@@ -117,7 +117,7 @@ export function RegisterForm({ nick }: { nick?: string } = {}) {
         label="E-mail do logowania"
         type="email"
         autoComplete="email"
-        hint="Nie pokażemy go na Twojej stronie."
+        hint="Nie pokażemy go na Twojej stronie"
         error={errors.email?.message}
         {...register('email')}
       />
@@ -125,7 +125,7 @@ export function RegisterForm({ nick }: { nick?: string } = {}) {
         label="Hasło"
         type={showPassword ? 'text' : 'password'}
         autoComplete="new-password"
-        hint="Co najmniej 10 znaków."
+        hint="Co najmniej 10 znaków"
         error={errors.password?.message}
         addon={
           <button
