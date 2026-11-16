@@ -36,7 +36,9 @@ def _hash_key() -> bytes:
 
 def counter_key(limit: Limit, subject: str) -> str:
     """The Valkey key of a subject's counter: `rl:<limit>:<hash>` (128 bits of HMAC-SHA-256)."""
-    digest = hmac.new(_hash_key(), subject.encode(), hashlib.sha256).hexdigest()[:32]
+    # The limit's name is part of the input: counters of different limits cannot be linked.
+    message = f"{limit.name}:{subject}".encode()
+    digest = hmac.new(_hash_key(), message, hashlib.sha256).hexdigest()[:32]
     return f"rl:{limit.name}:{digest}"
 
 

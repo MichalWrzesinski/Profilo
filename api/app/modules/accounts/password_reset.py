@@ -109,7 +109,7 @@ async def confirm(
 ) -> Account:
     """Set the new password, end every session, mark the token used. Returns the account,
     for which the caller starts a new session in this browser (still uncommitted)."""
-    await rate_limit.hit(CONFIRM_PER_IP, client_ip)
+    await rate_limit.hit(CONFIRM_PER_IP, rate_limit.ip_subject(client_ip))
     now = datetime.now(UTC)
     locked = await one_time.lock_with_account(session, raw_token, PURPOSE)
     if locked is None:

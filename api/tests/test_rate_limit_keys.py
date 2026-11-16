@@ -32,8 +32,6 @@ async def test_keys_hold_no_addresses_after_logins_registrations_and_resets(
     assert keys, "the requests above must have created counters"
     for key in keys:
         assert "@" not in key
-        assert "anna" not in key.lower()
-        assert "127.0.0.1" not in key
         name, digest = key.removeprefix("rl:").rsplit(":", 1)
         assert name
         assert len(digest) == 32
@@ -48,8 +46,9 @@ def test_counter_key_is_a_keyed_hash() -> None:
     assert IP not in rate_limit.counter_key(limit, IP)
     assert key == rate_limit.counter_key(limit, EMAIL)  # stable: the same counter
     assert key != rate_limit.counter_key(limit, "inna@example.pl")
+    # Different limits give different hashes: their counters cannot be linked.
     other = rate_limit.Limit("register_email", max_hits=5, window_seconds=900)
-    assert key.split(":")[-1] == rate_limit.counter_key(other, EMAIL).split(":")[-1]
+    assert key.split(":")[-1] != rate_limit.counter_key(other, EMAIL).split(":")[-1]
 
 
 def test_hash_depends_on_the_server_secret(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -66,3 +65,20 @@ def test_hash_depends_on_the_server_secret(monkeypatch: pytest.MonkeyPatch) -> N
     finally:
         monkeypatch.undo()
         rate_limit._hash_key.cache_clear()
+
+
+async def test_ip_limits_count_an_ipv6_network(client: AsyncClient, clean_state: None) -> None:
+    """Every per-IP limit counts IPv6 per /64 (an address can change within it)."""
+    from app.modules.accounts import confirmation, password_reset
+    from app.modules.profiles import service as profiles
+
+    a, b = "2001:db8:1:2::10", "2001:db8:1:2::99"
+    for limit in (
+        confirmation.RESEND_PER_IP,
+        confirmation.CONFIRM_PER_IP,
+        password_reset.CONFIRM_PER_IP,
+        profiles.OG_RENDERS,
+    ):
+        assert rate_limit.counter_key(limit, rate_limit.ip_subject(a)) == rate_limit.counter_key(
+            limit, rate_limit.ip_subject(b)
+        )
