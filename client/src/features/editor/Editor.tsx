@@ -285,9 +285,9 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
             onClick={() => void publish()}
           >
             {published ? (
-              <>
+              <span>
                 Opublikuj<span className="hide-m"> zmiany</span>
-              </>
+              </span>
             ) : (
               'Opublikuj'
             )}

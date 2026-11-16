@@ -21,7 +21,11 @@ describe('public pages', () => {
     [TermsPage, 'Regulamin', 'zgloszenia'],
     [PrivacyPage, 'Polityka prywatności', 'okres'],
   ])('renders the legal draft %#', (Page, title, section) => {
-    const { container } = render(<Page />);
+    const { container } = render(
+      <SessionProvider>
+        <Page />
+      </SessionProvider>,
+    );
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument();
     expect(screen.getByText('Wersja robocza.')).toBeInTheDocument();
     // Operator data filled in; a missing value would be marked (TASK-019 scenario 2).
@@ -33,13 +37,21 @@ describe('public pages', () => {
 
   it('shows the configured abuse address in the terms', () => {
     vi.stubEnv('ABUSE_EMAIL', 'zgloszenia@operator.pl');
-    render(<TermsPage />);
+    render(
+      <SessionProvider>
+        <TermsPage />
+      </SessionProvider>,
+    );
     expect(screen.getByText(/zgloszenia@operator\.pl/)).toBeInTheDocument();
     expect(screen.queryByText(/\[do uzupełnienia: adres do zgłoszeń nadużyć\]/)).toBeNull();
   });
 
   it('names the processors and the 30-day backups in the privacy policy', () => {
-    render(<PrivacyPage />);
+    render(
+      <SessionProvider>
+        <PrivacyPage />
+      </SessionProvider>,
+    );
     for (const text of ['Hetzner Online GmbH', 'Brevo SAS', '(Sentry)', 'przez 30 dni']) {
       expect(screen.getAllByText(new RegExp(text.replace(/[()]/g, '\\$&')))[0]).toBeInTheDocument();
     }

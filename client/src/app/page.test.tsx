@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import { SessionProvider } from '@/lib/session';
 import Home, { generateMetadata } from './page';
 
 afterEach(() => vi.unstubAllEnvs());
@@ -6,7 +7,11 @@ afterEach(() => vi.unstubAllEnvs());
 describe('Home', () => {
   it('offers to reserve an address that goes to registration', () => {
     vi.stubEnv('PUBLIC_BASE_URL', 'https://profilo.pl');
-    render(<Home />);
+    render(
+      <SessionProvider>
+        <Home />
+      </SessionProvider>,
+    );
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       'Twoja wizytówka w sieci. Gotowa w 5 minut.',
@@ -21,7 +26,11 @@ describe('Home', () => {
   });
 
   it('links to sign-up, login and the legal pages', () => {
-    render(<Home />);
+    render(
+      <SessionProvider>
+        <Home />
+      </SessionProvider>,
+    );
 
     expect(screen.getByRole('link', { name: 'Załóż stronę' })).toHaveAttribute(
       'href',

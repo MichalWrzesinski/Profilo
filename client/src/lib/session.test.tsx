@@ -11,6 +11,8 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 
 afterEach(() => {
   tokenStore.set(null);
+  vi.restoreAllMocks();
+  window.localStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -75,5 +77,74 @@ describe('SessionProvider', () => {
     await act(() => result.current.signOut());
 
     expect(window.localStorage.getItem(draftStorageKey('a1'))).toBeNull();
+  });
+
+  it('resumes only in a browser that was signed in', async () => {
+    const fetch = mockFetch(() => json(200, SESSION));
+    const { result } = renderHook(() => useSession(), { wrapper });
+
+    await act(() => result.current.resume());
+    expect(fetch).not.toHaveBeenCalled();
+    expect(result.current.status).toBe('unknown');
+
+    window.localStorage.setItem('profilo:signed-in', '1');
+    await act(() => result.current.resume());
+    expect(result.current.status).toBe('authenticated');
+  });
+
+  it('remembers the sign-in until logout or an expired session', async () => {
+    mockFetch((request) =>
+      request.url.endsWith('/refresh')
+        ? json(401, { code: 'unauthorized', status: 401 })
+        : json(204),
+    );
+    const { result } = renderHook(() => useSession(), { wrapper });
+
+    act(() => result.current.signIn(SESSION));
+    expect(window.localStorage.getItem('profilo:signed-in')).toBe('1');
+    await act(() => result.current.signOut());
+    expect(window.localStorage.getItem('profilo:signed-in')).toBeNull();
+
+    window.localStorage.setItem('profilo:signed-in', '1');
+    const { result: later } = renderHook(() => useSession(), { wrapper });
+    await act(() => later.current.resume());
+    expect(later.current.status).toBe('anonymous');
+    expect(window.localStorage.getItem('profilo:signed-in')).toBeNull();
+  });
+
+  it('asks the API when storage is blocked', async () => {
+    mockFetch(() => json(200, SESSION));
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError');
+    });
+    const { result } = renderHook(() => useSession(), { wrapper });
+
+    await act(() => result.current.resume());
+
+    expect(result.current.status).toBe('authenticated');
+  });
+
+  it('keeps the hint when the API is unavailable', async () => {
+    window.localStorage.setItem('profilo:signed-in', '1');
+    mockFetch(() => json(503, { code: 'unavailable', status: 503 }));
+    const { result } = renderHook(() => useSession(), { wrapper });
+
+    await act(() => result.current.resume());
+
+    expect(result.current.status).toBe('anonymous');
+    expect(window.localStorage.getItem('profilo:signed-in')).toBe('1');
+  });
+
+  it('keeps the hint when the network fails', async () => {
+    window.localStorage.setItem('profilo:signed-in', '1');
+    mockFetch(() => Promise.reject(new TypeError('offline')));
+    const { result } = renderHook(() => useSession(), { wrapper });
+
+    await act(() => result.current.resume());
+
+    expect(window.localStorage.getItem('profilo:signed-in')).toBe('1');
   });
 });

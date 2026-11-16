@@ -23,7 +23,7 @@ export default async function RegisterPage({ searchParams }: Props) {
           : 'Zajmie to około 5 minut.'
       }
       topbarAction={
-        <Link className="btn btn-ghost btn-sm" href="/logowanie">
+        <Link className="btn btn-primary btn-sm" href="/logowanie">
           Zaloguj się
         </Link>
       }
