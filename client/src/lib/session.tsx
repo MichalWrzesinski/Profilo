@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  lastRefreshRejected,
   logoutSession,
   refreshSession,
   tokenStore,
@@ -50,6 +51,8 @@ type SessionContextValue = {
   ensure: () => Promise<void>;
   /** Like `ensure`, but only when this browser was signed in (public pages). */
   resume: () => Promise<void>;
+  /** Whether this browser was signed in last time (public pages wait for `resume`). */
+  hasHint: () => boolean;
   signIn: (session: Session) => void;
   signOut: () => Promise<void>;
   markEmailConfirmed: () => void;
@@ -85,7 +88,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } else {
       setAccount(null);
       setStatus('anonymous');
-      writeHint(false);
+      // An outage keeps the hint: the session may still be valid next time.
+      if (lastRefreshRejected()) writeHint(false);
     }
   }, [signIn, setStatus]);
 
@@ -110,7 +114,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ status, account, ensure, resume, signIn, signOut, markEmailConfirmed }),
+    () => ({
+      status,
+      account,
+      ensure,
+      resume,
+      hasHint: readHint,
+      signIn,
+      signOut,
+      markEmailConfirmed,
+    }),
     [status, account, ensure, resume, signIn, signOut, markEmailConfirmed],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

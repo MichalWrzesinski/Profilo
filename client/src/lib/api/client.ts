@@ -36,18 +36,24 @@ export const api = createClient<paths>({
 });
 
 let pendingRefresh: Promise<Session | null> | null = null;
+let refreshRejected = false;
+
+/** Whether the last refresh failed because the API rejected the cookie (not an outage). */
+export const lastRefreshRejected = (): boolean => refreshRejected;
 
 /** Get a new access token from the refresh cookie; concurrent calls share one request. */
 export function refreshSession(): Promise<Session | null> {
   pendingRefresh ??= (async () => {
     try {
-      const { data } = await api.POST('/api/v1/auth/refresh', {
+      const { data, response } = await api.POST('/api/v1/auth/refresh', {
         // The browser sends the HttpOnly cookie itself; the contract lists it as a parameter.
         params: { header: CSRF_HEADERS, cookie: {} as { profilo_rt: string } },
       });
+      refreshRejected = response.status === 401 || response.status === 403;
       tokenStore.set(data?.accessToken ?? null, data?.expiresIn);
       return data ?? null;
     } catch {
+      refreshRejected = false;
       tokenStore.set(null);
       return null;
     } finally {

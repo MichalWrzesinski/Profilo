@@ -11,6 +11,7 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 
 afterEach(() => {
   tokenStore.set(null);
+  vi.restoreAllMocks();
   window.localStorage.clear();
   vi.unstubAllGlobals();
 });
@@ -124,6 +125,26 @@ describe('SessionProvider', () => {
     await act(() => result.current.resume());
 
     expect(result.current.status).toBe('authenticated');
-    vi.restoreAllMocks();
+  });
+
+  it('keeps the hint when the API is unavailable', async () => {
+    window.localStorage.setItem('profilo:signed-in', '1');
+    mockFetch(() => json(503, { code: 'unavailable', status: 503 }));
+    const { result } = renderHook(() => useSession(), { wrapper });
+
+    await act(() => result.current.resume());
+
+    expect(result.current.status).toBe('anonymous');
+    expect(window.localStorage.getItem('profilo:signed-in')).toBe('1');
+  });
+
+  it('keeps the hint when the network fails', async () => {
+    window.localStorage.setItem('profilo:signed-in', '1');
+    mockFetch(() => Promise.reject(new TypeError('offline')));
+    const { result } = renderHook(() => useSession(), { wrapper });
+
+    await act(() => result.current.resume());
+
+    expect(window.localStorage.getItem('profilo:signed-in')).toBe('1');
   });
 });

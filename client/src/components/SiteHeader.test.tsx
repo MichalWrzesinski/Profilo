@@ -47,4 +47,16 @@ describe('SiteHeader', () => {
     );
     expect(screen.queryByRole('link', { name: 'Moje konto' })).toBeNull();
   });
+
+  it('hides the buttons while a likely session is restored', async () => {
+    window.localStorage.setItem('profilo:signed-in', '1');
+    let answer: (response: Response) => void = () => undefined;
+    mockFetch(() => new Promise<Response>((resolve) => (answer = resolve)));
+    renderHeader();
+
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'Zaloguj się' })).toBeNull());
+    answer(new Response(JSON.stringify({ code: 'unauthorized', status: 401 }), { status: 401 }));
+
+    expect(await screen.findByRole('link', { name: 'Zaloguj się' })).toBeVisible();
+  });
 });

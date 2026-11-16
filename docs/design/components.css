@@ -166,7 +166,7 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .layout-opt b { color: var(--color-heading); }
 
 /* ---------- Link card (public) & link row (editor) ---------- */
-.link-card { display: flex; align-items: center; gap: var(--space-4); min-height: 64px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface); border: var(--border-width) solid var(--color-border); box-shadow: var(--shadow-xs); text-decoration: none; color: inherit; transition: transform var(--duration-fast), border-color var(--duration-fast), box-shadow var(--duration-base); }
+.link-card { display: flex; align-items: center; gap: var(--space-4); min-height: 64px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface); border: var(--border-width) solid var(--color-border); box-shadow: var(--shadow-xs); text-decoration: none; color: inherit; transition: border-color var(--duration-fast), box-shadow var(--duration-base); }
 .link-card:hover { border-color: var(--page-accent); box-shadow: var(--shadow-md); }
 .link-ico { width: 40px; height: 40px; flex: none; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--page-accent) 12%, #fff); color: var(--page-accent); font-weight: var(--font-weight-bold); font-size: var(--text-sm); }
 .link-card .txt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
