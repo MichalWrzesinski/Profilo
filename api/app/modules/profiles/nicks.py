@@ -7,7 +7,7 @@ MIN_LENGTH = 3
 MAX_LENGTH = 40
 PATTERN = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 # En dash is intended (Polish typography in a user-facing message).
-RULE = "3–40 znaków: małe litery, cyfry i pojedyncze myślniki, bez myślnika na początku i końcu."  # noqa: RUF001
+RULE = "3–40 znaków: małe litery, cyfry i pojedyncze myślniki, bez myślnika na początku i końcu"  # noqa: RUF001
 
 # Polish letters first (ł has no Unicode decomposition); other diacritics via NFKD.
 _POLISH = str.maketrans("ąćęłńóśźżĄĆĘŁŃÓŚŹŻ", "acelnoszzACELNOSZZ")

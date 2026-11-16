@@ -32,7 +32,7 @@ REQUEST_PER_EMAIL = rate_limit.Limit("reset_request_email", max_hits=3, window_s
 MAILS_PER_DAY = rate_limit.Limit("reset_mail_day", max_hits=150, window_seconds=86400)
 CONFIRM_PER_IP = rate_limit.Limit("reset_confirm_ip", max_hits=30, window_seconds=900)
 
-EXPIRED_DETAIL = "Link wygasł albo został już użyty."
+EXPIRED_DETAIL = "Link wygasł albo został już użyty"
 
 
 def reset_link(raw_token: str) -> str:

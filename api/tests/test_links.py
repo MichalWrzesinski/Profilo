@@ -160,7 +160,7 @@ async def test_invalid_url_is_rejected_with_a_field_message(client: AsyncClient,
             {
                 "field": "url",
                 "code": "invalid_url",
-                "message": "To nie wygląda na adres strony. Sprawdź, czy nie ma w nim spacji.",
+                "message": "To nie wygląda na adres strony. Sprawdź, czy nie ma w nim spacji",
             }
         ]
 
@@ -173,7 +173,7 @@ async def test_empty_label_is_refused(client: AsyncClient) -> None:
     null = await client.patch(f"{LINKS}/{link_id}", json={"label": None}, headers=auth)
 
     assert blank.status_code == 422
-    assert null.json()["errors"][0]["message"] == "Wpisz etykietę."
+    assert null.json()["errors"][0]["message"] == "Wpisz etykietę"
 
 
 async def test_twenty_first_link_is_refused(client: AsyncClient) -> None:
@@ -209,7 +209,7 @@ async def test_links_need_login(client: AsyncClient) -> None:
 
 @pytest.mark.parametrize(
     ("body", "message"),
-    [({}, "Podaj adres albo etykietę."), ({"url": None}, "Wpisz adres strony.")],
+    [({}, "Podaj adres albo etykietę"), ({"url": None}, "Wpisz adres strony")],
 )
 async def test_link_patch_needs_a_change(
     client: AsyncClient, body: dict[str, Any], message: str

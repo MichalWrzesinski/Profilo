@@ -44,7 +44,7 @@ async def upload_slot(account_id: uuid.UUID) -> AsyncIterator[None]:
         raise ProblemError(
             429,
             "rate_limited",
-            "Poczekaj, aż poprzedni obraz się wgra.",
+            "Poczekaj, aż poprzedni obraz się wgra",
             headers={"Retry-After": "5"},
         )
     try:
@@ -82,14 +82,14 @@ async def store_upload(
                     "code": "image_too_small",
                     # The multiplication sign is intended (Polish typography for dimensions).
                     "message": (
-                        f"Obraz jest za mały. Użyj co najmniej {min_width} × {min_height} px."  # noqa: RUF001
+                        f"Obraz jest za mały. Użyj co najmniej {min_width} × {min_height} px"  # noqa: RUF001
                     ),
                 }
             ],
         ) from None
     except processing.UnsupportedImageError:
         raise ProblemError(
-            415, "unsupported_image", "To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik."
+            415, "unsupported_image", "To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik"
         ) from None
     key = f"{account_id}/{secrets.token_urlsafe(18)}"
     try:
@@ -112,7 +112,7 @@ async def store_upload(
 
 
 def _too_large() -> ProblemError:
-    return ProblemError(413, "file_too_large", "Plik jest za duży. Wybierz obraz do 10 MB.")
+    return ProblemError(413, "file_too_large", "Plik jest za duży. Wybierz obraz do 10 MB")
 
 
 async def get_image(session: AsyncSession, image_id: uuid.UUID) -> Image | None:

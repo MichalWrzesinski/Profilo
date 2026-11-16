@@ -53,7 +53,7 @@ paths:
               schema: { $ref: '#/components/schemas/Session' }
         '409':
           description: E-mail already registered (`email_taken`).
-          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' }, example: { type: 'https://profilo.pl/problems/email-taken', title: Account already exists, status: 409, code: email_taken, detail: 'Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło.' } } }
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' }, example: { type: 'https://profilo.pl/problems/email-taken', title: Account already exists, status: 409, code: email_taken, detail: 'Konto z tym adresem już istnieje. Zaloguj się albo zresetuj hasło' } } }
         '422': { $ref: '#/components/responses/ValidationError' }
         '428':
           description: 'Proof-of-work challenge required (`challenge_required`): from the 4th attempt per IP within an hour, also for a missing, forged, expired or reused solution. The response contains a new challenge; send its solution in `challenge` (base64 JSON `{algorithm, challenge, number, salt, signature}`, ALTCHA format).'
@@ -79,7 +79,7 @@ paths:
           content: { application/json: { schema: { $ref: '#/components/schemas/Session' } } }
         '401':
           description: Wrong e-mail or password (`invalid_credentials`) — identical for unknown e-mail.
-          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' }, example: { type: 'https://profilo.pl/problems/invalid-credentials', title: Invalid credentials, status: 401, code: invalid_credentials, detail: 'Nieprawidłowy e-mail lub hasło.' } } }
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' }, example: { type: 'https://profilo.pl/problems/invalid-credentials', title: Invalid credentials, status: 401, code: invalid_credentials, detail: 'Nieprawidłowy e-mail lub hasło' } } }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
 
@@ -284,7 +284,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/NickProblem' }
-              example: { type: 'https://profilo.pl/problems/nick-taken', title: Nick unavailable, status: 409, code: nick_taken, detail: 'Ten adres jest już zajęty.', suggestions: [anna-wisniewska-2, anna-wisniewska-krakow, anna-wisniewska-3] }
+              example: { type: 'https://profilo.pl/problems/nick-taken', title: Nick unavailable, status: 409, code: nick_taken, detail: 'Ten adres jest już zajęty', suggestions: [anna-wisniewska-2, anna-wisniewska-krakow, anna-wisniewska-3] }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /api/v1/nicks/{nick}/availability:
@@ -572,7 +572,7 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ValidationProblem' }
-          example: { type: 'https://profilo.pl/problems/validation-error', title: Validation failed, status: 422, code: validation_error, errors: [ { field: password, code: too_short, message: 'Hasło jest za krótkie. Użyj co najmniej 10 znaków.' } ] }
+          example: { type: 'https://profilo.pl/problems/validation-error', title: Validation failed, status: 422, code: validation_error, errors: [ { field: password, code: too_short, message: 'Hasło jest za krótkie. Użyj co najmniej 10 znaków' } ] }
     DraftConflict:
       description: Draft changed in another window (`draft_conflict`); response contains the current profile.
       content: { application/problem+json: { schema: { $ref: '#/components/schemas/DraftConflictProblem' } } }

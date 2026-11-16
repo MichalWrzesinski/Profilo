@@ -456,7 +456,7 @@ async def test_invalid_public_email_has_a_polish_message(client: AsyncClient) ->
         {
             "field": "publicEmail",
             "code": "invalid_email",
-            "message": "To nie wygląda na adres e-mail. Sprawdź, czy jest w nim @.",
+            "message": "To nie wygląda na adres e-mail. Sprawdź, czy jest w nim @",
         }
     ]
 
@@ -510,7 +510,7 @@ async def test_conflict_never_overwrites_the_newer_draft(client: AsyncClient) ->
     )
 
     assert stale.status_code == 409
-    assert stale.json()["detail"] == "Szkic zmienił się w innym oknie — odśwież."
+    assert stale.json()["detail"] == "Szkic zmienił się w innym oknie — odśwież"
     assert stale.json()["current"]["draft"]["headline"] == "Okno A"
 
 

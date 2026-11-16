@@ -7,7 +7,7 @@ from urllib.parse import urlsplit, urlunsplit
 MAX_LINKS = 20
 MAX_URL_LENGTH = 2000
 MAX_LABEL_LENGTH = 40
-INVALID_URL = "To nie wygląda na adres strony. Sprawdź, czy nie ma w nim spacji."
+INVALID_URL = "To nie wygląda na adres strony. Sprawdź, czy nie ma w nim spacji"
 
 # Domain → service; subdomains (pl.linkedin.com, m.youtube.com) match too.
 SERVICES: dict[str, str] = {

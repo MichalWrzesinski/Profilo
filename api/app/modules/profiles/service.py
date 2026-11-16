@@ -128,7 +128,7 @@ async def owner_out(session: AsyncSession, profile: Profile) -> OwnerProfileOut:
 async def _draft_conflict(session: AsyncSession, profile: Profile) -> ProblemError:
     current = (await owner_out(session, profile)).model_dump(mode="json", by_alias=True)
     return ProblemError(
-        409, "draft_conflict", "Szkic zmienił się w innym oknie — odśwież.", current=current
+        409, "draft_conflict", "Szkic zmienił się w innym oknie — odśwież", current=current
     )
 
 
@@ -145,7 +145,7 @@ def _normalise_phone(value: str) -> str:
                 {
                     "field": "publicPhone",
                     "code": "invalid_phone",
-                    "message": "To nie wygląda na numer telefonu. Sprawdź cyfry i kierunkowy.",
+                    "message": "To nie wygląda na numer telefonu. Sprawdź cyfry i kierunkowy",
                 }
             ],
         )
@@ -163,7 +163,7 @@ def _normalise_email(value: str) -> str:
                 {
                     "field": "publicEmail",
                     "code": "invalid_email",
-                    "message": "To nie wygląda na adres e-mail. Sprawdź, czy jest w nim @.",
+                    "message": "To nie wygląda na adres e-mail. Sprawdź, czy jest w nim @",
                 }
             ],
         ) from None
@@ -179,7 +179,7 @@ async def update_draft(session: AsyncSession, account_id: uuid.UUID, patch: Draf
         raise ProblemError(
             422,
             "validation_error",
-            errors=[{"field": "displayName", "code": "required", "message": "Wpisz nazwę."}],
+            errors=[{"field": "displayName", "code": "required", "message": "Wpisz nazwę"}],
         )
     for empty_to_null in (
         "headline",
@@ -303,7 +303,7 @@ async def set_nick(session: AsyncSession, account_id: uuid.UUID, raw: str) -> Pr
     if profile.nick_locked:
         if nick == profile.nick:
             return profile
-        raise _nick_problem("nick_locked", "Adresu nie można zmienić po pierwszej publikacji.", [])
+        raise _nick_problem("nick_locked", "Adresu nie można zmienić po pierwszej publikacji", [])
     if error := nicks.format_error(nick):
         raise ProblemError(
             422,
@@ -316,7 +316,7 @@ async def set_nick(session: AsyncSession, account_id: uuid.UUID, raw: str) -> Pr
     if reason:
         raise _nick_problem(
             "nick_reserved" if reason == "reserved" else "nick_taken",
-            "Ten adres jest już zajęty.",
+            "Ten adres jest już zajęty",
             await suggestions_for(session, nick, profile),
         )
     try:
@@ -331,7 +331,7 @@ async def set_nick(session: AsyncSession, account_id: uuid.UUID, raw: str) -> Pr
         profile = await get_own_profile(session, account_id)
         raise _nick_problem(
             "nick_taken",
-            "Ten adres jest już zajęty.",
+            "Ten adres jest już zajęty",
             await suggestions_for(session, nick, profile),
         ) from exc
     await session.refresh(profile)
@@ -351,10 +351,10 @@ async def publish(
     Idempotent: an unchanged, already published draft keeps its `published_at`."""
     profile = await get_own_profile(session, account_id, lock=True)
     if profile.blocked_at:
-        raise ProblemError(403, "profile_blocked", "Strona jest zablokowana — napisz do nas.")
+        raise ProblemError(403, "profile_blocked", "Strona jest zablokowana — napisz do nas")
     if not email_confirmed:
         raise ProblemError(
-            403, "email_not_confirmed", "Potwierdź adres e-mail, żeby opublikować stronę."
+            403, "email_not_confirmed", "Potwierdź adres e-mail, żeby opublikować stronę"
         )
     if version != profile.version:
         raise await _draft_conflict(session, profile)
@@ -362,7 +362,7 @@ async def publish(
         raise ProblemError(
             422,
             "profile_incomplete",
-            errors=[{"field": "nick", "code": "required", "message": "Wybierz adres strony."}],
+            errors=[{"field": "nick", "code": "required", "message": "Wybierz adres strony"}],
         )
     snapshot = await session.get(PublishedProfile, profile.id, with_for_update=True)
     unchanged = (
@@ -513,11 +513,11 @@ async def qr_code(
     profile = await get_own_profile(session, account_id)
     if not profile.nick_locked or not profile.nick:
         raise ProblemError(
-            409, "not_published", "Kod QR będzie dostępny po pierwszej publikacji strony."
+            409, "not_published", "Kod QR będzie dostępny po pierwszej publikacji strony"
         )
     if profile.blocked_at is not None:  # its address shows the 404 page (PUB-BR-10)
         raise ProblemError(
-            409, "page_blocked", "Strona jest zablokowana — napisz do nas, jeśli to pomyłka."
+            409, "page_blocked", "Strona jest zablokowana — napisz do nas, jeśli to pomyłka"
         )
     return render_qr(_public_url(profile.nick), format), profile.nick
 
@@ -571,7 +571,7 @@ async def add_link(session: AsyncSession, account_id: uuid.UUID, data: LinkInput
         raise ProblemError(
             409,
             "links_limit_reached",
-            "Możesz dodać najwyżej 20 linków. Usuń któryś, aby dodać nowy.",
+            "Możesz dodać najwyżej 20 linków. Usuń któryś, aby dodać nowy",
         )
     url, service = _url(data.url)
     session.add(
@@ -602,7 +602,7 @@ async def update_link(
         raise ProblemError(
             422,
             "validation_error",
-            errors=[{"field": "label", "code": "required", "message": "Wpisz etykietę."}],
+            errors=[{"field": "label", "code": "required", "message": "Wpisz etykietę"}],
         )
     changed = False
     if changes.get("url") is not None:
@@ -640,7 +640,7 @@ async def reorder_links(
         raise ProblemError(
             422,
             "link_order_mismatch",
-            "Lista linków się zmieniła — odśwież stronę.",
+            "Lista linków się zmieniła — odśwież stronę",
             errors=[],
         )
     changed = False
