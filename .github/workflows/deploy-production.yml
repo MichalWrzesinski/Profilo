@@ -4,9 +4,10 @@ name: Deploy production
 # that staging verified: database dump, migrations, zero-downtime switch after readiness,
 # smoke tests, automatic return to the previous release on failure, GitHub release with the
 # merged PRs. Secrets: PROD_SSH_HOST, PROD_SSH_KEY, PROD_SSH_KNOWN_HOSTS,
-# PROD_SMTP_USERNAME, PROD_SMTP_PASSWORD; variables: PROD_DOMAIN, PROD_MAIL_FROM, optional
-# PROD_SSH_USER, PROD_APP_DIR, PROD_SMTP_HOST, PROD_SMTP_PORT, PROD_SMTP_SECURITY
-# (docs/runbook.md).
+# PROD_SMTP_USERNAME, PROD_SMTP_PASSWORD, PROD_BACKUP_SSH_KEY, PROD_BACKUP_KNOWN_HOSTS,
+# PROD_BACKUP_PASSWORD; variables: PROD_DOMAIN, PROD_MAIL_FROM, PROD_BACKUP_REPOSITORY,
+# PROD_ALERT_EMAIL, optional PROD_SSH_USER, PROD_APP_DIR, PROD_SMTP_HOST, PROD_SMTP_PORT,
+# PROD_SMTP_SECURITY, PROD_BACKUP_SFTP_PORT (docs/runbook.md).
 on:
   workflow_dispatch:
     inputs:
@@ -80,6 +81,14 @@ jobs:
           SMTP_SECURITY: ${{ vars.PROD_SMTP_SECURITY || 'starttls' }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
+          # Off-site backups (TASK-022): required in production.
+          BACKUP_REQUIRED: 'true'
+          BACKUP_REPOSITORY: ${{ vars.PROD_BACKUP_REPOSITORY }}
+          BACKUP_SFTP_PORT: ${{ vars.PROD_BACKUP_SFTP_PORT || '23' }}
+          BACKUP_SSH_KEY: ${{ secrets.PROD_BACKUP_SSH_KEY }}
+          BACKUP_KNOWN_HOSTS: ${{ secrets.PROD_BACKUP_KNOWN_HOSTS }}
+          BACKUP_PASSWORD: ${{ secrets.PROD_BACKUP_PASSWORD }}
+          ALERT_EMAIL: ${{ vars.PROD_ALERT_EMAIL }}
         run: bash "$RUNNER_TEMP/deploy-remote.sh"
 
   release:

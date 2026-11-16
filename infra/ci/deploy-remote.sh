@@ -11,6 +11,9 @@
 #   SHA DOMAIN SSH_HOST SSH_USER APP_DIR SSH_KEY KNOWN_HOSTS
 #   SMTP_HOST SMTP_PORT SMTP_SECURITY SMTP_USERNAME SMTP_PASSWORD MAIL_FROM
 #   GHCR_USER GHCR_TOKEN
+#   Off-site backups (production): BACKUP_REQUIRED (true: fail without them),
+#   BACKUP_REPOSITORY (sftp:user@host:/path), BACKUP_SFTP_PORT, BACKUP_SSH_KEY,
+#   BACKUP_KNOWN_HOSTS, BACKUP_PASSWORD (restic encryption key), ALERT_EMAIL
 set -euo pipefail
 
 fail() { echo "::error::$*"; exit 1; }
@@ -37,6 +40,18 @@ case "${SMTP_SECURITY:-}" in
   *) fail "SMTP security must be starttls or ssl" ;;
 esac
 [[ "$GHCR_USER" =~ ^[A-Za-z0-9-]+$ ]] || fail "invalid GHCR user"
+backups=false
+if [[ -n "${BACKUP_REPOSITORY:-}" ]]; then
+  [[ "$BACKUP_REPOSITORY" =~ ^sftp:[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:/[A-Za-z0-9._/-]+$ ]] \
+    || fail "the backup repository must look like sftp:user@host:/path"
+  [[ "${BACKUP_SFTP_PORT:-23}" =~ ^[0-9]{1,5}$ ]] || fail "invalid backup SFTP port"
+  [[ -n "${BACKUP_SSH_KEY:-}" && -n "${BACKUP_KNOWN_HOSTS:-}" && -n "${BACKUP_PASSWORD:-}" ]] \
+    || fail "backup SSH key, known hosts or encryption key missing for $ENV_NAME (docs/runbook.md)"
+  [[ "${ALERT_EMAIL:-}" =~ ^[^@[:space:]\']+@[^@[:space:]\']+$ ]] || fail "invalid or missing alert e-mail address"
+  backups=true
+elif [[ "${BACKUP_REQUIRED:-false}" == true ]]; then
+  fail "off-site backups are required for $ENV_NAME: set the backup repository (docs/runbook.md)"
+fi
 
 group "SSH (pinned host key)"
 install -d -m 700 ~/.ssh
@@ -67,6 +82,21 @@ endgroup
     "SMTP_USERNAME='$SMTP_USERNAME'" "SMTP_PASSWORD='$SMTP_PASSWORD'" "MAIL_FROM='$MAIL_FROM'" \
     | ssh server "umask 077 && cat > '$APP_DIR/.env.secrets'"
   endgroup
+
+  # Backup settings and keys: a directory of their own, read-only in the backup container.
+  # Without settings any earlier ones are removed, so the backup service stops (deploy.sh).
+  if [[ "$backups" == true ]]; then
+    group "Backup settings and keys"
+    ssh server "umask 077 && mkdir -p '$APP_DIR/backup/keys'"
+    printf '%s\n' "$BACKUP_SSH_KEY" | ssh server "umask 077 && cat > '$APP_DIR/backup/keys/ssh_key'"
+    printf '%s\n' "$BACKUP_KNOWN_HOSTS" | ssh server "umask 077 && cat > '$APP_DIR/backup/keys/known_hosts'"
+    printf '%s' "$BACKUP_PASSWORD" | ssh server "umask 077 && cat > '$APP_DIR/backup/keys/restic-password'"
+    printf '%s\n' "BACKUP_REPOSITORY=$BACKUP_REPOSITORY" "BACKUP_SFTP_PORT=${BACKUP_SFTP_PORT:-23}" \
+      "ALERT_EMAIL=$ALERT_EMAIL" | ssh server "umask 077 && cat > '$APP_DIR/backup/config'"
+    endgroup
+  else
+    ssh server "rm -f '$APP_DIR/backup/config'"
+  fi
 
   # Short-lived registry login with the workflow's own token; logged out whatever happens.
   printf '%s' "$GHCR_TOKEN" | ssh server "docker login ghcr.io -u '$GHCR_USER' --password-stdin" >/dev/null

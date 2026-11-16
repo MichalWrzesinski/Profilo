@@ -69,6 +69,14 @@ jobs:
           SMTP_SECURITY: ${{ vars.PROD_SMTP_SECURITY || 'starttls' }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
+          # Off-site backups (TASK-022): required in production.
+          BACKUP_REQUIRED: 'true'
+          BACKUP_REPOSITORY: ${{ vars.PROD_BACKUP_REPOSITORY }}
+          BACKUP_SFTP_PORT: ${{ vars.PROD_BACKUP_SFTP_PORT || '23' }}
+          BACKUP_SSH_KEY: ${{ secrets.PROD_BACKUP_SSH_KEY }}
+          BACKUP_KNOWN_HOSTS: ${{ secrets.PROD_BACKUP_KNOWN_HOSTS }}
+          BACKUP_PASSWORD: ${{ secrets.PROD_BACKUP_PASSWORD }}
+          ALERT_EMAIL: ${{ vars.PROD_ALERT_EMAIL }}
         run: bash "$RUNNER_TEMP/deploy-remote.sh"
 
       - name: Summary
