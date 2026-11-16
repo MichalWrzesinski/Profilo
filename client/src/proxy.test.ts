@@ -14,8 +14,6 @@ describe('proxy', () => {
     const policy = first.headers.get('Content-Security-Policy');
     expect(nonceOf(policy)).toBeTruthy();
     expect(nonceOf(policy)).not.toBe(nonceOf(second.headers.get('Content-Security-Policy')));
-    // Next.js reads the nonce from the request it renders.
-    expect(first.headers.get('x-middleware-request-content-security-policy')).toBe(policy);
     expect(policy).toContain("frame-ancestors 'none'");
     expect(policy).not.toContain('unsafe-eval');
   });
@@ -30,8 +28,15 @@ describe('proxy', () => {
   });
 
   it('runs for pages only', () => {
-    const source = new RegExp(`^${config.matcher[0]!.source}$`);
-    for (const page of ['/', '/panel', '/user/anna-nowak', '/nowe-haslo', '/podglad']) {
+    const source = new RegExp(`^${config.matcher[0]}$`);
+    for (const page of [
+      '/',
+      '/panel',
+      '/user/anna-nowak',
+      '/nowe-haslo',
+      '/podglad',
+      '/user/a.b',
+    ]) {
       expect(source.test(page)).toBe(true);
     }
     for (const file of [
@@ -41,6 +46,8 @@ describe('proxy', () => {
       '/favicon.ico',
       '/robots.txt',
       '/sitemap.xml',
+      '/icon-192.png',
+      '/logo.svg',
     ]) {
       expect(source.test(file)).toBe(false);
     }

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { owner } from './helpers';
+import { owner, recordViolations } from './helpers';
 
 /** Same path on the stack under test (the tags carry PUBLIC_BASE_URL, not http://caddy). */
 const local = (url: string) => {
@@ -17,7 +17,10 @@ test('a published page has link-preview tags and is in the sitemap until unpubli
   await ewa.publish({ headline: 'Fotografka ślubna', bio: 'Zdjęcia z wesel w całej Polsce.' });
 
   // Scenario 1: title, description and an og:image that returns 200.
+  const found = await recordViolations(page); // public page: JSON-LD, Sentry (TASK-024)
   await page.goto(`/user/${nick}`);
+  await page.locator('html[data-hydrated]').waitFor();
+  expect(found).toEqual([]);
   await expect(page).toHaveTitle('Ewa Podgląd — Fotografka ślubna');
   const meta = (selector: string) => page.locator(selector).getAttribute('content');
   expect(await meta('meta[name="description"]')).toBe('Zdjęcia z wesel w całej Polsce.');

@@ -1,27 +1,16 @@
-import { expect, type Page, test } from '@playwright/test';
-import { open } from './helpers';
+import { expect, test } from '@playwright/test';
+import { open, recordViolations } from './helpers';
 
 // Content-Security-Policy with a per-request script nonce (TASK-024).
 
 declare global {
   interface Window {
-    cspViolations: string[];
     injected?: boolean;
   }
 }
 
-/** Records every CSP violation of the page (directive and what was blocked). */
-async function recordViolations(page: Page) {
-  await page.addInitScript(() => {
-    window.cspViolations = [];
-    document.addEventListener('securitypolicyviolation', (event) => {
-      window.cspViolations.push(`${event.violatedDirective} ${event.blockedURI}`);
-    });
-  });
-}
-
 test('pages work under the strict policy (scenario 1)', async ({ page }) => {
-  await recordViolations(page);
+  const found = await recordViolations(page);
   for (const path of [
     '/',
     '/przyklad',
@@ -35,7 +24,7 @@ test('pages work under the strict policy (scenario 1)', async ({ page }) => {
     const policy = response?.headers()['content-security-policy'] ?? '';
     expect(policy, path).toMatch(/script-src 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/);
     expect(policy, path).not.toMatch(/script-src[^;]*'unsafe-inline'/);
-    expect(await page.evaluate(() => window.cspViolations), path).toEqual([]);
+    expect(found, path).toEqual([]);
   }
 });
 
@@ -50,7 +39,8 @@ test('every page request gets a new nonce', async ({ page }) => {
 });
 
 test('an injected inline script without the nonce does not run (scenario 2)', async ({ page }) => {
-  await recordViolations(page);
+  const found = await recordViolations(page);
+  let served = '';
   await page.route('**/regulamin', async (route) => {
     const response = await route.fetch();
     const html = (await response.text()).replace(
@@ -61,15 +51,25 @@ test('an injected inline script without the nonce does not run (scenario 2)', as
     const headers = { ...response.headers() };
     delete headers['content-length'];
     delete headers['content-encoding'];
+    served = html;
     await route.fulfill({ status: response.status(), headers, body: html });
   });
   // Waits for the load event, not hydration: the extra element itself makes React's
   // hydration of <body> mismatch (that is the injection, not the policy).
   await page.goto('/regulamin', { waitUntil: 'load' });
 
+  // The script was in the HTML (React later removes the unexpected element), did not run,
+  // and the policy blocked exactly an inline script.
+  expect(served).toContain('<script>window.injected = true</script>');
   expect(await page.evaluate(() => window.injected)).toBeUndefined();
-  await expect
-    .poll(() => page.evaluate(() => window.cspViolations))
-    .toContainEqual(expect.stringMatching(/^script-src/));
+  await expect.poll(() => found).toContainEqual(expect.stringMatching(/^script-src\S* inline$/));
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+});
+
+test('a 404 for a dotted path is still interactive', async ({ page }) => {
+  const found = await recordViolations(page);
+  const response = await page.goto('/user/anna.nowak');
+  expect(response?.status()).toBe(404);
+  await page.locator('html[data-hydrated]').waitFor();
+  expect(found).toEqual([]);
 });

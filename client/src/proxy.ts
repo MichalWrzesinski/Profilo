@@ -19,14 +19,10 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    {
-      // Pages only: not the API, media, Next.js assets or files (a dot in the path: public/,
-      // robots.txt, sitemap.xml; nicks have no dots).
-      source: '/((?!api/|media/|_next/|.*\\.).*)',
-      missing: [
-        { type: 'header', key: 'next-router-prefetch' },
-        { type: 'header', key: 'purpose', value: 'prefetch' },
-      ],
-    },
+    // Pages only — every document, prefetched and prerendered ones too (they would otherwise
+    // arrive without a nonce and never become interactive): not the API, media, Next.js
+    // assets or files with a known extension (public/, robots.txt, sitemap.xml). A dotted
+    // path that is not a file (a 404) still gets the nonce; nicks have no dots anyway.
+    '/((?!api/|media/|_next/|.*\\.(?:txt|xml|ico|png|jpe?g|svg|webp|gif|js|css|map|json|woff2?|webmanifest)$).*)',
   ],
 };
