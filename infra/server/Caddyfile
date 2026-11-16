@@ -39,12 +39,10 @@ import upstreams.caddy
 		X-Robots-Tag "{$ROBOTS_TAG:noindex, nofollow}"
 		-Server
 	}
-	# Pages cannot be framed, except the editor preview (/podglad) and the landing's example
-	# page (/przyklad), both by the same origin only.
-	@framable path /podglad /przyklad
-	@not_framable not path /podglad /przyklad
-	header @not_framable Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
-	header @framable Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+	# Pages set their own policy with a per-request script nonce (client/src/proxy.ts,
+	# TASK-024), including which pages may be framed. This strict one applies only where the
+	# response has none (`?`): the API, media, Next.js assets.
+	header ?Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 }
 
 {$SITE_ADDRESS} {
