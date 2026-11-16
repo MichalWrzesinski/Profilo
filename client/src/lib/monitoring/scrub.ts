@@ -7,7 +7,8 @@
 const FILTERED = '[Filtered]';
 const SENSITIVE_KEY =
   /pass|secret|token|auth|cookie|session|e-?mail|phone|dsn|csrf|jwt|api[-_]?key|signature/i;
-const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/g;
+// Also internationalised addresses: anything around an @ up to a separator, dot in the domain.
+const EMAIL = /[^\s@<>()[\]"',;:=]+@[^\s@<>()[\]"',;:=]+\.[^\s@<>()[\]"',;:=]+/g;
 const JWT = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
 const OPAQUE = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{32,}(?![A-Za-z0-9_-])/g;
 const QUERY_SECRET = /((?:token|code|password|email|key)=)[^&#\s]+/gi;

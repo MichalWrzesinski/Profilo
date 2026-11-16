@@ -1,6 +1,10 @@
 import * as Sentry from '@sentry/nextjs';
 
-vi.mock('@sentry/nextjs', () => ({ init: vi.fn(), captureRequestError: vi.fn() }));
+vi.mock('@sentry/nextjs', () => ({
+  init: vi.fn(),
+  captureRequestError: vi.fn(),
+  breadcrumbsIntegration: vi.fn((options: object) => ({ name: 'Breadcrumbs', options })),
+}));
 
 type InitOptions = {
   beforeSend: (event: object) => object;
@@ -69,9 +73,20 @@ describe('browser instrumentation', () => {
     const kept = options.integrations([
       { name: 'BrowserSession' },
       { name: 'BrowserTracing' },
+      { name: 'Breadcrumbs' },
       { name: 'GlobalHandlers' },
     ]);
-    expect(kept).toEqual([{ name: 'GlobalHandlers' }]);
+    // No sessions or tracing; breadcrumbs without clicks and console messages.
+    expect(kept).toEqual([
+      { name: 'GlobalHandlers' },
+      { name: 'Breadcrumbs', options: { dom: false } },
+    ]);
+    expect(options.maxBreadcrumbs).toBe(20);
+    expect(options.beforeBreadcrumb({ category: 'console', message: 'x' })).toBeNull();
+    expect(options.beforeBreadcrumb({ category: 'ui.click', message: 'x' })).toBeNull();
+    expect(
+      options.beforeBreadcrumb({ category: 'navigation', data: { to: '/a?token=x' } }),
+    ).toEqual({ category: 'navigation', data: { to: '/a?token=[Filtered]' } });
     expect(options.beforeSend({ user: { id: 1 }, message: 'x' })).toEqual({ message: 'x' });
     expect(options.beforeBreadcrumb({ message: 'a@b.pl' })).toEqual({ message: '[Filtered]' });
   });

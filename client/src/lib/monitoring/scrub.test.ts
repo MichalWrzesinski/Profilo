@@ -16,6 +16,11 @@ describe('scrubText', () => {
     expect(scrubbed).not.toContain('a'.repeat(40));
     expect(scrubbed).toContain('2026-11-16');
   });
+
+  it('removes internationalised addresses', () => {
+    const scrubbed = scrubText('Key (email)=(józef.wiśniewski@żółw.pl) <ąę@例え.jp>');
+    expect(scrubbed).toBe('Key (email)=([Filtered]) <[Filtered]>');
+  });
 });
 
 describe('scrubEvent', () => {

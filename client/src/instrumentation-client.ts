@@ -24,14 +24,22 @@ if (process.env.NODE_ENV === 'production') {
     },
     tracesSampleRate: 0,
     sendClientReports: false,
+    // The last pages visited and API calls (addresses, scrubbed) help to find the cause;
+    // clicks and console messages are not recorded (privacy policy).
+    maxBreadcrumbs: 20,
     // Errors only: no session per page view, no replays, no performance data.
-    integrations: (defaults) =>
-      defaults.filter(
-        (integration) => !['BrowserSession', 'BrowserTracing'].includes(integration.name),
+    integrations: (defaults) => [
+      ...defaults.filter(
+        (integration) =>
+          !['BrowserSession', 'BrowserTracing', 'Breadcrumbs'].includes(integration.name),
       ),
+      Sentry.breadcrumbsIntegration({ dom: false }),
+    ],
     beforeSend: (event) =>
       scrubEvent(event as unknown as Record<string, unknown>) as unknown as typeof event,
     beforeBreadcrumb: (crumb) =>
-      scrubBreadcrumb(crumb as unknown as Record<string, unknown>) as unknown as typeof crumb,
+      crumb.category === 'console' || crumb.category?.startsWith('ui.')
+        ? null
+        : (scrubBreadcrumb(crumb as unknown as Record<string, unknown>) as unknown as typeof crumb),
   });
 }
