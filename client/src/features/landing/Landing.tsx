@@ -1,6 +1,6 @@
-import { Check, LayoutTemplate, Mail, QrCode } from 'lucide-react';
+import { LayoutTemplate, Lightbulb, Mail, QrCode } from 'lucide-react';
 import { SiteHeader } from '@/components/SiteHeader';
-import { ClaimNickInput } from './ClaimNickInput';
+import { ClaimForm } from './ClaimForm';
 import { SiteFooter } from './SiteFooter';
 import styles from './Landing.module.css';
 
@@ -40,18 +40,9 @@ export function Landing({ host }: { host: string }) {
               Jeden stały adres z opisem, kontaktem i linkami do Twoich profili. Wstaw go do CV,
               stopki e-mail albo na wizytówkę.
             </p>
-            {/* A plain GET form: works before hydration and without JavaScript. */}
-            <form className={styles.claim} action="/rejestracja" method="get">
-              <label className="input-group">
-                <span className="prefix">{host}/user/</span>
-                <ClaimNickInput />
-              </label>
-              <button type="submit" className="btn btn-primary">
-                Zarezerwuj adres
-              </button>
-            </form>
+            <ClaimForm host={host} />
             <p className={`hint ${styles.note}`}>
-              <Check className="i sm" aria-hidden="true" />
+              <Lightbulb className="i sm" aria-hidden="true" />
               Adres możesz zmienić aż do pierwszej publikacji.
             </p>
           </div>

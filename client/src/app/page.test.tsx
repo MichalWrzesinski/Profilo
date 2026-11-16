@@ -21,7 +21,8 @@ describe('Home', () => {
     const form = field.closest('form')!;
     expect(form).toHaveAttribute('action', '/rejestracja');
     expect(form).toHaveAttribute('method', 'get');
-    expect(within(form).getByText('profilo.pl/user/')).toBeInTheDocument();
+    expect(within(form).getByText('/user/')).toBeInTheDocument();
+    expect(field).toHaveAccessibleDescription('profilo.pl/user/twoje-imie');
     expect(screen.getByTitle('Przykładowa strona w Profilo')).toHaveAttribute('src', '/przyklad');
   });
 
