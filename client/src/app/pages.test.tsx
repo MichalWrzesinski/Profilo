@@ -24,8 +24,10 @@ describe('public pages', () => {
     const { container } = render(<Page />);
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument();
     expect(screen.getByText('Wersja robocza.')).toBeInTheDocument();
-    // Operator data still missing: clearly marked (TASK-019 scenario 2).
-    expect(screen.getAllByText(/\[do uzupełnienia: nazwa operatora\]/)[0]).toBeInTheDocument();
+    // Operator data filled in; a missing value would be marked (TASK-019 scenario 2).
+    expect(screen.getAllByText(/Michał Wrzesiński Webhome/)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/9671286620/)[0]).toBeInTheDocument();
+    expect(screen.queryByText(/\[do uzupełnienia: nazwa operatora\]/)).toBeNull();
     expect(container.querySelector(`#${section}`)).not.toBeNull();
   });
 

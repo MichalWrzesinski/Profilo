@@ -115,8 +115,8 @@ export default function PrivacyPage() {
             dziennikach serwera — 14 dni.
           </li>
           <li>
-            Zgłoszenia nadużyć — przez czas potrzebny do ich rozpatrzenia i ewentualnego odwołania,
-            nie dłużej niż <Placeholder value={null} label="okres przechowywania zgłoszeń" />.
+            Zgłoszenia nadużyć — przez czas potrzebny do ich rozpatrzenia i ewentualnego odwołania
+            (6 miesięcy na odwołanie), nie dłużej niż 12 miesięcy od rozpatrzenia zgłoszenia.
           </li>
         </ul>
       </Section>
