@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 import { HydrationMarker } from '@/components/HydrationMarker';
 import { SessionProvider } from '@/lib/session';
@@ -27,7 +28,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: '#0F2747' };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+// Every page renders per request: a nonce cannot be put into HTML generated at build time
+// (TASK-024, src/proxy.ts).
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  await connection();
   return (
     <html lang="pl" className={jakarta.variable}>
       <body>

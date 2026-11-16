@@ -3,6 +3,29 @@ import type { APIRequestContext, Page } from '@playwright/test';
 
 export const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025';
 
+/** Collects every Content-Security-Policy violation of the page (TASK-024), across
+ * navigations and including workers: the documents' violation events ("directive
+ * blocked-uri") and the browser's "Refused to …" console errors. Call before navigating. */
+export async function recordViolations(page: Page): Promise<string[]> {
+  const found: string[] = [];
+  await page.exposeFunction('reportCspViolation', (violation: string) => {
+    found.push(violation);
+  });
+  await page.addInitScript(() => {
+    document.addEventListener('securitypolicyviolation', (event) => {
+      const report = (window as unknown as { reportCspViolation: (v: string) => void })
+        .reportCspViolation;
+      report(`${event.violatedDirective} ${event.blockedURI}`);
+    });
+  });
+  page.on('console', (message) => {
+    if (message.type() === 'error' && message.text().includes('Content Security Policy')) {
+      found.push(message.text());
+    }
+  });
+  return found;
+}
+
 /** Open a page and wait until React has taken it over (forms would submit natively before). */
 export async function open(page: Page, path: string) {
   await page.goto(path);

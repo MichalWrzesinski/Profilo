@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { open, TEST_PASSWORD } from './helpers';
+import { open, recordViolations, TEST_PASSWORD } from './helpers';
 
 test('many registrations from one network must solve a challenge first', async ({
   page,
@@ -21,6 +21,10 @@ test('many registrations from one network must solve a challenge first', async (
   expect(forged.status()).toBe(428);
 
   // A real visitor on the same network: the browser solves it in a web worker and goes on.
+  // The worker must really run under the CSP (TASK-024): the app would quietly fall back to
+  // the main thread if it were blocked.
+  const found = await recordViolations(page);
+  const worker = page.waitForEvent('worker');
   await open(page, '/rejestracja');
   await page.getByLabel('Imię i nazwisko lub pseudonim').fill('Ola Prawdziwa');
   await page.getByLabel('E-mail do logowania').fill(`e2e-czlowiek-${run}@example.pl`);
@@ -31,5 +35,7 @@ test('many registrations from one network must solve a challenge first', async (
   );
   await page.getByRole('button', { name: 'Załóż konto' }).click();
   await answer;
+  await worker;
   await expect(page).toHaveURL(/\/kreator$/);
+  expect(found).toEqual([]);
 });

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { PNG } from 'pngjs';
-import { confirmationPath, open, TEST_PASSWORD } from './helpers';
+import { confirmationPath, open, recordViolations, TEST_PASSWORD } from './helpers';
 
 // Main flow (docs/design/flows.md): register → nick → content → preview → confirm e-mail
 // (Mailpit) → publish → public page; the preview must match the public page.
@@ -24,6 +24,7 @@ async function pageHtml(page: Page | ReturnType<Page['frameLocator']>) {
 }
 
 test('a new owner publishes a page that looks exactly like the preview', async ({ page }) => {
+  const found = await recordViolations(page); // editor, preview iframe, postMessage (TASK-024)
   // The landing: „Zarezerwuj adres” opens registration with the chosen address (TASK-019).
   await open(page, '/');
   await expect(
@@ -129,4 +130,5 @@ test('a new owner publishes a page that looks exactly like the preview', async (
     'https://linkedin.com/in/ewa-testowa',
   );
   expect(await pageHtml(page)).toBe(previewHtml);
+  expect(found).toEqual([]); // the whole flow ran under the page CSP (TASK-024)
 });
