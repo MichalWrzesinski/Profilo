@@ -106,13 +106,13 @@ Staging: after the CI workflow succeeds on `main` (its `publish` job pushed `ghc
 3. logs the server in to GHCR with the workflow's short-lived token (logged out at the end);
 4. `releases/<sha>/deploy.sh <sha>` (one at a time, lock file):
    1. pull images;
-   2. `pg_dump` of the running database to `backups/before-<sha>-<time>.dump` (checked with `pg_restore --list`; the newest 5 stay; not for `--rollback`), then migrations — unless the database is at a revision the release does not know (it is ahead: a rollback or an older commit; read from `alembic_version` and checked against the release's migrations). Any other error stops the deployment before anything changes;
+   2. migrations, each time after a `pg_dump` of the running database to `backups/before-<sha>-<time>.dump` (checked with `pg_restore --list`; the newest 5 stay) — unless the database is at a revision the release does not know (it is ahead: a rollback or an older commit; read from `alembic_version` and checked against the release's migrations). Any other error stops the deployment before anything changes;
    3. **blue-green switch**: the app services exist twice, `api-blue`/`client-blue` and `api-green`/`client-green` (each client talks to the API of its own colour). The release starts in the idle colour beside the live one, which keeps serving; it gets no traffic until its containers are healthy and the API's `/ready` passes. Then Caddy is pointed at it: `$APP_DIR/caddy/upstreams.caddy` names the colour, the release's `Caddyfile` is copied to `$APP_DIR/caddy/`, and Caddy reloads gracefully (requests in flight finish; Caddy itself keeps running);
    4. smoke tests `/ready` and `/` through Caddy (retried up to 90 s), then `worker` and `beat` are replaced in place (no traffic) → the previous colour stops (30 s for running requests), `current` symlink, the commit appended to `.deployed-history`; old releases beyond the last 5 are removed with their images;
 5. if the new colour never becomes healthy or ready, it is removed and the live release keeps serving — no request reached it; if the smoke tests fail after the switch, Caddy is pointed back at the previous colour, which is still running (about a second), and the new one is removed; the workflow fails in both cases. A failed pull, dump or migration leaves the running release untouched;
 6. external smoke tests: `/ready`, `/`, HTTP → HTTPS redirect, security headers (a failure here does not roll back: the release passed on the server, the problem is in front of it — DNS, the host's nginx, certificates).
 
-Layout of `$APP_DIR` (`/srv/profilo`, `/srv/Profilo` on the shared host): `.env` (server-only), `.env.secrets` (from the workflow), `releases/<sha>/` (stack files and `deploy.log` of each release), `current` → last successful release, `caddy/Caddyfile` and `caddy/upstreams.caddy` (live Caddy configuration and colour), `backups/` (pre-migration dumps, mode 700), `.deployed-history` (commits that passed verification, oldest first).
+Layout of `$APP_DIR` (`/srv/profilo`, `/srv/Profilo` on the shared host): `.env` (server-only), `.env.secrets` (from the workflow), `releases/<sha>/` (stack files and `deploy.log` of each release), `current` → last successful release, `caddy/Caddyfile`, `caddy/upstreams.caddy` and `caddy/live` (live Caddy configuration, routed colour, colour Caddy loaded), `backups/` (pre-migration dumps, mode 700), `.deployed-history` (commits that passed verification, oldest first).
 
 The deployment runs detached on the server (own session, log in `releases/<sha>/deploy.log`); the workflow only follows the log, so a dropped SSH connection does not interrupt it — check the log and `current` afterwards.
 
@@ -142,12 +142,12 @@ Check that the server can reach the SMTP port (*Shared host* step 9) before the 
 
 The status `deploy/staging` is only ever set (never withdrawn) and any account with write access could set it; it is a check against mistakes, not a security boundary — only the owner can start production.
 
-**Later rollback** — Actions → *Rollback production* with the SHA of an earlier `production-*` release. No dump; the database stays as it is (it is ahead of the release, so no migration runs; migrations are backward compatible, so the older release works with it), the release starts in the idle colour and takes over as in a deployment. It is refused unless the commit has a `production-*` tag and appears in the server's `.deployed-history`. The agent may start it without consent and informs the user at once: cause, version restored, state of the application. Restoring the database from a dump loses data written since and needs the user's consent (deployment standard).
+**Later rollback** — Actions → *Rollback production* with the SHA of an earlier `production-*` release. The database stays as it is (it is ahead of the release, so no migration and no dump run; after a restored dump the database may be behind — then it is dumped and migrated; migrations are backward compatible, so the older release works with it), the release starts in the idle colour and takes over as in a deployment. It is refused unless the commit has a `production-*` tag and appears in the server's `.deployed-history`. The agent may start it without consent and informs the user at once: cause, version restored, state of the application. Restoring the database from a dump loses data written since and needs the user's consent (deployment standard).
 
 ## Manual operations (as `deploy` on the server, in `/srv/profilo`)
 
 Helpers for the commands below — `live` prints the serving colour (`blue` or `green`):
-`live() { grep -oE 'api-(blue|green)' /srv/profilo/caddy/upstreams.caddy | head -n1 | cut -d- -f2; }`
+`live() { cat /srv/profilo/caddy/live; }`
 `dc() { set -a; . /srv/profilo/.env; set +a; t=$(basename "$(readlink /srv/profilo/current)"); APP_DIR=/srv/profilo IMAGE_TAG=$t docker compose --project-directory /srv/profilo/current -f /srv/profilo/current/compose.yml "$@"; }`
 
 | Task | Command |
@@ -155,7 +155,7 @@ Helpers for the commands below — `live` prints the serving colour (`blue` or `
 | Current release | `readlink /srv/profilo/current` |
 | Status | `dc ps` |
 | Logs | `dc logs -f --tail=100 api-$(live)`; the Caddy access log (with IPs, kept 14 days) is a file: `dc exec caddy tail -f /data/logs/access.log` |
-| Redeploy or roll back to a commit | Staging: *Deploy staging* → *Run workflow* with the SHA (any commit on `main` whose images exist; one deployed before skips its migrations). Production: *Rollback production* (above) |
+| Redeploy or roll back to a commit | Staging: *Deploy staging* → *Run workflow* with the SHA (any commit on `main` whose images exist; migrations are skipped when the database is ahead of it). Production: *Rollback production* (above) |
 | Pre-migration dumps | `ls -lt $APP_DIR/backups`; restore only with the user's consent: `dc stop api-$(live) client-$(live) worker beat`, `dc exec -T db pg_restore -U profilo -d profilo --clean --if-exists < backups/<file>.dump`, `dc start api-$(live) client-$(live) worker beat` |
 | Restart | `dc restart` |
 | Block a page reported as illegal (PUB-BR-10) | `dc exec api-$(live) profilo block-profile <nick>` — the page, its images and its preview card return 404 at once (browsers and messenger previews may keep images and the card for up to a day), the owner sees „Strona zablokowana”; send the owner the statement of reasons by e-mail (terms §5). If the owner deletes the account, the nick stays reserved (`reserved_nicks`, reason `blocked`); to free it: `dc exec db psql -U profilo -c "delete from reserved_nicks where nick='<nick>' and reason='blocked'"`. Exit codes: 0 done, 1 unknown nick, 3 database or Valkey unavailable |
@@ -169,12 +169,12 @@ Helpers for the commands below — `live` prints the serving colour (`blue` or `
 
 | Situation | What to do |
 |---|---|
-| Workflow failed, log says "previous release … restored" or "failed before taking traffic" | The previous release serves (production: tell the user). Fix the cause in a new PR; nothing to do on the server. |
+| Workflow failed, log says "previous release … serves again" or "failed before taking traffic" | The previous release serves (production: tell the user). Fix the cause in a new PR; nothing to do on the server. |
 | Pull or migration failed | The running release was not changed. Fix in a PR. A migration that failed half-way is rolled back by PostgreSQL's transactional DDL; check `dc --profile tools run --rm migrate alembic current`. |
 | First deployment failed (no previous release) | The stack may be up with an unhealthy service and `/ready` 502. Read `dc logs api-blue`, fix in a PR, merge → the next deployment replaces it. |
-| "rollback failed — manual action needed" | Staging: run *Deploy staging* with the last good SHA (`tail $APP_DIR/.deployed-history`). Production: *Rollback production* with the last good `production-*` release, and inform the user. If that fails too, inform the user with the logs; do not change the server by hand. |
+| "switching back failed — manual action needed" | Staging: run *Deploy staging* with the last good SHA (`tail $APP_DIR/.deployed-history`). Production: *Rollback production* with the last good `production-*` release, and inform the user. If that fails too, inform the user with the logs; do not change the server by hand. |
 | Rollback refused: "never deployed" | Only commits in the server's `.deployed-history` (and, in production, with a `production-*` tag) can be restored. Choose one of those. |
-| Containers of both colours after an interrupted run (`docker ps`) | Only the colour in `caddy/upstreams.caddy` gets traffic; the next deployment removes the idle colour's containers before it starts. A run interrupted after the switch but before verification may leave the new colour serving without `current` updated — rerun the workflow with the SHA you want. |
+| Containers of both colours after an interrupted run (`docker ps`) | Only the colour in `caddy/live` gets traffic; the next deployment removes the idle colour's containers before it starts. A run interrupted after the switch but before verification may leave the new colour serving without `current` updated — rerun the workflow with the SHA you want. |
 | "a deployment is still running" | A deployment continues on the server after a dropped connection. Wait for it (`tail -f releases/<sha>/deploy.log`), then check `current`; in production, if it finished, the `production-*` tag is missing — rerun *Deploy production* with that SHA. |
 | "another deployment is running" | Wait for the other run to finish and rerun the workflow (the lock is released automatically when `deploy.sh` exits). |
 | Server lost | Create a new server and repeat *Provision*; staging data is not backed up (test data only). |
