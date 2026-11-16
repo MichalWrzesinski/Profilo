@@ -71,6 +71,8 @@ svg.i.sm { width: 16px; height: 16px; }
 .input:disabled, .input.is-disabled { background: var(--color-bg); color: var(--color-text-muted); cursor: not-allowed; }
 textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading-normal); }
 .hint { font-size: var(--text-sm); color: var(--color-text-muted); display: flex; gap: var(--space-2); align-items: flex-start; }
+/* The icon sits in the middle of the first line, not at its top. */
+.hint > svg.i.sm { margin-top: calc((var(--leading-normal) * 1em - 16px) / 2); }
 .hint.is-error { color: var(--color-danger); font-weight: var(--font-weight-semibold); }
 .hint.is-success { color: var(--color-success); font-weight: var(--font-weight-semibold); }
 .counter { font-size: var(--text-xs); color: var(--color-text-muted); justify-self: end; }
@@ -106,6 +108,10 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .alert .grow { flex: 1; }
 .alert .btn { margin-left: auto; }
 .banner { border-radius: 0; border-width: 0 0 var(--border-width); padding: var(--space-3) var(--space-6); align-items: center; flex-wrap: wrap; }
+/* The banner's own button: its border colour, darkening to its text colour on hover. */
+.alert-warning .btn-ghost { background: #F3DDB4; color: var(--color-warning); }
+.alert-warning .btn-ghost:hover:not(:disabled) { background: var(--color-warning); color: var(--color-warning-bg); }
+.alert-warning .btn-ghost.is-loading::after { border-color: var(--color-warning) var(--color-warning) transparent transparent; }
 .toast { position: fixed; left: 50%; bottom: var(--space-6); transform: translateX(-50%); display: flex; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-navy-900); color: #fff; box-shadow: var(--shadow-lg); font-size: var(--text-sm); font-weight: var(--font-weight-medium); z-index: 20; max-width: calc(100% - 32px); }
 .toast .btn { color: #fff; }
 .toast.is-static { position: static; transform: none; display: inline-flex; }
