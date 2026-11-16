@@ -44,7 +44,13 @@ describe('PublicPage', () => {
       'href',
       'tel:+48601234567',
     );
-    expect(screen.getByText('+48 601 234 567')).toBeInTheDocument();
+    // The number is the third detail under the name, above the buttons.
+    const details = screen.getByText('Kraków').closest('ul')!;
+    expect([...details.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+      'Właścicielka, Studio W',
+      'Kraków',
+      '+48 601 234 567',
+    ]);
     expect(screen.getByText(/Projektuję aplikacje\./)).toHaveClass('bio');
   });
 
