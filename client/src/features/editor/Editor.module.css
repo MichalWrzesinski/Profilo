@@ -82,7 +82,9 @@
 
 @media (max-width: 860px) {
   .ed {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): a plain 1fr track is at least as wide as its widest content and pushed
+       the form past a 320 px screen. */
+    grid-template-columns: minmax(0, 1fr);
     min-height: 0;
   }
 
