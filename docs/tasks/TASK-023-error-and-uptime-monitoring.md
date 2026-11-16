@@ -1,7 +1,7 @@
 ---
 id: TASK-023
 title: Error and uptime monitoring
-status: IN_PROGRESS
+status: BLOCKED
 priority: high
 iteration: ITER-05
 depends_on: [TASK-003]
@@ -60,6 +60,8 @@ Review (subagent, code review + security), round 1 — fixed:
 - runbook overstated the production check (the token is checked after the deployment) → corrected;
 - the privacy policy did not mention breadcrumbs → clicks (`dom`) and console breadcrumbs off, at most 20, the policy names recent pages and API addresses;
 - nits: Sentry started twice in the API (worker module imported for its tasks) → worker and beat start it from Celery signals; tuples, sets and other objects scrubbed too (repr); short-password limit documented; a failed e-mail reported twice — documented.
+
+Round 2 — fixed: the throttle grouped every unhandled exception under one key (`unhandled_exception`), so a new bug could hide behind another for 10 minutes → the key includes the exception type and the line that raised it (test with two different exceptions); the tunnel logs a warning once per window when its cap is reached; the *Sentry release* job checks for `/opt/sourcemaps` explicitly instead of treating any copy failure as an old image; scoped package paths (`node_modules/@sentry/…`) are no longer taken for e-mail addresses; tests replace the modules' clock instead of the global `time.monotonic` (which would also stop asyncio's clock).
 
 Not verified: real Sentry ingestion and the *Sentry release* job (no Sentry account yet); Better Stack monitors and scenario 2 (no account; configuration in the runbook — with a 3-minute check interval on a plan the alert comes later than 2 minutes).
 
