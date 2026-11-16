@@ -32,4 +32,4 @@ export function abuseEmail(): string {
 }
 
 /** Version of the legal drafts (changes are announced before they apply). */
-export const LEGAL_VERSION = 'Wersja robocza z 15 listopada 2026 r.';
+export const LEGAL_VERSION = 'Wersja z 16 listopada 2026 r.';

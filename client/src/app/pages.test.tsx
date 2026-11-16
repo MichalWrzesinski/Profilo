@@ -27,7 +27,7 @@ describe('public pages', () => {
       </SessionProvider>,
     );
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument();
-    expect(screen.getByText('Wersja robocza.')).toBeInTheDocument();
+    expect(screen.getByText('Wersja demonstracyjna.')).toBeInTheDocument();
     // Operator data filled in; a missing value would be marked (TASK-019 scenario 2).
     expect(screen.getAllByText(/Michał Wrzesiński Webhome/)[0]).toBeInTheDocument();
     expect(screen.getAllByText(/9671286620/)[0]).toBeInTheDocument();

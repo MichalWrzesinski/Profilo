@@ -32,7 +32,7 @@ for (const path of ['/', '/regulamin', '/prywatnosc']) {
 test('legal pages name the operator and mark what is still to be supplied', async ({ page }) => {
   for (const path of ['/regulamin', '/prywatnosc']) {
     await open(page, path);
-    await expect(page.getByText('Wersja robocza.')).toBeVisible();
+    await expect(page.getByText('Wersja demonstracyjna.')).toBeVisible();
     await expect(page.getByText(/Michał Wrzesiński Webhome/).first()).toBeVisible();
   }
   // The privacy policy still waits for the processor confirmations.
