@@ -85,7 +85,7 @@ function Pickers({ initial, storageKey }: { initial: OwnerProfile; storageKey: s
         )}
         <LayoutPicker value={draft.values.layout} onChange={(v) => draft.edit('layout', v)} />
         <h2 className={styles.subtitle}>Kolor przewodni</h2>
-        <p className="hint">Każdy kolor jest sprawdzony pod kątem czytelności.</p>
+        <p className="hint">Każdy kolor jest sprawdzony pod kątem czytelności</p>
         <AccentPicker value={draft.values.accent} onChange={(v) => draft.edit('accent', v)} />
       </main>
       <WizardBar>

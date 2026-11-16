@@ -73,7 +73,7 @@ describe('checkFile', () => {
   it.each([
     [file('a.jpg', 'image/jpeg'), null],
     [file('a.webp', 'image/webp'), null],
-    [file('a.pdf', 'application/pdf'), 'To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik.'],
+    [file('a.pdf', 'application/pdf'), 'To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik'],
     [file('a.jpg', 'image/jpeg', MAX_BYTES + 1), 'Plik jest za duży. Wybierz obraz do 10 MB.'],
   ])('%s', (input, message) => {
     expect(checkFile(input)).toBe(message);
@@ -141,7 +141,7 @@ describe('ImagesSection', () => {
     await user.click(screen.getByRole('button', { name: 'Zapisz zdjęcie' }));
 
     expect(
-      await screen.findByText('Nie udało się przyciąć zdjęcia. Wybierz inny plik.'),
+      await screen.findByText('Nie udało się przyciąć zdjęcia. Wybierz inny plik'),
     ).toBeVisible();
   });
 
@@ -164,7 +164,7 @@ describe('ImagesSection', () => {
     });
 
     expect(
-      screen.getByText('To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik.'),
+      screen.getByText('To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik'),
     ).toBeVisible();
     expect(upload).not.toHaveBeenCalled();
   });
@@ -176,10 +176,10 @@ describe('ImagesSection', () => {
         body: {
           status: 415,
           code: 'unsupported_image',
-          detail: 'To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik.',
+          detail: 'To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik',
         },
       },
-      'To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik.',
+      'To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik',
     ],
     [{ status: 413, body: null }, 'Plik jest za duży. Wybierz obraz do 10 MB.'],
     [

@@ -75,7 +75,7 @@ describe('LoginForm', () => {
 
     await submit('', '');
 
-    expect(await screen.findByText('Wpisz hasło.')).toBeInTheDocument();
+    expect(await screen.findByText('Wpisz hasło')).toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
   });
 });

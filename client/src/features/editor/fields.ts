@@ -98,10 +98,10 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Checks done before saving (the API checks again, profile.md limits). */
 export function validate(values: Values, key: DraftKey): string | null {
   const value = patchValue(values, key);
-  if (key === 'displayName' && !value) return 'Wpisz nazwę.';
+  if (key === 'displayName' && !value) return 'Wpisz nazwę';
   const limit = LIMITS[key];
   if (limit && value && charCount(value) > limit) {
-    return `Możesz wpisać najwyżej ${limit} znaków (teraz ${charCount(value)}).`;
+    return `Możesz wpisać najwyżej ${limit} znaków (teraz ${charCount(value)})`;
   }
   if (key === 'publicEmail' && value && !EMAIL.test(value)) {
     return 'To nie wygląda na adres e-mail. Sprawdź, czy jest w nim @.';

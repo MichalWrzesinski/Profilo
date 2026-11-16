@@ -17,7 +17,7 @@ type Change = () => Promise<OwnerProfile | null>;
 export const MAX_BYTES = 10 * 1024 * 1024;
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const TOO_LARGE = 'Plik jest za duży. Wybierz obraz do 10 MB.';
-const UNSUPPORTED = 'To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik.';
+const UNSUPPORTED = 'To nie jest obraz JPG, PNG ani WebP. Wybierz inny plik';
 
 type Props = {
   profile: OwnerProfile;
@@ -102,7 +102,7 @@ export function ImagesSection({ profile, run, busy = false }: Props) {
       const blob = await cropToSquare(src, area);
       await send('avatar', blob, 'avatar.jpg');
     } catch {
-      fail('avatar', 'Nie udało się przyciąć zdjęcia. Wybierz inny plik.');
+      fail('avatar', 'Nie udało się przyciąć zdjęcia. Wybierz inny plik');
     } finally {
       URL.revokeObjectURL(src);
     }
@@ -187,8 +187,8 @@ export function ImagesSection({ profile, run, busy = false }: Props) {
           )}
           <p id={`img-${kind}-hint`} className="hint">
             {kind === 'avatar'
-              ? 'JPG, PNG lub WebP, do 10 MB.'
-              : 'Bez grafiki użyjemy wzoru w kolorze przewodnim.'}
+              ? 'JPG, PNG lub WebP, do 10 MB'
+              : 'Bez grafiki użyjemy wzoru w kolorze przewodnim'}
           </p>
           <span id={`img-${kind}-error`} aria-live="polite" className={styles.slot}>
             {errors[kind] && (

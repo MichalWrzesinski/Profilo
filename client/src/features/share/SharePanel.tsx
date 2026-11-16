@@ -197,7 +197,7 @@ export function SharePanel({ publicUrl, nick }: Props) {
             </button>
           ))}
         </div>
-        <p className="hint">PNG 1024 × 1024 px do dokumentów, SVG do druku w dowolnym rozmiarze.</p>
+        <p className="hint">PNG 1024 × 1024 px do dokumentów, SVG do druku w dowolnym rozmiarze</p>
         {downloadFailed && (
           <p className="hint is-error" role="alert">
             Nie udało się pobrać pliku. Spróbuj ponownie.

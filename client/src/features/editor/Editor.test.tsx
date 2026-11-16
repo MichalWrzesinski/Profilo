@@ -374,7 +374,7 @@ describe('Editor', () => {
     await user.type(await input('Firma'), 'Studio');
     await act(() => vi.advanceTimersByTimeAsync(1000));
 
-    expect(screen.getByText('Możesz wpisać najwyżej 500 znaków (teraz 501).')).toBeVisible();
+    expect(screen.getByText('Możesz wpisać najwyżej 500 znaków (teraz 501)')).toBeVisible();
     expect(bio).toHaveAttribute('aria-invalid', 'true');
     await waitFor(() => expect(bodies).toEqual([{ version: 5, company: 'Studio' }]));
     expect(saveState()).toHaveTextContent('Nie zapisano');
@@ -522,12 +522,12 @@ describe('Editor', () => {
     [
       { confirmed: false },
       owner({ status: 'never_published' }),
-      'Potwierdź adres e-mail, żeby opublikować stronę.',
+      'Potwierdź adres e-mail, żeby opublikować stronę',
     ],
     [
       {},
       owner({ status: 'never_published', nick: null }),
-      'Najpierw wybierz adres strony w kreatorze.',
+      'Najpierw wybierz adres strony w kreatorze',
     ],
   ])('explains why publishing is disabled (%#)', async (options, profile, hint) => {
     setup({ ...options, profile });

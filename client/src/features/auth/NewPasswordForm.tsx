@@ -15,8 +15,8 @@ import { problemMessage } from './messages';
 const schema = z.object({
   newPassword: z
     .string()
-    .min(10, 'Hasło jest za krótkie. Użyj co najmniej 10 znaków.')
-    .max(128, 'Hasło może mieć najwyżej 128 znaków.'),
+    .min(10, 'Hasło jest za krótkie. Użyj co najmniej 10 znaków')
+    .max(128, 'Hasło może mieć najwyżej 128 znaków'),
 });
 type Values = z.input<typeof schema>;
 
@@ -97,7 +97,7 @@ export function NewPasswordForm() {
         label="Nowe hasło"
         type={showPassword ? 'text' : 'password'}
         autoComplete="new-password"
-        hint="Co najmniej 10 znaków. Po zmianie wylogujemy Cię na innych urządzeniach."
+        hint="Co najmniej 10 znaków. Po zmianie wylogujemy Cię na innych urządzeniach"
         error={errors.newPassword?.message}
         addon={
           <button

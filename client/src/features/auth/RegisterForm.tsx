@@ -19,14 +19,14 @@ const schema = z.object({
   displayName: z
     .string()
     .trim()
-    .min(1, 'Wpisz imię i nazwisko lub pseudonim.')
-    .max(60, 'Nazwa może mieć najwyżej 60 znaków.'),
-  email: z.email('Wpisz pełny adres e-mail, np. anna@example.pl.'),
+    .min(1, 'Wpisz imię i nazwisko lub pseudonim')
+    .max(60, 'Nazwa może mieć najwyżej 60 znaków'),
+  email: z.email('Wpisz pełny adres e-mail, np. anna@example.pl'),
   password: z
     .string()
-    .min(10, 'Hasło jest za krótkie. Użyj co najmniej 10 znaków.')
-    .max(128, 'Hasło może mieć najwyżej 128 znaków.'),
-  acceptTerms: z.literal(true, { error: 'Zaakceptuj regulamin, aby założyć konto.' }),
+    .min(10, 'Hasło jest za krótkie. Użyj co najmniej 10 znaków')
+    .max(128, 'Hasło może mieć najwyżej 128 znaków'),
+  acceptTerms: z.literal(true, { error: 'Zaakceptuj regulamin, aby założyć konto' }),
 });
 
 type Values = z.input<typeof schema>;

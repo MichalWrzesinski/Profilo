@@ -261,7 +261,7 @@ export function NickStep() {
             {check.state === 'available' && (
               <span className="hint is-success">
                 <CheckIcon className="i sm" aria-hidden="true" />
-                Adres wolny. Rezerwujemy go dla Ciebie po przejściu dalej.
+                Adres wolny. Rezerwujemy go dla Ciebie po przejściu dalej
               </span>
             )}
             {check.state === 'invalid' && (
@@ -272,18 +272,18 @@ export function NickStep() {
             )}
             {check.state === 'unknown' && (
               <span className="hint">
-                Nie udało się teraz sprawdzić adresu. Sprawdzimy go, gdy przejdziesz dalej.
+                Nie udało się teraz sprawdzić adresu. Sprawdzimy go, gdy przejdziesz dalej
               </span>
             )}
             {check.state === 'taken' && (
               <span className="hint is-error">
                 <CircleAlert className="i sm" aria-hidden="true" />
-                Ten adres jest już zajęty.
+                Ten adres jest już zajęty
                 {check.suggestions.length > 0 && ' Może któryś z tych?'}
               </span>
             )}
             {locked && (
-              <span className="hint">Adresu nie można zmienić po pierwszej publikacji.</span>
+              <span className="hint">Adresu nie można zmienić po pierwszej publikacji</span>
             )}
           </span>
           {check.state === 'taken' && check.suggestions.length > 0 && (
@@ -301,7 +301,7 @@ export function NickStep() {
             </div>
           )}
           <span id="nick-rule" className="hint">
-            3–40 znaków: małe litery, cyfry i myślniki. Polskie znaki zamienimy automatycznie.
+            3–40 znaków: małe litery, cyfry i myślniki. Polskie znaki zamienimy automatycznie
           </span>
         </div>
       </main>

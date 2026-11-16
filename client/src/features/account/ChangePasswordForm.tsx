@@ -11,11 +11,11 @@ import { api, type Problem } from '@/lib/api/client';
 import { useSession } from '@/lib/session';
 
 const schema = z.object({
-  currentPassword: z.string().min(1, 'Wpisz obecne hasło.'),
+  currentPassword: z.string().min(1, 'Wpisz obecne hasło'),
   newPassword: z
     .string()
-    .min(10, 'Hasło jest za krótkie. Użyj co najmniej 10 znaków.')
-    .max(128, 'Hasło może mieć najwyżej 128 znaków.'),
+    .min(10, 'Hasło jest za krótkie. Użyj co najmniej 10 znaków')
+    .max(128, 'Hasło może mieć najwyżej 128 znaków'),
 });
 type Values = z.input<typeof schema>;
 
@@ -46,7 +46,7 @@ export function ChangePasswordForm() {
       }
       const problem = error as Problem | undefined;
       if (problem?.code === 'invalid_password') {
-        return setError('currentPassword', { message: 'Obecne hasło jest nieprawidłowe.' });
+        return setError('currentPassword', { message: 'Obecne hasło jest nieprawidłowe' });
       }
       const fieldError = problem?.errors?.find((item) => item.field === 'newPassword');
       if (response.status === 422 && fieldError) {
@@ -62,7 +62,7 @@ export function ChangePasswordForm() {
     <section className="card card-pad" aria-labelledby="password-title">
       <h2 id="password-title">Zmień hasło</h2>
       {!confirmed ? (
-        <p className="hint">Najpierw potwierdź adres e-mail — wtedy zmienisz hasło.</p>
+        <p className="hint">Najpierw potwierdź adres e-mail — wtedy zmienisz hasło</p>
       ) : (
         <form method="post" onSubmit={onSubmit} noValidate>
           {done && (
@@ -82,7 +82,7 @@ export function ChangePasswordForm() {
             label="Nowe hasło"
             type={show ? 'text' : 'password'}
             autoComplete="new-password"
-            hint="Co najmniej 10 znaków. Po zmianie wylogujemy Cię na innych urządzeniach."
+            hint="Co najmniej 10 znaków. Po zmianie wylogujemy Cię na innych urządzeniach"
             error={errors.newPassword?.message}
             addon={
               <button

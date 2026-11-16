@@ -97,7 +97,7 @@ describe('PublishPanel', () => {
     expect(await screen.findByText('Opublikowana')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'localhost:8080/user/anna-wisniewska' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Opublikuj zmiany' })).toBeDisabled();
-    expect(screen.getByText('Wszystkie zmiany są już na stronie.')).toBeInTheDocument();
+    expect(screen.getByText('Wszystkie zmiany są już na stronie')).toBeInTheDocument();
     const body = await (fetch.mock.calls.at(-1)![0] as Request).json();
     expect(body).toEqual({ version: 4 });
   });
@@ -115,13 +115,9 @@ describe('PublishPanel', () => {
   });
 
   it.each([
-    [{ confirmed: false }, owner(), 'Potwierdź adres e-mail, żeby opublikować stronę.'],
-    [{}, owner({ nick: null }), 'Najpierw wybierz adres strony w kreatorze.'],
-    [
-      {},
-      owner({ status: 'blocked' }),
-      'Strona jest zablokowana — napisz do nas, jeśli to pomyłka.',
-    ],
+    [{ confirmed: false }, owner(), 'Potwierdź adres e-mail, żeby opublikować stronę'],
+    [{}, owner({ nick: null }), 'Najpierw wybierz adres strony w kreatorze'],
+    [{}, owner({ status: 'blocked' }), 'Strona jest zablokowana — napisz do nas, jeśli to pomyłka'],
   ])('explains why publishing is disabled (%#)', async (options, profile, reason) => {
     setup(profile, options);
 

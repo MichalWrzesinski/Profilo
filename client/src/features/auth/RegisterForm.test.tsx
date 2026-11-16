@@ -117,11 +117,11 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('button', { name: 'Załóż konto' }));
 
     expect(await screen.findByText('Popraw 4 pola zaznaczone poniżej.')).toBeInTheDocument();
-    expect(screen.getByText('Wpisz pełny adres e-mail, np. anna@example.pl.')).toBeInTheDocument();
+    expect(screen.getByText('Wpisz pełny adres e-mail, np. anna@example.pl')).toBeInTheDocument();
     expect(
-      screen.getByText('Hasło jest za krótkie. Użyj co najmniej 10 znaków.'),
+      screen.getByText('Hasło jest za krótkie. Użyj co najmniej 10 znaków'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Zaakceptuj regulamin, aby założyć konto.')).toBeInTheDocument();
+    expect(screen.getByText('Zaakceptuj regulamin, aby założyć konto')).toBeInTheDocument();
     expect(screen.getByLabelText('Hasło')).toHaveAttribute('aria-invalid', 'true');
     expect(fetch).not.toHaveBeenCalled();
   });

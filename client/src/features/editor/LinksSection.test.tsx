@@ -122,7 +122,7 @@ describe('LinksSection', () => {
     await user.click(screen.getByRole('button', { name: 'Dodaj pierwszy link' }));
     await user.click(screen.getByRole('button', { name: 'Zapisz link' }));
 
-    expect(screen.getByText('Wpisz adres strony.')).toBeVisible();
+    expect(screen.getByText('Wpisz adres strony')).toBeVisible();
     expect(bodies).toHaveLength(0);
   });
 
@@ -134,7 +134,7 @@ describe('LinksSection', () => {
     const label = screen.getByLabelText('Etykieta');
     await user.clear(label);
     await user.click(screen.getByRole('button', { name: 'Zapisz link' }));
-    expect(screen.getByText('Wpisz etykietę.')).toBeVisible();
+    expect(screen.getByText('Wpisz etykietę')).toBeVisible();
 
     await user.type(label, 'Mój LinkedIn');
     await user.click(screen.getByRole('button', { name: 'Zapisz link' }));
@@ -357,7 +357,7 @@ describe('LinksSection', () => {
     setup(links, () => json(500, {}));
 
     expect(screen.getByRole('button', { name: 'Dodaj link' })).toBeDisabled();
-    expect(screen.getByText('Masz już 20 linków — to najwięcej, ile można dodać.')).toBeVisible();
+    expect(screen.getByText('Masz już 20 linków — to najwięcej, ile można dodać')).toBeVisible();
   });
 
   it('gives the drag handle a Polish name and instructions', () => {

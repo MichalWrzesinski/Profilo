@@ -188,11 +188,11 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
     profile.status !== 'blocked' &&
     !(published && !profile.hasUnpublishedChanges);
   const publishHint = !emailConfirmed
-    ? 'Potwierdź adres e-mail, żeby opublikować stronę.'
+    ? 'Potwierdź adres e-mail, żeby opublikować stronę'
     : !profile.nick
-      ? 'Najpierw wybierz adres strony w kreatorze.'
+      ? 'Najpierw wybierz adres strony w kreatorze'
       : draft.unsaved
-        ? 'Opublikujesz, gdy wszystkie zmiany będą zapisane.'
+        ? 'Opublikujesz, gdy wszystkie zmiany będą zapisane'
         : undefined;
 
   const publish = async () => {
@@ -475,7 +475,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
                   placeholder="np. kontakt@twojafirma.pl"
                 />
                 {!errors.publicEmail && (
-                  <span className="hint">Może być inny niż e-mail do logowania.</span>
+                  <span className="hint">Może być inny niż e-mail do logowania</span>
                 )}
                 {errorOf('publicEmail')}
               </div>

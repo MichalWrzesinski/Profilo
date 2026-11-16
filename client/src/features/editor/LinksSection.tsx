@@ -290,10 +290,10 @@ export function LinksSection({ links, run, busy = false }: Props) {
             </button>
           )
         )}
-        {full && <p className="hint">Masz już 20 linków — to najwięcej, ile można dodać.</p>}
+        {full && <p className="hint">Masz już 20 linków — to najwięcej, ile można dodać</p>}
         {shown.length > 1 && (
           <p className="hint" style={{ marginTop: 'var(--space-2)' }}>
-            Przeciągnij, aby zmienić kolejność. Na telefonie użyj strzałek.
+            Przeciągnij, aby zmienić kolejność. Na telefonie użyj strzałek
           </p>
         )}
       </div>
@@ -405,8 +405,8 @@ function LinkForm({ link, onCancel, onSaved, run }: FormProps) {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!url.trim()) return setErrors({ url: 'Wpisz adres strony.' });
-    if (link && !label.trim()) return setErrors({ label: 'Wpisz etykietę.' });
+    if (!url.trim()) return setErrors({ url: 'Wpisz adres strony' });
+    if (link && !label.trim()) return setErrors({ label: 'Wpisz etykietę' });
     setSaving(true);
     setErrors({});
     setGeneral(null);

@@ -51,11 +51,11 @@ export function PublishPanel() {
   const published = profile.status === 'published';
   const blocked = profile.status === 'blocked';
   const blocker = blocked
-    ? 'Strona jest zablokowana — napisz do nas, jeśli to pomyłka.'
+    ? 'Strona jest zablokowana — napisz do nas, jeśli to pomyłka'
     : !confirmed
-      ? 'Potwierdź adres e-mail, żeby opublikować stronę.'
+      ? 'Potwierdź adres e-mail, żeby opublikować stronę'
       : !profile.nick
-        ? 'Najpierw wybierz adres strony w kreatorze.'
+        ? 'Najpierw wybierz adres strony w kreatorze'
         : null;
   const publishLabel = published ? 'Opublikuj zmiany' : 'Opublikuj';
   const nothingToPublish = published && !profile.hasUnpublishedChanges;
@@ -131,9 +131,7 @@ export function PublishPanel() {
             {blocker}
           </p>
         )}
-        {nothingToPublish && !blocker && (
-          <p className="hint">Wszystkie zmiany są już na stronie.</p>
-        )}
+        {nothingToPublish && !blocker && <p className="hint">Wszystkie zmiany są już na stronie</p>}
       </section>
     </>
   );
