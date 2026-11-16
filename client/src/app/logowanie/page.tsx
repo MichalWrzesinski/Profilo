@@ -19,6 +19,11 @@ export default async function LoginPage({ searchParams }: Props) {
           Załóż stronę
         </Link>
       }
+      footer={
+        <>
+          Nie masz konta? <Link href="/rejestracja">Zarejestruj się</Link>
+        </>
+      }
     >
       {potwierdzono === '1' && <Alert variant="success">Adres potwierdzony — zaloguj się.</Alert>}
       <LoginForm />

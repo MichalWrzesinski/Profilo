@@ -80,7 +80,11 @@ describe('public pages', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Załóż swoją stronę' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Zaloguj się' })).toBeInTheDocument();
+    // The top bar and the line under the form.
+    for (const link of screen.getAllByRole('link', { name: 'Zaloguj się' })) {
+      expect(link).toHaveAttribute('href', '/logowanie');
+    }
+    expect(screen.getByText(/Masz już konto\?/)).toBeInTheDocument();
   });
 
   it.each([
@@ -91,6 +95,10 @@ describe('public pages', () => {
     render(<SessionProvider>{page}</SessionProvider>);
     expect(screen.getByRole('heading', { level: 1, name: 'Zaloguj się' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Załóż stronę' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Zarejestruj się' })).toHaveAttribute(
+      'href',
+      '/rejestracja',
+    );
     expect(screen.queryByText('Adres potwierdzony — zaloguj się.') !== null).toBe(notice);
   });
 

@@ -38,7 +38,8 @@ test('a new owner publishes a page that looks exactly like the preview', async (
   ).toHaveText('Anna Wiśniewska');
   await page.getByRole('textbox', { name: 'Wybrany adres strony' }).fill(`Ewa Testowa ${run}`);
   await page.getByRole('button', { name: 'Zarezerwuj adres' }).click();
-  await expect(page).toHaveURL(new RegExp(`/rejestracja\\?adres=Ewa\\+Testowa\\+${run}$`));
+  // The field shows the address as it will be, so the form sends it normalised.
+  await expect(page).toHaveURL(new RegExp(`/rejestracja\\?adres=ewa-testowa-${run}$`));
   await page.locator('html[data-hydrated]').waitFor();
 
   // Registration lands in the wizard.

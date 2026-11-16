@@ -13,6 +13,12 @@
   margin: var(--space-1) 0 var(--space-6);
 }
 
+.footer {
+  margin-top: var(--space-5);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
 .main :global(.alert) {
   margin-bottom: var(--space-5);
 }

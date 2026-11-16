@@ -9,7 +9,11 @@
     ["  Łódź", "lodz"],
     ["anna ", "anna-"],
     ["José Müller", "jose-muller"],
-    ["O'Brien & Syn", "obrien-syn"]
+    ["O'Brien & Syn", "obrien-syn"],
+    ["Żółć ! Syn", "zolc-syn"],
+    ["anna- maria", "anna-maria"],
+    ["anna-&", "anna-"],
+    ["a - - b", "a-b"]
   ],
   "format": [
     ["ab", "too_short"],

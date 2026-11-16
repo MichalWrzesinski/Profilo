@@ -59,7 +59,7 @@ function Identity({ content }: { content: Content }) {
       )}
       <h1>{content.displayName}</h1>
       {content.headline && <p className="headline">{content.headline}</p>}
-      {(work || content.city) && (
+      {(work || content.city || content.publicPhone) && (
         <ul className="meta">
           {work && (
             <li>
@@ -73,6 +73,12 @@ function Identity({ content }: { content: Content }) {
               {content.city}
             </li>
           )}
+          {content.publicPhone && (
+            <li>
+              <Phone className="i" aria-hidden="true" />
+              {formatPhone(content.publicPhone)}
+            </li>
+          )}
         </ul>
       )}
     </>
@@ -82,27 +88,24 @@ function Identity({ content }: { content: Content }) {
 function Contact({ content }: { content: Content }) {
   if (!content.publicEmail && !content.publicPhone) return null;
   return (
-    <>
-      <div className="contact">
-        {content.publicEmail && (
-          <a className="btn btn-primary" href={mailtoHref(content.publicEmail)}>
-            <Mail className="i" aria-hidden="true" />
-            Napisz e-mail
-          </a>
-        )}
-        {content.publicPhone && (
-          <a
-            className="btn btn-secondary"
-            href={`tel:${content.publicPhone}`}
-            aria-label={`Zadzwoń: ${formatPhone(content.publicPhone)}`}
-          >
-            <Phone className="i" aria-hidden="true" />
-            Zadzwoń
-          </a>
-        )}
-      </div>
-      {content.publicPhone && <p className="muted">{formatPhone(content.publicPhone)}</p>}
-    </>
+    <div className="contact">
+      {content.publicEmail && (
+        <a className="btn btn-primary" href={mailtoHref(content.publicEmail)}>
+          <Mail className="i" aria-hidden="true" />
+          Napisz e-mail
+        </a>
+      )}
+      {content.publicPhone && (
+        <a
+          className="btn btn-secondary"
+          href={`tel:${content.publicPhone}`}
+          aria-label={`Zadzwoń: ${formatPhone(content.publicPhone)}`}
+        >
+          <Phone className="i" aria-hidden="true" />
+          Zadzwoń
+        </a>
+      )}
+    </div>
   );
 }
 

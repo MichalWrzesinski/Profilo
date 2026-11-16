@@ -36,13 +36,14 @@ function asciiLower(text: string): string {
 
 /**
  * What the owner types: as PRF-BR-2 (separators → hyphen, other characters dropped), but typed
- * hyphens stay as they are so the owner sees the rule. Only leading whitespace is trimmed: a
+ * hyphens stay as they are so the owner sees the rule. A separator next to a hyphen adds none
+ * (typing „anna-” and then a space keeps „anna-”). Only leading whitespace is trimmed: a
  * trailing space becomes the hyphen before the next word.
  */
 export function normaliseNickInput(text: string): string {
   return asciiLower(text.trimStart())
-    .replace(/[\s_./\\,;:+&|]+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
+    .replace(/[^a-z0-9\-\s_./\\,;:+&|]/g, '')
+    .replace(/[-\s_./\\,;:+&|]*[\s_./\\,;:+&|][-\s_./\\,;:+&|]*/g, '-');
 }
 
 export type NickFormatError = 'too_short' | 'too_long' | 'invalid_format';
