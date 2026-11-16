@@ -1,7 +1,7 @@
 ---
 id: TASK-023
 title: Error and uptime monitoring
-status: BLOCKED
+status: DONE
 priority: high
 iteration: ITER-05
 depends_on: [TASK-003]
@@ -65,7 +65,9 @@ Round 2 — fixed: the throttle grouped every unhandled exception under one key 
 
 On staging after the merge (`ec84ddf`): deployment, *Sentry release* (skipped: no token) and `deploy/staging` green; in the browser no console errors, source maps not served (404), and an error thrown in the page was posted to `/api/v1/monitoring/sentry` (204, dropped — staging has no DSN).
 
-Not verified: real Sentry ingestion and the *Sentry release* job (no Sentry account yet); Better Stack monitors and scenario 2 (no account; configuration in the runbook — with a 3-minute check interval on a plan the alert comes later than 2 minutes).
+**Done on staging (2026-11-16).** Sentry (EU, organisation `webhome-6c`, project `profilo`): `STAGING_SENTRY_*` set; the *Sentry release* job creates the release, uploads 82 files (scripts and source maps) and records the `staging` deployment (the first attempt failed with 401 because the script forced `de.sentry.io`; an organisation token carries its own address — fixed in PR #54, and a newly created token). Scenario 1 live: a browser error and a real worker error (`TimeoutError` of the e-mail task — staging's SMTP ports are blocked by the VPS provider) arrived with release, environment and `service` tag; the test error's timestamp shows as `[Filtered]` (13 digits are treated as a phone number — intended caution). Scenario 2: Better Stack Uptime monitors `https://profilo.gitpush.app/ready` with e-mail alerts to the operator; a temporary monitor on a missing path raised an incident and the alert e-mail arrived (then removed). Production monitors (Better Stack, `PROD_SENTRY_*`) come with the first production deployment (TASK-021).
+
+The earlier note, before the accounts existed — not verified: real Sentry ingestion and the *Sentry release* job (no Sentry account yet); Better Stack monitors and scenario 2 (no account; configuration in the runbook — with a 3-minute check interval on a plan the alert comes later than 2 minutes).
 
 Needs from the user: Sentry (EU) and Better Stack accounts; `STAGING_SENTRY_DSN`, `STAGING_SENTRY_AUTH_TOKEN`, `PROD_SENTRY_DSN`, `PROD_SENTRY_AUTH_TOKEN`, variables `SENTRY_ORG`, `SENTRY_PROJECT`; Better Stack monitors and heartbeat (`PROD_BACKUP_HEARTBEAT_URL`); GitHub failure e-mails (runbook *Monitoring*).
 
