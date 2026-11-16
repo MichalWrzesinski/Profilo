@@ -49,8 +49,8 @@ export function PrivacyNotice() {
       <div id="privacy-notice-text" className="muted">
         <p>
           Używamy tylko niezbędnego pliku cookie, który utrzymuje Twoje zalogowanie, oraz pamięci
-          przeglądarki na niezapisane zmiany. Nie używamy plików cookie reklamowych ani
-          analitycznych.
+          przeglądarki, m.in. na niezapisane zmiany i zapamiętanie, że zamknąłeś to okno. Nie
+          używamy plików cookie reklamowych ani analitycznych.
         </p>
         <p style={{ marginTop: 'var(--space-3)' }}>
           Dane, które podajesz (np. imię i nazwisko, e-mail, telefon), przetwarzamy, żeby prowadzić
