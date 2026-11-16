@@ -45,6 +45,13 @@ Verified:
 - E2E (`e2e/tests/csp.spec.ts`, local stack): scenario 1 — `/`, `/przyklad`, `/rejestracja`, `/logowanie`, `/nie-pamietam-hasla`, `/regulamin` hydrate with no CSP violation and a nonce policy; every request gets a new nonce; scenario 2 — an inline `<script>` injected into the HTML does not run and is reported as a `script-src` violation. The whole suite passes under the policy, including registration with the proof-of-work worker and the editor preview iframe.
 - Production image: no `'unsafe-eval'`, all 22 scripts of a page carry the nonce, files such as `robots.txt` get no page policy.
 
+Review (subagent, security), round 1 — fixed:
+- documents prefetched or prerendered by the browser (`Purpose: prefetch`, `Sec-Purpose: prefetch;prerender`) were excluded from the proxy and would have arrived without a nonce, never becoming interactive → no prefetch exclusion; checked on the production image: such a request gets a nonce policy;
+- E2E never ran under Caddy's fallback policy → the local Caddyfile has the same fallback; the registration test now requires the proof-of-work web worker to start (the app would quietly fall back to the main thread) and no violation;
+- 404 pages for dotted paths (`/user/anna.nowak`) bypassed the proxy → only files with a known extension are skipped; E2E: such a 404 hydrates without violations;
+- violations were checked on six pages only → a shared collector (`recordViolations`, across navigations and workers) in the main flow (wizard, editor, preview iframe, publishing), the public page and registration;
+- nits: scenario 2 checks that the script was served and blocked as `inline`; no assertion on an internal Next.js header; `(await headers())` in the docs.
+
 Decisions:
 - The CSP moved from Caddy to the app for pages (a nonce exists only per render); Caddy keeps a strict fallback, so nothing is served without a policy.
 - All pages dynamic instead of mixing static pages with a weaker policy.
