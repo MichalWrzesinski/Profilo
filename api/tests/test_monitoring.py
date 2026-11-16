@@ -83,6 +83,8 @@ def test_scrub_text_removes_internationalised_addresses() -> None:
     assert "żółw" not in scrubbed
     assert "例え" not in scrubbed
     assert "Key (email)=([Filtered])" in scrubbed
+    path = "/app/node_modules/@sentry/core/build/x.js"
+    assert monitoring.scrub_text(path) == path  # scoped package paths are not addresses
 
 
 def test_scrub_handles_tuples_and_other_objects() -> None:
@@ -217,7 +219,7 @@ async def test_repeated_error_logs_are_throttled(
     sentry: CaptureTransport, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     clock = [1000.0]
-    monkeypatch.setattr("app.core.monitoring.time.monotonic", lambda: clock[0])
+    monkeypatch.setattr(monitoring, "_now", lambda: clock[0])
     for _ in range(5):
         log.error("rate_limit_unavailable", limit="login")
     log.error("other_problem")
@@ -231,6 +233,27 @@ async def test_repeated_error_logs_are_throttled(
     ]
     assert "not_reported_since_last" not in sentry.events[0].get("extra", {})
     assert sentry.events[2]["extra"]["not_reported_since_last"] == 4
+
+
+async def test_different_unhandled_exceptions_are_not_throttled_together(
+    sentry: CaptureTransport,
+) -> None:
+    def fail_a() -> None:
+        raise RuntimeError("bug A")
+
+    def fail_b() -> None:
+        raise KeyError("bug B")
+
+    for fail in (fail_a, fail_a, fail_b):
+        try:
+            fail()
+        except Exception as exc:
+            log.error("unhandled_exception", exc_info=exc)
+    sentry_sdk.flush()
+    assert [e["exception"]["values"][-1]["type"] for e in sentry.events] == [
+        "RuntimeError",
+        "KeyError",
+    ]
 
 
 def test_worker_and_beat_start_monitoring_by_signal(sentry: CaptureTransport) -> None:
@@ -353,18 +376,22 @@ async def test_forward_posts_scrubbed_events(monkeypatch: pytest.MonkeyPatch) ->
     assert DSN.encode() in sent[0]
 
 
-async def test_forward_has_a_global_cap_per_process(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_forward_has_a_global_cap_per_process(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Independent of Valkey: the per-IP limit fails open when Valkey is down."""
     from collections import deque
 
     monkeypatch.setattr(get_settings(), "sentry_dsn", SecretStr(DSN))
     monkeypatch.setattr(tunnel, "_forwarded", deque())
     clock = [5000.0]
-    monkeypatch.setattr("app.modules.monitoring.tunnel.time.monotonic", lambda: clock[0])
+    monkeypatch.setattr(tunnel, "_now", lambda: clock[0])
+    monkeypatch.setattr(tunnel, "_cap_warned_at", [])
     sent: list[bytes] = []
     monkeypatch.setattr(tunnel, "_post", lambda dsn, data: sent.append(data))
     await tunnel.forward([{"message": str(i)} for i in range(tunnel.MAX_FORWARDED_PER_WINDOW + 5)])
     assert len(sent) == tunnel.MAX_FORWARDED_PER_WINDOW
+    assert capsys.readouterr().out.count("sentry_tunnel_cap_reached") == 1  # once per window
     clock[0] += tunnel.FORWARD_WINDOW_SECONDS + 1
     await tunnel.forward([{"message": "later"}])
     assert len(sent) == tunnel.MAX_FORWARDED_PER_WINDOW + 1

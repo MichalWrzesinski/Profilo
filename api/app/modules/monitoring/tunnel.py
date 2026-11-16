@@ -27,6 +27,8 @@ FORWARD_TIMEOUT_SECONDS = 5.0
 MAX_FORWARDED_PER_WINDOW = 60
 FORWARD_WINDOW_SECONDS = 600.0
 _forwarded: deque[float] = deque()
+_cap_warned_at: list[float] = []  # one warning per window when the cap is reached
+_now = time.monotonic  # replaced in tests
 
 
 @dataclass(frozen=True)
@@ -149,10 +151,14 @@ async def forward(events: list[dict[str, Any]]) -> None:
     if dsn is None:
         return
     for event in events:
-        now = time.monotonic()
+        now = _now()
         while _forwarded and now - _forwarded[0] > FORWARD_WINDOW_SECONDS:
             _forwarded.popleft()
         if len(_forwarded) >= MAX_FORWARDED_PER_WINDOW:
+            # Visible, but not as an error (that would be reported to Sentry again).
+            if not _cap_warned_at or now - _cap_warned_at[0] > FORWARD_WINDOW_SECONDS:
+                _cap_warned_at[:] = [now]
+                log.warning("sentry_tunnel_cap_reached", limit=MAX_FORWARDED_PER_WINDOW)
             return
         _forwarded.append(now)
         try:

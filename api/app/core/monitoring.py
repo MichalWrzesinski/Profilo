@@ -12,6 +12,7 @@ import re
 import sys
 import threading
 import time
+import traceback
 from collections.abc import MutableMapping
 from contextvars import ContextVar
 from typing import Any
@@ -28,7 +29,8 @@ SENSITIVE_KEY = re.compile(
 )
 # Also internationalised addresses (EmailStr accepts them): anything around an @ up to a
 # separator, with a dot in the domain.
-EMAIL = re.compile(r"[^\s@<>()\[\]\"',;:=]+@[^\s@<>()\[\]\"',;:=]+\.[^\s@<>()\[\]\"',;:=]+")
+# No "/" before the @, so paths of scoped packages (node_modules/@sentry/...) stay.
+EMAIL = re.compile(r"[^\s@<>()\[\]\"',;:=/]+@[^\s@<>()\[\]\"',;:=]+\.[^\s@<>()\[\]\"',;:=]+")
 # JWTs and long opaque strings (one-time tokens, refresh tokens, keys).
 JWT = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 OPAQUE = re.compile(r"(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{32,}(?![A-Za-z0-9_-])")
@@ -163,13 +165,14 @@ def init_sentry(service: str) -> bool:
 # the number left out since. An outage that logs on every request (Valkey down, a daily cap
 # reached) must not use up the Sentry quota and hide everything else.
 THROTTLE_SECONDS = 600.0
+_now = time.monotonic  # replaced in tests (patching time.monotonic would stop asyncio's clock)
 _throttle: dict[str, tuple[float, int]] = {}
 _throttle_lock = threading.Lock()
 
 
 def _allowed(kind: str) -> tuple[bool, int]:
     """Whether an entry of this kind may be sent now, and how many were left out before it."""
-    now = time.monotonic()
+    now = _now()
     with _throttle_lock:
         last, skipped = _throttle.get(kind, (None, 0))
         if last is not None and now - last < THROTTLE_SECONDS:
@@ -179,6 +182,17 @@ def _allowed(kind: str) -> tuple[bool, int]:
         return True, skipped
 
 
+def _kind(event: str, exc: Any) -> str:
+    """Throttle key: the log event, and for an exception its type and the line that raised
+    it — every unhandled exception is logged as `unhandled_exception`, and a new bug must not
+    hide behind another one."""
+    if not isinstance(exc, BaseException):
+        return event
+    frame = traceback.extract_tb(exc.__traceback__)[-1:] if exc.__traceback__ else []
+    where = f"{frame[0].filename}:{frame[0].lineno}" if frame else ""
+    return f"{event}:{type(exc).__qualname__}:{where}"
+
+
 def report_errors(
     _logger: Any, _method: str, event_dict: MutableMapping[str, Any]
 ) -> MutableMapping[str, Any]:
@@ -186,12 +200,12 @@ def report_errors(
     throttled per kind of entry."""
     if event_dict.get("level") not in ("error", "critical") or not sentry_sdk.is_initialized():
         return event_dict
-    allowed, skipped = _allowed(str(event_dict.get("event")))
-    if not allowed:
-        return event_dict
     exc = event_dict.get("exc_info")
     if exc is True:
         exc = sys.exc_info()[1]
+    allowed, skipped = _allowed(_kind(str(event_dict.get("event")), exc))
+    if not allowed:
+        return event_dict
     with sentry_sdk.new_scope() as scope:
         for key, value in event_dict.items():
             if key not in ("event", "level", "timestamp", "exc_info"):
