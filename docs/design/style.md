@@ -13,7 +13,7 @@
 
 ## Style direction
 
-**Chosen: Variant A — "Granat korporacyjny"** (user decision, 2026-11-09). Reference mockup: `mockups/style-variants/profile.html#a`, screenshots `variant-a-*.png`. Variants B and C are kept in `mockups/style-variants/` for reference only.
+**Chosen: Variant A — "Granat korporacyjny"** (user decision, 2026-11-09), out of three variants; the exploration (style variants and greyscale sketches) was removed in the pre-production clean-up and stays in Git history.
 
 | Element | Decision |
 |---|---|
@@ -69,9 +69,7 @@ The wordmark in `logo.svg` uses live text in Plus Jakarta Sans 800; iteration 0 
 
 | Stage | Location | Status |
 |---|---|---|
-| Style direction | `mockups/style-variants/` | Accepted: variant A |
-| Sketch mockups (greyscale) | `mockups/sketches/index.html`, PNG in `mockups/sketches/png/` | Accepted (2026-11-09) |
-| Final mockups with states | `mockups/final/index.html` (`screens.html#<view>`), PNG in `mockups/final/png/` | Awaiting acceptance |
+| Final mockups with states | `mockups/final/index.html` (`screens.html#<view>`), PNG in `mockups/final/png/` | Reference for the implemented screens |
 
 ## Design system
 

@@ -181,6 +181,20 @@ Retention: unconfirmed accounts deleted after 7 days; deleted accounts removed i
 | Unpublish / block | Stale content visible | No caching of public pages; snapshot visibility checked on every request |
 | Account deletion | Accidental or hostile deletion, data left behind | Password required (5 wrong passwords per account per 15 min, shared with the password change; like login, the limit fails open when Valkey is down); confirmation e-mail; cascade in one transaction; files removed by a task (directly when the queue is down); cached preview cards dropped |
 
+## External services and costs
+
+Approved on 2026-11-09 (prices from public sources then, without VAT; check before ordering). Staging runs on the owner's shared VPS instead of a separate Hetzner server (runbook „Shared host”).
+
+| Service | Purpose | At start | Growth (≈ 5 000–10 000 owners) |
+|---|---|---|---|
+| Hetzner Cloud CX33 ([ADR 0004](decisions/0004-hosting-single-vps-docker-compose.md)) | Production server | ≈ €9/month | CX43 ≈ €15–17/month |
+| Hetzner Storage Box | Off-site backups (TASK-022) | ≈ €4/month | same |
+| Brevo ([ADR 0005](decisions/0005-transactional-email-brevo.md)) | Transactional e-mail (SMTP; staging on port 2525) | free, 300 e-mails/day | Starter ≈ €9–14/month |
+| Sentry (EU region) | Error reporting | free (Developer) | Team ≈ $26/month |
+| Better Stack Uptime | Uptime monitor, backup heartbeat | free | free |
+| Let's Encrypt, ALTCHA (self-hosted) | TLS, registration bot protection | free | free |
+| Domain `.pl` | | ≈ 50–150 PLN/year | same |
+
 ## Code map
 
 | Path | Responsibility | State |
