@@ -4,7 +4,7 @@ Status: accepted — approved by the user (2026-11-09)
 
 ## Context
 
-Profilo sends only transactional e-mails (confirmation, password reset, security notices, account deletion), under 3 000 per month at start. Compared: Brevo, Amazon SES (eu-central-1), Postmark — see `docs/technology-summary.md`.
+Profilo sends only transactional e-mails (confirmation, password reset, security notices, account deletion), under 3 000 per month at start. Compared (2026-11-09): Brevo (free 300 e-mails/day, EU company), Amazon SES (cheapest at volume, US parent company, more setup), Postmark (best deliverability, from $15/month).
 
 ## Decision
 

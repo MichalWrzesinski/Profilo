@@ -8,7 +8,7 @@ A simple, professional personal page that works as an online business card — o
 - Design: [docs/design/style.md](docs/design/style.md), [design system](docs/design/design-system.html), [final mockups](docs/design/mockups/final/index.html)
 - Architecture: [docs/architecture.md](docs/architecture.md), decisions in [docs/decisions/](docs/decisions/)
 - API contract: [docs/api/openapi.yaml](docs/api/openapi.yaml)
-- Technology and costs: [docs/technology-summary.md](docs/technology-summary.md)
+- Operations: [docs/runbook.md](docs/runbook.md); external services and costs in [docs/architecture.md](docs/architecture.md#external-services-and-costs)
 - Instructions for agents: [AGENTS.md](AGENTS.md); standards in [docs/standards/](docs/standards/)
 
 ## Development
@@ -31,7 +31,6 @@ make hooks   # once per clone: gitleaks secret scan before each commit
 | `make up` / `make down` | Start / stop the stack |
 | `make logs` | Follow logs |
 | `make migrate` | Apply database migrations |
-| `make seed` | Load demo data (none yet) |
 | `make test` | Backend and frontend tests with coverage ≥ 95 % (backend uses the `profilo_test` database) |
 | `make lint` | Formatters in check mode, linters, type checks |
 | `make format` | Format code |
