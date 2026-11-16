@@ -6,6 +6,7 @@ import pytest
 from httpx import AsyncClient, Response
 from sqlalchemy import func, select
 
+from app.core import rate_limit
 from app.core.db import get_sessionmaker
 from app.core.valkey import get_valkey
 from app.modules.accounts import service, tokens
@@ -430,4 +431,11 @@ async def test_login_does_not_reveal_the_email_in_logs(
     )
 
     assert "secret-person" not in capsys.readouterr().out
-    assert await get_valkey().exists("rl:login_fail:secret-person@example.pl") == 1
+    # The counter exists, under a keyed hash of the address (TASK-027).
+    assert (
+        await get_valkey().exists(
+            rate_limit.counter_key(service.LOGIN_FAILURES, "secret-person@example.pl")
+        )
+        == 1
+    )
+    assert await get_valkey().keys("*secret-person*") == []
