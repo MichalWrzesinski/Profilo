@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { APIRequestContext, Page } from '@playwright/test';
+import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 export const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025';
 
@@ -24,6 +24,24 @@ export async function recordViolations(page: Page): Promise<string[]> {
     }
   });
   return found;
+}
+
+/** Fails when the page scrolls sideways, naming the elements that stick out. */
+export async function expectNoSidewaysScroll(page: Page, what: string) {
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  const offenders = await page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    return [...document.querySelectorAll<HTMLElement>('body *')]
+      .filter((el) => el.getBoundingClientRect().right > width + 0.5)
+      .slice(0, 8)
+      .map((el) => {
+        const cls = typeof el.className === 'string' ? el.className.split(' ')[0] : '';
+        return `${el.tagName.toLowerCase()}${cls ? `.${cls}` : ''} right=${Math.round(el.getBoundingClientRect().right)}`;
+      });
+  });
+  expect(overflow, `${what}: ${offenders.join(', ')}`).toBe(0);
 }
 
 /** Open a page and wait until React has taken it over (forms would submit natively before). */
