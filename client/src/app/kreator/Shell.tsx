@@ -52,8 +52,11 @@ function WizardFrame({ children }: { children: ReactNode }) {
         <Brand withName={false} />
         <Stepper step={current.step} label={current.label} />
         <span className="spacer" />
-        <Link className="btn btn-ghost btn-sm" href="/edytor">
-          <span className="hide-m">Dokończę&nbsp;</span>później
+        <Link className="btn btn-primary btn-sm" href="/edytor">
+          {/* One flex item: the button's gap would otherwise split the words. */}
+          <span>
+            <span className="hide-m">Dokończę </span>później
+          </span>
         </Link>
       </header>
       <ConfirmEmailBanner />

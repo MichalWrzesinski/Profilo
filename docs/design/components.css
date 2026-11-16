@@ -26,10 +26,11 @@ svg.i.sm { width: 16px; height: 16px; }
   min-height: var(--control-height); padding: 0 var(--space-5); border-radius: var(--radius-md);
   font: var(--font-weight-semibold) var(--text-base)/1 var(--font-sans); white-space: nowrap;
   text-decoration: none; border: var(--border-width-strong) solid transparent; cursor: pointer;
-  transition: background var(--duration-base) var(--ease-standard), transform var(--duration-fast), box-shadow var(--duration-base);
+  transition: background var(--duration-base) var(--ease-standard), box-shadow var(--duration-base);
 }
 .btn-primary { background: var(--color-navy-900); color: var(--color-text-on-dark); box-shadow: var(--shadow-button); }
-.btn-primary:hover, .btn-primary.is-hover { background: var(--color-navy-800); transform: translateY(-1px); }
+/* Buttons never move on hover; the primary one turns to the logo-dot orange. */
+.btn-primary:hover:not(:disabled, .is-disabled), .btn-primary.is-hover { background: var(--color-accent); }
 .btn-secondary { background: var(--color-surface); color: var(--color-navy-900); border-color: var(--color-border-strong); }
 .btn-secondary:hover, .btn-secondary.is-hover { background: var(--color-blue-100); }
 .btn-ghost { background: transparent; color: var(--color-navy-900); }
@@ -166,7 +167,7 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 
 /* ---------- Link card (public) & link row (editor) ---------- */
 .link-card { display: flex; align-items: center; gap: var(--space-4); min-height: 64px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface); border: var(--border-width) solid var(--color-border); box-shadow: var(--shadow-xs); text-decoration: none; color: inherit; transition: transform var(--duration-fast), border-color var(--duration-fast), box-shadow var(--duration-base); }
-.link-card:hover { transform: translateY(-1px); border-color: var(--page-accent); box-shadow: var(--shadow-md); }
+.link-card:hover { border-color: var(--page-accent); box-shadow: var(--shadow-md); }
 .link-ico { width: 40px; height: 40px; flex: none; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--page-accent) 12%, #fff); color: var(--page-accent); font-weight: var(--font-weight-bold); font-size: var(--text-sm); }
 .link-card .txt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .link-card strong { color: var(--color-heading); font-weight: var(--font-weight-semibold); overflow-wrap: anywhere; }
