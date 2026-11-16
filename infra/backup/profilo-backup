@@ -29,6 +29,9 @@ KEEP_DAYS="${BACKUP_KEEP_DAYS:-30}"
 BACKUP_AT="${BACKUP_AT:-02:30}"
 RESTORE_TEST_DAY="${RESTORE_TEST_DAY:-01}"
 RESTORE_TEST_AT="${RESTORE_TEST_AT:-04:30}"
+# The restore test fails when the newest snapshot is older than this (daily backups broken).
+MAX_AGE_HOURS="${BACKUP_MAX_AGE_HOURS:-36}"
+JOB=""
 export TZ=UTC
 export RESTIC_PASSWORD_FILE="$SECRETS/restic-password"
 export RESTIC_CACHE_DIR="$STATE/cache"
@@ -41,7 +44,9 @@ restic_() {
   target="${BACKUP_REPOSITORY#sftp:}"
   target="${target%%:*}"
   port="${BACKUP_SFTP_PORT:-23}"
-  restic --repo "$BACKUP_REPOSITORY" \
+  # --retry-lock: a manual job and the scheduler may meet; a lock left by a killed process
+  # is stale after 30 min (restic), so this does not wait for that.
+  restic --repo "$BACKUP_REPOSITORY" --retry-lock 2m \
     -o sftp.command="ssh -p $port -i $SECRETS/ssh_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$SECRETS/known_hosts -o ConnectTimeout=20 -o ServerAliveInterval=30 $target -s sftp" \
     "$@"
 }
@@ -50,6 +55,10 @@ check_settings() {
   [[ "${BACKUP_REPOSITORY:-}" =~ ^sftp:[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:/[A-Za-z0-9._/-]+$ ]] \
     || { log "BACKUP_REPOSITORY must look like sftp:user@host:/path"; return 1; }
   [[ "${BACKUP_SFTP_PORT:-23}" =~ ^[0-9]{1,5}$ ]] || { log "invalid BACKUP_SFTP_PORT"; return 1; }
+  [[ "$BACKUP_AT" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ && "$RESTORE_TEST_AT" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] \
+    || { log "BACKUP_AT and RESTORE_TEST_AT must be HH:MM (UTC)"; return 1; }
+  # Two digits and at most 28, so that every month has the day.
+  [[ "$RESTORE_TEST_DAY" =~ ^(0[1-9]|1[0-9]|2[0-8])$ ]] || { log "RESTORE_TEST_DAY must be 01–28"; return 1; }
   local f
   for f in restic-password ssh_key known_hosts; do
     [[ -s "$SECRETS/$f" ]] || { log "missing $SECRETS/$f (written by the deploy workflow)"; return 1; }
@@ -72,7 +81,11 @@ alert() {
   netrc="$(mktemp)"
   message="$(mktemp)"
   if [[ -n "${SMTP_USERNAME:-}" ]]; then
-    printf 'machine %s login %s password %s\n' "$SMTP_HOST" "$SMTP_USERNAME" "${SMTP_PASSWORD:-}" > "$netrc"
+    # Quoted tokens (curl ≥ 7.84): spaces, quotes and backslashes in the password are safe.
+    local user pass
+    user="$(printf '%s' "$SMTP_USERNAME" | sed 's/[\\"]/\\&/g')"
+    pass="$(printf '%s' "${SMTP_PASSWORD:-}" | sed 's/[\\"]/\\&/g')"
+    printf 'machine %s login "%s" password "%s"\n' "$SMTP_HOST" "$user" "$pass" > "$netrc"
   fi
   {
     printf 'From: %s\r\nTo: %s\r\nSubject: [Profilo %s] %s\r\nDate: %s\r\n' \
@@ -99,15 +112,21 @@ run_job() {
   local name="$1" fn="$2" out status=0
   mkdir -p "$STATE"
   out="$(mktemp)"
-  # A separate process: inside `… || status=$?` bash ignores `set -e` in functions, so a
-  # failing step would not stop the job.
-  "$0" "__$fn" > >(tee "$out") 2>&1 || status=$?
-  sleep 1  # let tee flush
+  # A separate process in its own session: `set -e` stays in force (bash ignores it in
+  # functions called in `… || status=$?`), and on SIGTERM the scheduler stops the whole job
+  # (restic removes its lock) — see schedule().
+  setsid "$0" "__$fn" > "$out" 2>&1 &
+  JOB=$!
+  wait "$JOB" || status=$?
+  JOB=""
+  cat "$out"
   if [[ "$status" == 0 ]]; then
     date -u +%Y-%m-%dT%H:%M:%SZ > "$STATE/last-$name-ok"
+    rm -f "$STATE/last-$name-failed"
     [[ "$name" == restore-test ]] && alert "monthly restore test passed" "$out" || true
   else
     date -u +%Y-%m-%dT%H:%M:%SZ > "$STATE/last-$name-failed"
+    rm -f "$STATE/last-$name-ok"
     log "$name FAILED (exit $status)"
     alert "$name FAILED" "$out" || true
   fi
@@ -136,45 +155,81 @@ do_backup() {
   log "media → snapshot (tag media)"
   restic_ backup "$MEDIA" --tag media --host "${BACKUP_HOST:-profilo}" --quiet
   log "retention: snapshots of the last $KEEP_DAYS days"
-  restic_ forget --group-by host,tags --keep-within "${KEEP_DAYS}d" --prune --quiet
+  # --max-unused 0: data of removed snapshots (e.g. deleted accounts) is really deleted from
+  # the repository, not kept in partly used packs (privacy policy: at most 30 days).
+  restic_ forget --group-by host,tags --keep-within "${KEEP_DAYS}d" --prune --max-unused 0 --quiet
   restic_ snapshots --latest 1 --compact
+}
+
+# fresh <tag>: fails unless the newest snapshot with the tag is at most MAX_AGE_HOURS old.
+fresh() {
+  local time age
+  # awk reads all input (no `head`: under pipefail its early exit would fail the pipe).
+  time="$(restic_ snapshots --json --host "${BACKUP_HOST:-profilo}" --tag "$1" --latest 1 \
+    | grep -o '"time":"[^"]*"' | awk -F'"' 'NR == 1 {print $4}')"
+  [[ -n "$time" ]] || { log "no $1 snapshot in the repository"; return 1; }
+  time="${time%%.*}"
+  age=$(( ($(date -u +%s) - $(date -u -d "${time/T/ }" +%s)) / 3600 ))
+  if (( age > MAX_AGE_HOURS )); then
+    log "the newest $1 snapshot is $age h old (limit $MAX_AGE_HOURS h): daily backups are not working"
+    return 1
+  fi
+  log "newest $1 snapshot: $time UTC ($age h old)"
 }
 
 do_restore_test() {
   check_settings
   local db
   db="restore_test_$(date -u +%Y%m%d%H%M%S)"
+  # EXIT, not RETURN: under `set -e` a failing step exits without returning, and the copy of
+  # production data must not stay in the cluster (this runs as its own process).
   # shellcheck disable=SC2064  # the name is fixed now
-  trap "dropdb --if-exists '$db' >/dev/null 2>&1 || true" RETURN
+  trap "dropdb --if-exists '$db' >/dev/null 2>&1 || true" EXIT
   # Leftovers of a test that was interrupted (container recreated by a deployment).
   psql -tAq -c "select datname from pg_database where datname like 'restore\_test\_%'" \
     | while read -r old; do log "dropping leftover $old"; dropdb --if-exists "$old"; done
+  fresh db
+  fresh media
   log "latest database snapshot → temporary database $db"
-  restic_ snapshots --tag db --latest 1 --compact
+  restic_ snapshots --host "${BACKUP_HOST:-profilo}" --tag db --latest 1 --compact
   createdb "$db"
-  restic_ dump --tag db latest /profilo.dump | pg_restore --no-owner --exit-on-error -d "$db"
+  restic_ dump --host "${BACKUP_HOST:-profilo}" --tag db latest /profilo.dump | pg_restore --no-owner --exit-on-error -d "$db"
   log "row counts (restored / live now):"
-  local tables table restored live empty=1
+  local tables table restored live restored_total=0 live_total=0
   tables="$(psql -d "$db" -tAq -c "select tablename from pg_tables where schemaname = 'public' order by 1")"
   [[ -n "$tables" ]] || { log "the restored database has no tables"; return 1; }
   for table in $tables; do
     restored="$(psql -d "$db" -tAq -c "select count(*) from public.\"$table\"")"
     live="$(psql -tAq -c "select count(*) from public.\"$table\"" 2>/dev/null || echo '?')"
     printf '  %-28s %8s / %s\n' "$table" "$restored" "$live"
-    [[ "$restored" != 0 ]] && empty=0
+    restored_total=$((restored_total + restored))
+    [[ "$live" =~ ^[0-9]+$ ]] && live_total=$((live_total + live))
   done
   psql -d "$db" -tAq -c "select version_num from alembic_version" | sed 's/^/  alembic_version: /'
-  (( empty == 0 )) || log "note: every restored table is empty"
+  if (( restored_total == 0 && live_total > 0 )); then
+    log "the restored database is empty while the live one has $live_total rows"
+    return 1
+  fi
+  local listing snapshot_files server_files
+  listing="$(restic_ ls --json --host "${BACKUP_HOST:-profilo}" --tag media latest)"
+  snapshot_files="$(grep -c '"type":"file"' <<<"$listing" || true)"
+  server_files="$(find "$MEDIA" -type f | wc -l)"
   log "media: files in the latest snapshot / on the server now"
-  printf '  %s / %s\n' \
-    "$(restic_ ls --json --tag media latest | grep -c '"type":"file"' || true)" \
-    "$(find "$MEDIA" -type f | wc -l)"
+  printf '  %s / %s\n' "$snapshot_files" "$server_files"
+  if (( snapshot_files == 0 && server_files > 0 )); then
+    log "the latest media snapshot has no files while the server has $server_files"
+    return 1
+  fi
   log "repository check with 5% of the data read back"
   restic_ check --read-data-subset=5% --quiet
   log "restore test passed"
 }
 
 schedule() {
+  # Stopped by a deployment (the container is recreated): the running job is stopped as a
+  # whole (restic unlocks the repository) and its day / month mark is not written, so it
+  # runs again after the restart.
+  trap 'log "stopping"; [[ -n "$JOB" ]] && kill -TERM -- "-$JOB" 2>/dev/null; wait; exit 143' TERM INT
   check_settings || log "settings incomplete: every job will fail and alert until fixed"
   log "scheduler: backup daily at $BACKUP_AT UTC, restore test on day $RESTORE_TEST_DAY at $RESTORE_TEST_AT UTC"
   mkdir -p "$STATE"
@@ -195,7 +250,8 @@ schedule() {
       run_job restore-test do_restore_test || true
       echo "$month" > "$STATE/restore-test-month"
     fi
-    sleep 30
+    sleep 30 &
+    wait $! || true
   done
 }
 
@@ -204,7 +260,7 @@ case "${1:-schedule}" in
   backup) run_job backup do_backup ;;
   restore-test) run_job restore-test do_restore_test ;;
   snapshots) check_settings && restic_ snapshots ;;
-  dump-db) check_settings >&2 && restic_ dump --tag db latest /profilo.dump ;;
+  dump-db) check_settings >&2 && restic_ dump --host "${BACKUP_HOST:-profilo}" --tag db latest /profilo.dump ;;
   restic) shift; check_settings && restic_ "$@" ;;
   __do_backup) do_backup ;;
   __do_restore_test) do_restore_test ;;

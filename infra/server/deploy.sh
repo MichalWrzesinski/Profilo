@@ -35,9 +35,15 @@ UPSTREAMS="$APP_DIR/caddy/upstreams.caddy"
 # The colour Caddy serves, written only after a successful reload (upstreams.caddy may name
 # a colour Caddy never loaded if a run was killed in between).
 LIVE_FILE="$APP_DIR/caddy/live"
-# Background services; the backup service only where the workflow configured it.
-BACKGROUND=(worker beat)
-[[ -f "$APP_DIR/backup/config" ]] && BACKGROUND+=(backup)
+# background_of <tag>: background services of a release — the backup service only where the
+# workflow configured backups and the release has it (releases before TASK-022 do not).
+background_of() {
+  local services="worker beat"
+  if [[ -f "$APP_DIR/backup/config" ]] && grep -q '^  backup:' "$APP_DIR/releases/$1/compose.yml"; then
+    services+=" backup"
+  fi
+  echo "$services"
+}
 
 log() { echo "[deploy $(date -u +%H:%M:%S)] $*"; }
 
@@ -253,7 +259,8 @@ switch_back() {
   # shellcheck disable=SC2046
   remove $(app_services "$TARGET") || true
   if [[ "$BACKGROUND_SWITCHED" == 1 ]]; then
-    compose "$PREV_TAG" up -d --no-deps --wait --wait-timeout 180 "${BACKGROUND[@]}" || return 1
+    # shellcheck disable=SC2046  # service names
+    compose "$PREV_TAG" up -d --no-deps --wait --wait-timeout 180 $(background_of "$PREV_TAG") || return 1
   fi
   smoke && touch "$APP_DIR/releases/$PREV_TAG" && log "previous release $PREV_TAG serves again"
 }
@@ -338,8 +345,8 @@ else
   log "deploying $NEW_TAG (previous: ${PREV_TAG:-none})"
 fi
 if [[ "${DEPLOY_SKIP_PULL:-0}" != 1 ]]; then
-  pull=(api-blue client-blue)
-  [[ " ${BACKGROUND[*]} " == *" backup "* ]] && pull+=(backup)
+  # shellcheck disable=SC2207  # service names
+  pull=(api-blue client-blue $(background_of "$NEW_TAG" | grep -o backup || true))
   if ! compose "$NEW_TAG" pull --quiet "${pull[@]}"; then
     log "pulling images failed; the running release was not changed"
     exit 1
@@ -356,11 +363,14 @@ fi
 # (Celery finishes running tasks; exactly one beat and one backup scheduler must run).
 BACKGROUND_SWITCHED=0
 background() {
+  local services
+  services="$(background_of "$NEW_TAG")"
   BACKGROUND_SWITCHED=1
-  compose "$NEW_TAG" up -d --no-deps --wait --wait-timeout 180 "${BACKGROUND[@]}" \
-    || { log "${BACKGROUND[*]} of $NEW_TAG did not become healthy"; return 1; }
+  # shellcheck disable=SC2086  # service names
+  compose "$NEW_TAG" up -d --no-deps --wait --wait-timeout 180 $services \
+    || { log "$services of $NEW_TAG did not become healthy"; return 1; }
   # Backups switched off (no backup/config any more): no stale backup container.
-  [[ " ${BACKGROUND[*]} " == *" backup "* ]] || remove backup
+  [[ "$services" == *backup* ]] || remove backup
 }
 
 if switch_to "$NEW_TAG" && smoke && background; then

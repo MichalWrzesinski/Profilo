@@ -125,6 +125,10 @@ services:
     image: ghcr.io/michalwrzesinski/profilo-backup:${IMAGE_TAG:?IMAGE_TAG is required}
     profiles: [backup]
     restart: unless-stopped
+    # tini as PID 1 forwards SIGTERM to the scheduler, which stops a running job cleanly
+    # (restic removes its repository lock) within the grace period.
+    init: true
+    stop_grace_period: 30s
     env_file:
       - path: ${APP_DIR:?APP_DIR is required}/.env.secrets
         required: false
@@ -135,7 +139,8 @@ services:
       PGUSER: ${POSTGRES_USER:?}
       PGPASSWORD: ${POSTGRES_PASSWORD:?}
       PGDATABASE: ${POSTGRES_DB:?}
-      BACKUP_HOST: profilo-${ENVIRONMENT:-production}
+      # Fixed: retention groups snapshots by host and tag, a changed name would never be pruned.
+      BACKUP_HOST: profilo
     volumes:
       - media:/data/media:ro
       - backup_state:/state

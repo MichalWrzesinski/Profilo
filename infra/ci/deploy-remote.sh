@@ -32,7 +32,8 @@ endgroup() { echo "::endgroup::"; }
 [[ "${SMTP_HOST:-}" =~ ^[A-Za-z0-9.-]+$ && "${SMTP_PORT:-}" =~ ^[0-9]{2,5}$ ]] || fail "invalid SMTP host or port"
 # Single-quoted in the env file (taken literally: `$`, `#` and spaces are safe).
 for value in "$SMTP_USERNAME" "$SMTP_PASSWORD" "$MAIL_FROM"; do
-  [[ "$value" != *"'"* && "$value" != *$'\n'* ]] || fail "SMTP values must not contain ' or a line break"
+  [[ "$value" != *"'"* && "$value" != *$'\n'* && "$value" != *$'\r'* ]] \
+    || fail "SMTP values must not contain ' or a line break"
 done
 case "${SMTP_SECURITY:-}" in
   starttls) tls=(SMTP_STARTTLS=true SMTP_SSL=false) ;;
