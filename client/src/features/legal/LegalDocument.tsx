@@ -18,8 +18,8 @@ export function LegalDocument({ title, children }: Props) {
           <p className="muted">{LEGAL_VERSION}</p>
           <Alert variant="warning">
             <b>Wersja demonstracyjna.</b> Ten serwis jest wersją demo oprogramowania Profilo. Konta,
-            strony i wszystkie dane mogą zostać usunięte bez uprzedzenia i bez podania przyczyny
-            podczas resetu lub czyszczenia platformy
+            strony i wszystkie dane mogą zostać usunięte bez uprzedzenia podczas resetu lub
+            czyszczenia platformy demonstracyjnej
           </Alert>
           {children}
         </article>
