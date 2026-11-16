@@ -75,3 +75,61 @@ Każdy wpis ma te części:
   - CTO: model sesji, kolejność blokad, bezpiecznik danych.
   - DevOps: runbook, worker, Beat, staging nadal zablokowany.
   - PO: sprzeczność kontraktu ze scenariuszem, umiejscowienie kwarantanny.
+
+## ITER-05 — Release readiness
+
+- **Iteracja / data / commity:** 2026-11-15 – 2026-11-16. TASK-019 (PR #34, 6 commitów), TASK-020 (PR #35, 9), dokończenie TASK-003 na współdzielonym VPS (PR #36, 7, i PR #37, 2), TASK-021 (PR #38, 9), TASK-022 (PR #39, 7), TASK-023 (PR #40, 14).
+- **Co zrobiono:**
+  - strona główna, regulamin i polityka prywatności; zgłaszanie nadużyć i blokowanie stron przez operatora (CLI);
+  - staging działa na współdzielonym VPS za nginx hosta i sam się wdraża po każdym merge'u;
+  - wdrożenie produkcyjne blue-green z kopią bazy przed migracjami i automatycznym powrotem, codzienne szyfrowane kopie poza serwerem z comiesięcznym testem odtworzenia, Sentry i Better Stack. Trzy ostatnie zadania mają status BLOCKED: czekają na serwer produkcyjny, Storage Box i konta Sentry/Better Stack.
+- **Problemy:**
+  - **TASK-019:** pośredni commit się nie budował; przebudowałem historię i zrobiłem force-push (za zgodą użytkownika). Teksty prawne nie zgadzały się z rzeczywistością (retencja logów, Sentry, kopie); poprawione po recenzji.
+  - **TASK-020:** CLI operatora nie działało poza API (`NoReferencedTableError`), bo nie importowało wszystkich modeli; zablokowany nick zwalniał się po usunięciu konta. Oba wyszły w recenzji.
+  - **Staging (TASK-003):**
+    - VPS okazał się współdzielony z innymi projektami (nginx i certbot na 80/443), więc pierwotny `bootstrap.sh` (firewall, SSH dla całego serwera) nie mógł tam działać. Dodałem tryb `proxied` i `setup-shared-host.sh` (1 podejście, 2 rundy recenzji).
+    - Dostęp przez SSH i sekrety wymagały kilku rund z użytkownikiem: komendy z Maca uruchamiane na VPS, klucz SSH z hasłem, wpisanie adresu e-mail jako komendy. Użytkownik wkleił w czacie hasło do skrzynki; poprosiłem o zmianę i nigdzie go nie użyłem.
+    - Pierwsze wdrożenie przeszło na serwerze, ale test z zewnątrz był czerwony, bo nginx nie był jeszcze przełączony. Wysyłka maili nie działa: dostawca VPS blokuje wychodzące porty 465 i 587 (diagnoza w 3 krokach: kontener, host, firewall).
+  - **TASK-021:**
+    - Pierwsza wersja „bez przestoju” skalowała usługę do dwóch kontenerów pod jedną nazwą. Recenzja pokazała, że DNS Dockera daje ruch nowemu kontenerowi, zanim jest gotowy. Przepisałem na blue-green z przełączaniem Caddy (2. podejście).
+    - Token GitHuba z prawem zapisu trafiał na serwer; zapis przeniesiony do osobnych zadań.
+    - `alembic current` wypisuje `FAILED:` na stdout, przez co niedostępna baza pominęłaby migracje po cichu; teraz wersja schematu jest czytana z bazy przez `psql`.
+    - `bootstrap.sh` nie działał na Ubuntu 24.04 z `ssh.socket`.
+  - **TASK-022:**
+    - `pg_dump | restic --stdin` zostawiłby obciętą kopię jako „najnowszą” przy nieudanym zrzucie.
+    - Wdrożenie przerywałoby kopię w trakcie.
+    - Recenzja znalazła trzy rzeczy: test odtworzenia przechodził przy niedziałających kopiach, nieudany test zostawiał kopię danych produkcyjnych w bazie, a dane usuniętych kopii mogły zostawać w repozytorium dłużej niż 30 dni.
+    - `set -e` nie działa w funkcji wywołanej w `… || status=$?`; zadania uruchamiam więc jako osobny proces.
+  - **TASK-023:**
+    - Pierwszy test scenariusza 3 znalazł hasło w treści wyjątku (żaden wzorzec go nie rozpozna); hasła z żądania są teraz oznaczane jako sekrety przez typ `Password`.
+    - npm zmienił przy instalacji wersje niezwiązanych pakietów; zrobiłem instalację w czystym katalogu.
+    - Część nowych zależności przejściowych miała mniej niż 2 tygodnie (przypięte przez `overrides`), a CI znalazł podatności w przypiętych wersjach. Okazało się, że wersje z poprawkami mają już ponad 2 tygodnie.
+    - Recenzja w 2 rundach: limit błędów chroniący limit zdarzeń w Sentry grupował wszystkie nieobsłużone wyjątki pod jednym kluczem; tunel przyjmował od przeglądarki grupowanie i poziom zdarzeń.
+  - **Narzędzia:** dwa razy automatyczna kontrola bezpieczeństwa komend przestawała odpowiadać. Za drugim razem kończyłem zmiany edytorem plików, a commity zrobiłem, gdy kontrola wróciła.
+- **Decyzje agenta:**
+  - **Blue-green w jednym projekcie Compose** (jedna baza, jedno Valkey, jeden Caddy) zamiast dwóch pełnych stosów; poprzedni kolor czeka do końca weryfikacji, więc powrót trwa sekundę.
+  - **Decyzja o migracjach na podstawie wersji w bazie**, a nie historii wdrożeń: działa także po odtworzeniu kopii.
+  - **restic przez SFTP** zamiast plików `pg_dump | gpg` (szyfrowanie, deduplikacja, retencja i `check`), działający z każdym serwerem SFTP, nie tylko Storage Box.
+  - **Błędy z przeglądarki przez tunel w API:** CSP zostaje `connect-src 'self'`, jeden obraz dla wszystkich środowisk, a serwer drugi raz usuwa dane osobowe.
+  - **Rollback stagingu do commita sprzed TASK-021 uruchamia jego własny `deploy.sh`.** Recenzent proponował skrypt z `main`; uznałem, że skrypt i pliki Compose jednego commita to jeden kontrakt.
+  - **Statusy BLOCKED zamiast DONE** dla TASK-021–023: kod jest zweryfikowany na lokalnych VM, ale scenariusze na prawdziwej produkcji i w zewnętrznych usługach nie zostały sprawdzone.
+- **Udział człowieka:**
+  - Dane VPS, decyzja o dostosowaniu stagingu do współdzielonego serwera („Tak, dostosuj”), komendy na serwerze (skrypt instalacyjny, przełączenie nginx, certbot), sekrety w GitHubie, zgoda na ustawienie zmiennych.
+  - Wybór skrzynki pocztowej zamiast Brevo; zgłoszenie blokady portów u dostawcy VPS jest po stronie użytkownika.
+  - Pytanie o wersję standardów (praca na kopii 1.4.0, źródło lokalne ma już 4.1.0).
+- **Co pomogło:**
+  - **Lokalne maszyny wirtualne z ruchem testowym** w trakcie wdrożeń: dzięki nim liczba błędnych żądań była mierzalna, a nie zakładana.
+  - **Recenzje subagentów:** w każdym zadaniu ITER-05 znalazły co najmniej jeden poważny problem.
+  - **Runbook pisany razem z kodem**; komendy odtwarzania z runbooka sprawdziłem na VM.
+  - **Reguła z AGENTS.md o sekretach tylko w workflow wdrożeniowych** wymusiła czysty podział zadań w GitHub Actions.
+- **Co przeszkadzało:**
+  - Plan zakładał osobne serwery Hetzner (CX23, CX33), a w praktyce jest jeden współdzielony VPS z nginx; skrypt serwerowy i dokumentacja wymagały drugiego trybu.
+  - Standard wdrożeń zakłada chronione środowiska GitHub, niedostępne w darmowym planie; zatwierdzenie produkcji to reguła zachowania, nie zabezpieczenie techniczne.
+  - Reguła „zależności co najmniej 2 tygodnie” nie mówi, co robić, gdy poprawka bezpieczeństwa jest młodsza. Standard devops każe wdrażać poprawki bezpieczeństwa od razu; tym razem konflikt nie wystąpił.
+  - Bez kont zewnętrznych (Sentry, Better Stack, Storage Box) i serwera produkcyjnego trzech zadań nie da się zamknąć.
+- **Rola:**
+  - DevOps: staging, blue-green, kopie, monitoring, diagnoza poczty.
+  - CTO: model wdrożeń, wybór restic i tunelu.
+  - QA/Security: recenzje, testy pod obciążeniem, prywatność zgłoszeń błędów.
+  - Dev: CLI, Sentry w API i kliencie.
+  - PO: treści prawne, zakres danych w zgłoszeniach błędów.
