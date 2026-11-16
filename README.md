@@ -41,3 +41,7 @@ make hooks   # once per clone: gitleaks secret scan before each commit
 | `make api-shell` | Shell in the api container |
 
 Local credentials in `.env.example` are for local development only.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
