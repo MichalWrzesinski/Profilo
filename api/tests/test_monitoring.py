@@ -43,6 +43,7 @@ def sentry(monkeypatch: pytest.MonkeyPatch) -> Iterator[CaptureTransport]:
     settings = get_settings()
     monkeypatch.setattr(settings, "sentry_dsn", SecretStr(DSN))
     monkeypatch.setattr(settings, "sentry_release", RELEASE)
+    monkeypatch.setattr(monitoring, "_throttle", {})
     assert monitoring.init_sentry("api") is True
     transport = CaptureTransport()
     sentry_sdk.get_client().transport = transport
@@ -73,6 +74,31 @@ def test_scrub_text_removes_emails_tokens_phones_and_query_secrets() -> None:
     assert "600 700 800" not in scrubbed
     assert "Zx9_-aaaa" not in scrubbed
     assert "2026-11-16" in scrubbed  # dates are not phone numbers
+
+
+def test_scrub_text_removes_internationalised_addresses() -> None:
+    text = "DETAIL:  Key (email)=(józef.wiśniewski@żółw.pl) already exists. <ąę@例え.jp>"
+    scrubbed = monitoring.scrub_text(text)
+    assert "józef" not in scrubbed
+    assert "żółw" not in scrubbed
+    assert "例え" not in scrubbed
+    assert "Key (email)=([Filtered])" in scrubbed
+
+
+def test_scrub_handles_tuples_and_other_objects() -> None:
+    class Opaque:
+        def __repr__(self) -> str:
+            return f"Opaque({EMAIL})"
+
+    scrubbed = monitoring.scrub_event(
+        {"extra": {"args": (EMAIL, 1, None, True), "set": {EMAIL}, "obj": Opaque(), "n": 2.5}}
+    )
+    assert scrubbed["extra"] == {
+        "args": ["[Filtered]", 1, None, True],
+        "set": ["[Filtered]"],
+        "obj": "Opaque([Filtered])",
+        "n": 2.5,
+    }
 
 
 def test_scrub_event_drops_request_body_cookies_user_and_sensitive_keys() -> None:
@@ -187,12 +213,35 @@ async def test_error_log_with_exc_info_true(sentry: CaptureTransport) -> None:
     no_personal_data(sentry.events[0])
 
 
-def test_worker_reports_with_its_own_service_tag(sentry: CaptureTransport) -> None:
-    assert monitoring.init_sentry("worker") is True
-    sentry_sdk.get_client().transport = sentry
-    sentry_sdk.capture_message("task failed")
+async def test_repeated_error_logs_are_throttled(
+    sentry: CaptureTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clock = [1000.0]
+    monkeypatch.setattr("app.core.monitoring.time.monotonic", lambda: clock[0])
+    for _ in range(5):
+        log.error("rate_limit_unavailable", limit="login")
+    log.error("other_problem")
+    clock[0] += monitoring.THROTTLE_SECONDS + 1
+    log.error("rate_limit_unavailable", limit="login")
     sentry_sdk.flush()
-    assert sentry.events[-1]["tags"]["service"] == "worker"
+    assert [e["message"] for e in sentry.events] == [
+        "rate_limit_unavailable",
+        "other_problem",
+        "rate_limit_unavailable",
+    ]
+    assert "not_reported_since_last" not in sentry.events[0].get("extra", {})
+    assert sentry.events[2]["extra"]["not_reported_since_last"] == 4
+
+
+def test_worker_and_beat_start_monitoring_by_signal(sentry: CaptureTransport) -> None:
+    from app.worker import start_beat_monitoring, start_worker_monitoring
+
+    for start, service in ((start_beat_monitoring, "beat"), (start_worker_monitoring, "worker")):
+        start()
+        sentry_sdk.get_client().transport = sentry
+        sentry_sdk.capture_message("task failed")
+        sentry_sdk.flush()
+        assert sentry.events[-1]["tags"]["service"] == service
 
 
 # --- Browser tunnel ----------------------------------------------------------------------
@@ -236,6 +285,9 @@ def test_error_events_keeps_only_events_and_handles_lengths() -> None:
     assert tunnel.error_events(b"{}\nnot json\n{}") == []
     assert tunnel.error_events(b"{}\n[1]\n{}") == []
     assert tunnel.error_events(b"{}\n\n" + json.dumps({"type": "event"}).encode()) == []
+    deep = b"[" * 100_000
+    assert tunnel.error_events(b"{}\n" + deep) == []
+    assert tunnel.error_events(b'{}\n{"type":"event"}\n' + deep) == []
 
 
 def test_reads_an_envelope_made_by_the_browser_sdk() -> None:
@@ -251,10 +303,14 @@ def test_reads_an_envelope_made_by_the_browser_sdk() -> None:
 
 def test_prepare_sets_server_release_and_scrubs(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(get_settings(), "sentry_release", RELEASE)
-    event = tunnel.prepare(json.loads(json.dumps(BROWSER_EVENT)))
+    raw = json.loads(json.dumps(BROWSER_EVENT))
+    raw.update(fingerprint=["merge-me-into-a-real-issue"], level="fatal")
+    event = tunnel.prepare(raw)
     assert event["release"] == RELEASE
     assert event["environment"] == get_settings().environment
-    assert event["tags"] == {"page": "editor", "service": "browser"}
+    assert event["tags"] == {"service": "browser"}  # the browser chooses no tags,
+    assert event["level"] == "error"  # level
+    assert "fingerprint" not in event  # or grouping
     assert event["contexts"] == {"browser": {"name": "Firefox"}}
     assert event["request"] == {
         "url": "https://profilo.pl/nowe-haslo?token=[Filtered]",
@@ -295,6 +351,23 @@ async def test_forward_posts_scrubbed_events(monkeypatch: pytest.MonkeyPatch) ->
     assert len(sent) == 1
     assert EMAIL.encode() not in sent[0]
     assert DSN.encode() in sent[0]
+
+
+async def test_forward_has_a_global_cap_per_process(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Independent of Valkey: the per-IP limit fails open when Valkey is down."""
+    from collections import deque
+
+    monkeypatch.setattr(get_settings(), "sentry_dsn", SecretStr(DSN))
+    monkeypatch.setattr(tunnel, "_forwarded", deque())
+    clock = [5000.0]
+    monkeypatch.setattr("app.modules.monitoring.tunnel.time.monotonic", lambda: clock[0])
+    sent: list[bytes] = []
+    monkeypatch.setattr(tunnel, "_post", lambda dsn, data: sent.append(data))
+    await tunnel.forward([{"message": str(i)} for i in range(tunnel.MAX_FORWARDED_PER_WINDOW + 5)])
+    assert len(sent) == tunnel.MAX_FORWARDED_PER_WINDOW
+    clock[0] += tunnel.FORWARD_WINDOW_SECONDS + 1
+    await tunnel.forward([{"message": "later"}])
+    assert len(sent) == tunnel.MAX_FORWARDED_PER_WINDOW + 1
 
 
 async def test_forward_failure_is_a_warning(

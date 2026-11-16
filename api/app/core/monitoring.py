@@ -10,6 +10,8 @@ fail-open situations (rate limits without Valkey, failed e-mails) are alerted to
 
 import re
 import sys
+import threading
+import time
 from collections.abc import MutableMapping
 from contextvars import ContextVar
 from typing import Any
@@ -24,7 +26,9 @@ SENSITIVE_KEY = re.compile(
     r"pass|secret|token|auth|cookie|session|e-?mail|phone|dsn|csrf|jwt|api[-_]?key|signature",
     re.IGNORECASE,
 )
-EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
+# Also internationalised addresses (EmailStr accepts them): anything around an @ up to a
+# separator, with a dot in the domain.
+EMAIL = re.compile(r"[^\s@<>()\[\]\"',;:=]+@[^\s@<>()\[\]\"',;:=]+\.[^\s@<>()\[\]\"',;:=]+")
 # JWTs and long opaque strings (one-time tokens, refresh tokens, keys).
 JWT = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 OPAQUE = re.compile(r"(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{32,}(?![A-Za-z0-9_-])")
@@ -50,7 +54,6 @@ STRUCTURAL = frozenset(
         "timestamp",
         "start_timestamp",
         "dist",
-        "fingerprint",
         "server_name",
         "request_id",
     }
@@ -64,7 +67,8 @@ _REQUEST_SECRETS: ContextVar[tuple[str, ...]] = ContextVar("request_secrets", de
 
 
 def redact(value: str) -> str:
-    """Marks a value of the current request (task) as secret; pydantic validator."""
+    """Marks a value of the current request (task) as secret; pydantic validator. Values under
+    four characters are not hunted for (they would match ordinary text)."""
     if len(value) >= 4:
         _REQUEST_SECRETS.set((*_REQUEST_SECRETS.get(), value))
     return value
@@ -98,9 +102,12 @@ def _scrub(value: Any) -> Any:
             else:
                 value[key] = _scrub(value[key])
         return value
-    if isinstance(value, list):
+    if isinstance(value, list | tuple | set | frozenset):
         return [_scrub(item) for item in value]
-    return value
+    if value is None or isinstance(value, bool | int | float):
+        return value
+    # Anything else would be serialised with repr() by the SDK: scrub that text.
+    return scrub_text(repr(value))
 
 
 def scrub_event(event: Any, _hint: Any = None) -> Any:
@@ -152,11 +159,35 @@ def init_sentry(service: str) -> bool:
     return True
 
 
+# Per process: the first entry of a kind is sent at once, then at most one per window, with
+# the number left out since. An outage that logs on every request (Valkey down, a daily cap
+# reached) must not use up the Sentry quota and hide everything else.
+THROTTLE_SECONDS = 600.0
+_throttle: dict[str, tuple[float, int]] = {}
+_throttle_lock = threading.Lock()
+
+
+def _allowed(kind: str) -> tuple[bool, int]:
+    """Whether an entry of this kind may be sent now, and how many were left out before it."""
+    now = time.monotonic()
+    with _throttle_lock:
+        last, skipped = _throttle.get(kind, (None, 0))
+        if last is not None and now - last < THROTTLE_SECONDS:
+            _throttle[kind] = (last, skipped + 1)
+            return False, 0
+        _throttle[kind] = (now, 0)
+        return True, skipped
+
+
 def report_errors(
     _logger: Any, _method: str, event_dict: MutableMapping[str, Any]
 ) -> MutableMapping[str, Any]:
-    """structlog processor: error-level entries are sent to Sentry (scrubbed in before_send)."""
+    """structlog processor: error-level entries are sent to Sentry (scrubbed in before_send),
+    throttled per kind of entry."""
     if event_dict.get("level") not in ("error", "critical") or not sentry_sdk.is_initialized():
+        return event_dict
+    allowed, skipped = _allowed(str(event_dict.get("event")))
+    if not allowed:
         return event_dict
     exc = event_dict.get("exc_info")
     if exc is True:
@@ -165,6 +196,8 @@ def report_errors(
         for key, value in event_dict.items():
             if key not in ("event", "level", "timestamp", "exc_info"):
                 scope.set_extra(key, value)
+        if skipped:
+            scope.set_extra("not_reported_since_last", skipped)
         if isinstance(exc, BaseException):
             scope.set_extra("log_event", event_dict.get("event"))
             sentry_sdk.capture_exception(exc)

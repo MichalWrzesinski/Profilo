@@ -9,7 +9,9 @@ server's release and environment, and forwarded with the server's DSN. Everythin
 
 import asyncio
 import json
+import time
 import urllib.request
+from collections import deque
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit
@@ -20,6 +22,11 @@ from app.core.settings import get_settings
 
 MAX_ENVELOPE_BYTES = 200 * 1024
 FORWARD_TIMEOUT_SECONDS = 5.0
+# Per process and independent of Valkey (the per-IP limit fails open without it): at most
+# this many browser events are forwarded per window, whoever sends them.
+MAX_FORWARDED_PER_WINDOW = 60
+FORWARD_WINDOW_SECONDS = 600.0
+_forwarded: deque[float] = deque()
 
 
 @dataclass(frozen=True)
@@ -59,7 +66,7 @@ def error_events(body: bytes) -> list[dict[str, Any]]:
             continue
         try:
             item = json.loads(header)
-        except ValueError:
+        except ValueError, RecursionError:  # RecursionError: deeply nested input
             break
         if not isinstance(item, dict):
             break
@@ -73,7 +80,7 @@ def error_events(body: bytes) -> list[dict[str, Any]]:
             continue
         try:
             event = json.loads(payload)
-        except ValueError:
+        except ValueError, RecursionError:
             continue
         if isinstance(event, dict) and ("exception" in event or "message" in event):
             events.append(event)
@@ -85,9 +92,10 @@ def prepare(event: dict[str, Any]) -> dict[str, Any]:
     event["environment"] = settings.environment
     if settings.sentry_release:
         event["release"] = settings.sentry_release
-    tags = event.get("tags")
-    event["tags"] = {**(tags if isinstance(tags, dict) else {}), "service": "browser"}
-    for field in ("user", "extra", "modules"):
+    # Anyone can post here: the browser does not choose grouping, level or tags.
+    event["tags"] = {"service": "browser"}
+    event["level"] = "error"
+    for field in ("user", "extra", "modules", "fingerprint"):
         event.pop(field, None)
     contexts = event.get("contexts")
     # Browser, OS and device are useful; nothing else from the visitor's machine.
@@ -141,6 +149,12 @@ async def forward(events: list[dict[str, Any]]) -> None:
     if dsn is None:
         return
     for event in events:
+        now = time.monotonic()
+        while _forwarded and now - _forwarded[0] > FORWARD_WINDOW_SECONDS:
+            _forwarded.popleft()
+        if len(_forwarded) >= MAX_FORWARDED_PER_WINDOW:
+            return
+        _forwarded.append(now)
         try:
             await asyncio.to_thread(_post, dsn, envelope(dsn, prepare(event)))
         except Exception as exc:  # network, HTTP error, Sentry rate limit
