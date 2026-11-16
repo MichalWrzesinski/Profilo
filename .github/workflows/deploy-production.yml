@@ -1,0 +1,122 @@
+name: Deploy production
+
+# Started only by the user (AGENTS.md: the agent never starts it). Deploys a commit on main
+# that staging verified: database dump, migrations, zero-downtime switch after readiness,
+# smoke tests, automatic return to the previous release on failure, GitHub release with the
+# merged PRs. Secrets: PROD_SSH_HOST, PROD_SSH_KEY, PROD_SSH_KNOWN_HOSTS,
+# PROD_SMTP_USERNAME, PROD_SMTP_PASSWORD; variables: PROD_DOMAIN, PROD_MAIL_FROM, optional
+# PROD_SSH_USER, PROD_APP_DIR, PROD_SMTP_HOST, PROD_SMTP_PORT, PROD_SMTP_SECURITY
+# (docs/runbook.md).
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full commit SHA on main, deployed and verified on staging
+        required: true
+
+# Job-level permissions: the job that reaches the server gets a read-only token (it is
+# handed to the server for the registry login); only the release job may write.
+permissions: {}
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy production
+    # No GitHub environments on this plan (AGENTS.md): only the owner's account, only from
+    # main. A skipped job evaluates nothing below, so no secret is touched.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.actor == 'MichalWrzesinski' &&
+      github.triggering_actor == 'MichalWrzesinski'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+      statuses: read
+    env:
+      SHA: ${{ inputs.sha }}
+      DOMAIN: ${{ vars.PROD_DOMAIN }}
+      SSH_USER: ${{ vars.PROD_SSH_USER || 'deploy' }}
+      APP_DIR: ${{ vars.PROD_APP_DIR || '/srv/profilo' }}
+    steps:
+      - name: Validate inputs
+        run: '[[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::invalid commit SHA (40 hex characters)"; exit 1; }'
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Check the commit is on main and verified on staging
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "::error::$SHA is not on main"; exit 1; }
+          state=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/statuses" \
+            --jq '[.[] | select(.context == "deploy/staging")][0].state // "none"')
+          [[ "$state" == success ]] || { echo "::error::$SHA was not deployed and verified on staging (deploy/staging: $state)"; exit 1; }
+          # The runner script comes from main; the stack files from the deployed commit.
+          cp infra/ci/deploy-remote.sh "$RUNNER_TEMP/"
+          git checkout --quiet "$SHA"
+
+      - name: Dump, migrate, switch, verify (rollback on failure), external smoke tests
+        env:
+          MODE: deploy
+          ENV_NAME: production
+          SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
+          SMTP_USERNAME: ${{ secrets.PROD_SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.PROD_SMTP_PASSWORD }}
+          MAIL_FROM: ${{ vars.PROD_MAIL_FROM }}
+          SMTP_HOST: ${{ vars.PROD_SMTP_HOST || 'smtp-relay.brevo.com' }}
+          SMTP_PORT: ${{ vars.PROD_SMTP_PORT || '587' }}
+          SMTP_SECURITY: ${{ vars.PROD_SMTP_SECURITY || 'starttls' }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: bash "$RUNNER_TEMP/deploy-remote.sh"
+
+  release:
+    name: GitHub release
+    needs: deploy
+    # Same guard as deploy (e.g. "Re-run failed jobs" by another account).
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.actor == 'MichalWrzesinski' &&
+      github.triggering_actor == 'MichalWrzesinski'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      SHA: ${{ inputs.sha }}
+      DOMAIN: ${{ vars.PROD_DOMAIN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      # Tag production-<UTC time> on the commit; the notes list the PRs merged since the
+      # previous production release. Without this tag rollback-production refuses the commit.
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="production-$(date -u +%Y%m%d-%H%M%S)"
+          previous=$(git tag --list 'production-*' --sort=-creatordate | head -n1)
+          args=(--target "$SHA" --title "Production $tag (${SHA:0:7})" --generate-notes)
+          [[ -n "$previous" ]] && args+=(--notes-start-tag "$previous")
+          gh release create "$tag" "${args[@]}"
+          {
+            echo "### Production serves \`${SHA:0:7}\`"
+            echo "https://$DOMAIN — release [$tag]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$tag)"
+          } >> "$GITHUB_STEP_SUMMARY"

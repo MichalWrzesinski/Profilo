@@ -15,6 +15,9 @@
 	}
 }
 
+# Snippets api_upstream and client_upstream (deploy.sh).
+import upstreams.caddy
+
 (tls_acme) {
 }
 
@@ -60,12 +63,14 @@
 	}
 
 	@api path /api/* /media/* /health /ready
+	# The live colour (api-blue/api-green, client-…) comes from upstreams.caddy, written by
+	# deploy.sh next to this file; a release switch is a graceful reload.
 	handle @api {
-		reverse_proxy api:8000
+		import api_upstream
 	}
 
 	handle {
-		reverse_proxy client:3000
+		import client_upstream
 	}
 
 	log {
