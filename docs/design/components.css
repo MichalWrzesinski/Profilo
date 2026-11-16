@@ -153,7 +153,7 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .menu a:hover, .menu button:hover { background: var(--color-blue-100); }
 .menu a[aria-current="page"] { font-weight: var(--font-weight-semibold); }
 .menu hr { border: 0; border-top: var(--border-width) solid var(--color-border); margin: var(--space-2) 0; }
-.menu a.danger { color: var(--color-danger); }
+.menu .danger { color: var(--color-danger); }
 
 /* ---------- Avatar ---------- */
 .avatar { width: 112px; height: 112px; flex: none; border-radius: var(--radius-2xl); display: grid; place-items: center; overflow: hidden; color: #fff; font-weight: var(--font-weight-extrabold); font-size: 38px; letter-spacing: .02em; background: linear-gradient(135deg, color-mix(in srgb, var(--page-accent) 75%, #fff), var(--page-accent)); box-shadow: var(--shadow-avatar); }

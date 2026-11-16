@@ -18,7 +18,7 @@ test('the owner changes the password and then deletes the account', async ({ pag
   await page.getByLabel('Hasło').fill(TEST_PASSWORD);
   await page.getByRole('button', { name: 'Zaloguj się' }).click();
   await page.getByRole('button', { name: 'Menu' }).click();
-  await page.getByRole('menuitem', { name: 'Ustawienia konta' }).click();
+  await page.getByRole('link', { name: 'Ustawienia konta' }).click();
   await expect(page.getByRole('heading', { name: 'Ustawienia konta' })).toBeVisible();
 
   // Scenario 1: change the password; the other session ends, this one goes on.

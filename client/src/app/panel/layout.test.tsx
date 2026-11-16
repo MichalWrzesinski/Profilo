@@ -18,6 +18,7 @@ function renderPanel() {
 }
 
 afterEach(() => {
+  pathname.current = '/';
   tokenStore.set(null);
   vi.unstubAllGlobals();
   vi.clearAllMocks();
@@ -49,7 +50,7 @@ describe('Panel', () => {
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole('button', { name: 'Menu' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Wyloguj się' }));
+    await user.click(screen.getByRole('button', { name: 'Wyloguj się' }));
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/logowanie'));
     expect(fetch.mock.calls.some(([req]) => (req as Request).url.endsWith('/auth/logout'))).toBe(
@@ -65,13 +66,28 @@ describe('Panel', () => {
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole('button', { name: 'Menu' }));
-    const settings = screen.getByRole('menuitem', { name: 'Ustawienia konta' });
+    const settings = screen.getByRole('link', { name: 'Ustawienia konta' });
     expect(settings).toHaveAttribute('href', '/panel/konto');
     // Back to the panel from any page of it; the current page is marked.
-    expect(screen.getByRole('menuitem', { name: 'Panel' })).toHaveAttribute('href', '/panel');
-    expect(screen.getByRole('menuitem', { name: 'Panel' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Panel' })).toHaveAttribute('href', '/panel');
+    expect(screen.getByRole('link', { name: 'Panel' })).toHaveAttribute('aria-current', 'page');
     await user.click(settings);
 
-    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Menu konta' })).toBeNull();
+  });
+
+  it('closes the menu with Escape and gives the focus back', async () => {
+    mockFetch(() => json(200, SESSION));
+    renderPanel();
+    const user = userEvent.setup();
+    const button = await screen.findByRole('button', { name: 'Menu' });
+
+    await user.click(button);
+    expect(button).toHaveAttribute('aria-expanded', 'true');
+    screen.getByRole('link', { name: 'Panel' }).focus();
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('navigation', { name: 'Menu konta' })).toBeNull();
+    expect(button).toHaveFocus();
   });
 });

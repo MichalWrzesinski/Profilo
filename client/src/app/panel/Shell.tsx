@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Brand } from '@/components/Brand';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
 import { useRequireSession } from '@/lib/useRequireSession';
@@ -12,6 +12,13 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { status, signOut } = useRequireSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  // A disclosure, not an ARIA menu: Escape closes it and gives the focus back to the button.
+  const onMenuKey = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || !menuOpen) return;
+    setMenuOpen(false);
+    menuButton.current?.focus();
+  };
 
   if (status !== 'authenticated') {
     return (
@@ -26,20 +33,22 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
       <header className="topbar">
         <Brand withName={false} />
         <span className="spacer" />
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative' }} onKeyDown={onMenuKey}>
           <button
+            ref={menuButton}
             type="button"
             className="btn btn-primary btn-sm"
-            aria-haspopup="menu"
             aria-expanded={menuOpen}
+            aria-controls="panel-menu"
             onClick={() => setMenuOpen((open) => !open)}
           >
             Menu
           </button>
           {menuOpen && (
-            <div
+            <nav
+              id="panel-menu"
               className="menu"
-              role="menu"
+              aria-label="Menu konta"
               style={{ position: 'absolute', right: 0, top: '110%' }}
             >
               {[
@@ -48,7 +57,6 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
               ].map(({ href, label }) => (
                 <Link
                   key={href}
-                  role="menuitem"
                   className="menu-item"
                   href={href}
                   aria-current={pathname === href ? 'page' : undefined}
@@ -60,7 +68,6 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
               <hr />
               <button
                 type="button"
-                role="menuitem"
                 className="menu-item"
                 onClick={async () => {
                   await signOut();
@@ -69,7 +76,7 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
               >
                 Wyloguj się
               </button>
-            </div>
+            </nav>
           )}
         </div>
       </header>
