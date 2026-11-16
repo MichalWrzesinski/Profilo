@@ -43,7 +43,8 @@
   --color-blue-400: #60A5FA;
   --color-blue-100: #E3EAF5;
   --color-blue-50:  #F1F5FB;
-  --color-accent:   #E0592A;   /* decorative only: logo dot, focus ring, highlights */
+  --color-accent:   #E0592A;   /* logo dot, focus ring, highlights; primary button hover
+                                   (owner's decision 2026-11-16, white text 3.73:1, below WCAG AA) */
   --color-accent-soft: #FFB396;
 
   /* ---------- Neutral / surfaces ---------- */
