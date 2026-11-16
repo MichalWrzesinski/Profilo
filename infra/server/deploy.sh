@@ -370,7 +370,10 @@ background() {
   compose "$NEW_TAG" up -d --no-deps --wait --wait-timeout 180 $services \
     || { log "$services of $NEW_TAG did not become healthy"; return 1; }
   # Backups switched off (no backup/config any more): no stale backup container.
-  [[ "$services" == *backup* ]] || remove backup
+  if [[ "$services" != *backup* ]]; then
+    [[ -f "$APP_DIR/backup/config" ]] && log "warning: release $NEW_TAG has no backup service — off-site backups stop until a newer release is deployed"
+    remove backup
+  fi
 }
 
 if switch_to "$NEW_TAG" && smoke && background; then

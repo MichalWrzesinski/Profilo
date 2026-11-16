@@ -32,6 +32,7 @@ RESTORE_TEST_AT="${RESTORE_TEST_AT:-04:30}"
 # The restore test fails when the newest snapshot is older than this (daily backups broken).
 MAX_AGE_HOURS="${BACKUP_MAX_AGE_HOURS:-36}"
 JOB=""
+SLEEP=""
 export TZ=UTC
 export RESTIC_PASSWORD_FILE="$SECRETS/restic-password"
 export RESTIC_CACHE_DIR="$STATE/cache"
@@ -166,7 +167,7 @@ fresh() {
   local time age
   # awk reads all input (no `head`: under pipefail its early exit would fail the pipe).
   time="$(restic_ snapshots --json --host "${BACKUP_HOST:-profilo}" --tag "$1" --latest 1 \
-    | grep -o '"time":"[^"]*"' | awk -F'"' 'NR == 1 {print $4}')"
+    | { grep -o '"time":"[^"]*"' || true; } | awk -F'"' 'NR == 1 {print $4}')"
   [[ -n "$time" ]] || { log "no $1 snapshot in the repository"; return 1; }
   time="${time%%.*}"
   age=$(( ($(date -u +%s) - $(date -u -d "${time/T/ }" +%s)) / 3600 ))
@@ -229,7 +230,7 @@ schedule() {
   # Stopped by a deployment (the container is recreated): the running job is stopped as a
   # whole (restic unlocks the repository) and its day / month mark is not written, so it
   # runs again after the restart.
-  trap 'log "stopping"; [[ -n "$JOB" ]] && kill -TERM -- "-$JOB" 2>/dev/null; wait; exit 143' TERM INT
+  trap 'log "stopping"; [[ -n "$SLEEP" ]] && kill "$SLEEP" 2>/dev/null; [[ -n "$JOB" ]] && kill -TERM -- "-$JOB" 2>/dev/null; wait; exit 143' TERM INT
   check_settings || log "settings incomplete: every job will fail and alert until fixed"
   log "scheduler: backup daily at $BACKUP_AT UTC, restore test on day $RESTORE_TEST_DAY at $RESTORE_TEST_AT UTC"
   mkdir -p "$STATE"
@@ -251,7 +252,9 @@ schedule() {
       echo "$month" > "$STATE/restore-test-month"
     fi
     sleep 30 &
-    wait $! || true
+    SLEEP=$!
+    wait "$SLEEP" || true
+    SLEEP=""
   done
 }
 
