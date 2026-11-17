@@ -21,6 +21,7 @@ Personal business-card pages (Polish-language competitor of about.me). Standards
 - Tests: pytest + httpx (backend), Vitest + Testing Library (frontend), Playwright (E2E main flow and smoke tests); coverage threshold 95 % per app (quality-checks standard)
 - Contract check: `api/scripts/check_contract.py` compares the FastAPI spec with `docs/api/openapi.yaml` (implemented paths, methods, 2xx statuses, request/response property names recursively; an object with fields on one side only is a difference)
 - Dependency audits: `pip-audit` (runtime deps, hashes) and `npm audit --omit=dev` fail on any advisory; dev-only npm advisories fail at high/critical, moderate/low are reported only
+- Temporary owner-approved audit exception (2026-11-17): only `picomatch` advisory `GHSA-fc5q-39xc-vjpf`, high severity and range `<=4.0.7`, is accepted until **2026-11-24 00:00 UTC**. `client/scripts/audit.mjs` reports it and automatically blocks it again at expiry; changed/new advisories still block under the normal rules. This is temporary risk acceptance, not a claim that the vulnerability is fixed or unreachable. Remove the exception when an upstream fix is available.
 - Images: base images pinned to patch version + digest; Dependabot weekly for uv, npm, Docker, Compose, GitHub Actions
 - UI language: Polish only; product docs and code in English
 - Runtime: Docker Compose (caddy, client, api, worker, beat, db, valkey); same Compose for staging and production
