@@ -33,7 +33,7 @@ const FEATURES = [
 export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string }) {
   return (
     <>
-      <SiteHeader />
+      <SiteHeader className={styles.topbar} />
       <main className={styles.page}>
         <section className={styles.hero}>
           <div className={styles.intro}>

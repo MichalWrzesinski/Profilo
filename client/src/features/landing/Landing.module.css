@@ -1,3 +1,8 @@
+/* The top bar's bottom line is darker than the gradient's start, so the bar stands out. */
+.topbar {
+  border-bottom-color: color-mix(in srgb, var(--color-blue-400) 55%, var(--color-navy-800));
+}
+
 /* A gradient under the top bar, fading into the page background over about 500 px. The
    headline highlight uses the darker accent, which keeps 3:1 on its top (large text, WCAG AA);
    50 % is as dark as the start can get without changing that colour. */
