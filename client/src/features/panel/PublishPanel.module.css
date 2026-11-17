@@ -1,6 +1,7 @@
 .panel {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: var(--space-5);
   align-items: start;
 }
@@ -56,6 +57,11 @@
   margin-top: 0;
 }
 
+.upToDate {
+  position: relative;
+  top: -2px;
+}
+
 .address {
   overflow-wrap: anywhere;
   font-weight: var(--font-weight-semibold);
@@ -63,17 +69,9 @@
 
 .actions {
   grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.actions > :global(.btn) {
-  width: 100%;
-  min-width: 0;
-  justify-content: center;
-  text-align: center;
-  white-space: normal;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .wrap {
@@ -95,14 +93,5 @@
 
   .thumb {
     display: none;
-  }
-
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-  }
-
-  .actions > :global(.btn) {
-    width: auto;
   }
 }

@@ -170,6 +170,27 @@ test('a new owner publishes a page that looks exactly like the preview', async (
         await expect(header.getByRole('button', { name: /Opublikuj/ })).toBeVisible();
         await expect(header.getByRole('button', { name: /Udostępnij/ })).toBeVisible();
       } else if (width > 860) await expect(header).toContainText(`Zalogowano jako ${email}`);
+      if (path === '/panel' && width > 860) {
+        const pageCard = page.getByRole('region', { name: 'Twoja strona' });
+        const shareCard = page.getByRole('region', { name: 'Udostępnij' });
+        const controls = [
+          pageCard.getByRole('button', { name: 'Opublikuj zmiany' }),
+          pageCard.getByRole('button', { name: 'Ukryj stronę' }),
+          pageCard.getByRole('link', { name: 'Edytuj stronę' }),
+          shareCard.getByRole('button', { name: 'Kopiuj adres' }),
+          shareCard.getByRole('button', { name: 'Pobierz kod QR w formacie PNG' }),
+          shareCard.getByRole('button', { name: 'Pobierz kod QR w formacie SVG' }),
+        ];
+        const rows = await Promise.all(
+          controls.map(async (control) => {
+            await expect(control).toBeVisible();
+            const box = await control.boundingBox();
+            expect(box).not.toBeNull();
+            return box!.y;
+          }),
+        );
+        expect(Math.max(...rows) - Math.min(...rows)).toBeLessThan(1);
+      }
       if (width === 320)
         expect(await header.evaluate((el) => Math.round(el.getBoundingClientRect().height))).toBe(
           56,
