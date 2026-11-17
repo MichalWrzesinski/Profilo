@@ -2,7 +2,7 @@ import { ArrowUpRight, Briefcase, Mail, MapPin, Phone } from 'lucide-react';
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { Logo } from '@/components/Brand';
-import { LinkIcon, LinkMark, shortUrl } from '@/components/LinkIcon';
+import { domainName, LinkIcon, LinkMark, MARKS, shortUrl } from '@/components/LinkIcon';
 import { formatPhone } from '@/lib/phone';
 import { PLACEHOLDER_ABUSE_EMAIL } from '@/lib/operator';
 import { initials, mailtoHref, type PublicProfile } from '@/lib/publicProfile';
@@ -142,13 +142,24 @@ function LinkList({ content }: { content: Content }) {
 function IconLinks({ content }: { content: Content }) {
   return (
     <ul className="icon-links" aria-label="Znajdziesz mnie tutaj">
-      {content.links.map((link) => (
-        <li key={link.id}>
-          <a href={link.url} title={link.label} aria-label={`${link.label}${NEW_TAB}`} {...EXTERNAL}>
-            <LinkMark service={link.service} />
-          </a>
-        </li>
-      ))}
+      {content.links.map((link) => {
+        // A service without a mark is named after its domain, not shown as a bare globe.
+        const name = link.service === 'other' ? domainName(link.url) : null;
+        const mark = link.service === 'other' ? name : MARKS[link.service];
+        return (
+          <li key={link.id}>
+            <a
+              href={link.url}
+              title={link.label}
+              className={name ? 'is-text' : undefined}
+              aria-label={`${mark}: ${link.label}${NEW_TAB}`}
+              {...EXTERNAL}
+            >
+              {name ? <span>{name}</span> : <LinkMark service={link.service} />}
+            </a>
+          </li>
+        );
+      })}
     </ul>
   );
 }

@@ -159,10 +159,34 @@ describe('PublicPage', () => {
     expect(container.querySelector('.pp-card > .bgfill.hero-art')).not.toBeNull();
     const icons = screen.getByRole('list', { name: 'Znajdziesz mnie tutaj' });
     expect(icons).toHaveClass('icon-links');
-    const first = screen.getByRole('link', { name: 'Link 0 (otwiera się w nowej karcie)' });
+    const first = screen.getByRole('link', { name: 'GH: Link 0 (otwiera się w nowej karcie)' });
     expect(first).toHaveTextContent('GH');
     expect(first).toHaveAttribute('rel', 'nofollow ugc noopener noreferrer');
     expect(container.querySelectorAll('.vcard')).toHaveLength(1);
+  });
+
+  it('names a Card link without a mark after its domain', () => {
+    render(
+      <PublicPage
+        profile={publicProfile({
+          layout: 'card',
+          links: [
+            {
+              id: 'l1',
+              service: 'other',
+              label: 'Mój blog',
+              url: 'https://blog.webhome.pl',
+            },
+          ],
+        })}
+      />,
+    );
+
+    const link = screen.getByRole('link', {
+      name: 'BlogWebhome: Mój blog (otwiera się w nowej karcie)',
+    });
+    expect(link).toHaveTextContent('BlogWebhome');
+    expect(link).toHaveClass('is-text');
   });
 
   it('lists more than six links in a second card below the card', () => {

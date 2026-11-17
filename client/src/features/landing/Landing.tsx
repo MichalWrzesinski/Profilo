@@ -33,7 +33,7 @@ const FEATURES = [
 export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string }) {
   return (
     <>
-      <SiteHeader />
+      <SiteHeader className={styles.topbar} />
       <main className={styles.page}>
         <section className={styles.hero}>
           <div className={styles.intro}>
@@ -70,15 +70,16 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
             <span className={`${styles.live} ${handwriting.className}`} aria-hidden="true">
               Zobacz na żywo
               <svg viewBox="0 0 64 64" width="56" height="56" fill="none">
-                {/* A quarter circle bulging downwards from the caption up to the phone, with an arrowhead. */}
+                {/* From the caption: a short way right, up, then right again into the phone. */}
                 <path
-                  d="M4 60 A54 54 0 0 0 58 6"
+                  d="M3 56 H18 Q26 56 26 48 V18 Q26 10 34 10 H58"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
                 <path
-                  d="M51 14 L58 6 L63 15"
+                  d="M51 4 L58 10 L51 16"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"

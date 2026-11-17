@@ -12,7 +12,7 @@ const noSubscription = () => () => undefined;
  * Top bar of the service's own pages (home, legal pages): fits a 320 px screen.
  * A signed-in visitor gets the panel and sign-out instead of login and sign-up.
  */
-export function SiteHeader() {
+export function SiteHeader({ className }: { className?: string } = {}) {
   const { status, resume, hasHint, signOut } = useSession();
   // While a likely session is being restored the buttons keep their place but stay hidden,
   // so a signed-in visitor never sees „Zaloguj się” flash first. The server and hydration
@@ -26,7 +26,7 @@ export function SiteHeader() {
   const restoring = hinted && !resumed && status === 'unknown';
 
   return (
-    <header className={`topbar ${styles.bar}`}>
+    <header className={`topbar ${styles.bar}${className ? ` ${className}` : ''}`}>
       <Brand />
       <span className="spacer" />
       {status === 'authenticated' ? (
