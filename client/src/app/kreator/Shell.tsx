@@ -49,7 +49,7 @@ function WizardFrame({ children }: { children: ReactNode }) {
           leave(link.getAttribute('href') ?? '/edytor');
         }}
       >
-        <Brand withName={false} />
+        <Brand nameOnPhones={false} />
         <Stepper step={current.step} label={current.label} />
         <span className="spacer" />
         <Link className="btn btn-primary btn-sm" href="/edytor">

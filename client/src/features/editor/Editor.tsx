@@ -75,7 +75,7 @@ function EditorLoading({ topbar }: { topbar: boolean }) {
     <>
       {topbar ? (
         <header className={`topbar ${styles.top}`}>
-          <Brand withName={false} />
+          <Brand nameOnPhones={false} />
           <span className="save-state" role="status">
             <span className="spinner" aria-hidden="true" />
             Wczytywanie…
@@ -243,7 +243,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
     <>
       {!wizard && (
         <header className={`topbar ${styles.top}`}>
-          <Brand withName={false} />
+          <Brand nameOnPhones={false} />
           <SaveState status={draft.shownStatus} invalid={draft.invalid} />
           <span className="spacer" />
           {status_ && <span className={`badge ${status_.className} hide-m`}>{status_.label}</span>}

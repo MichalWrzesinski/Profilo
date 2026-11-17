@@ -33,7 +33,7 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
   return (
     <PanelProfileProvider>
       <header className="topbar">
-        <Brand withName={false} />
+        <Brand nameOnPhones={false} />
         <span className="spacer" />
         <span className={`muted hide-m ${styles.account}`}>Zalogowano jako {account?.email}</span>
         <ViewProfileLink />

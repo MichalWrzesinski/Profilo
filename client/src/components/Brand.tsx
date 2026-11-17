@@ -17,11 +17,15 @@ export function Logo({ size }: { size?: number }) {
   );
 }
 
-export function Brand({ withName = true }: { withName?: boolean }) {
+/**
+ * Logo and name, linking home. Crowded top bars (panel, wizard, editor) pass
+ * `nameOnPhones={false}`: the name then shows above 860 px only, so they still fit 320 px.
+ */
+export function Brand({ nameOnPhones = true }: { nameOnPhones?: boolean }) {
   return (
     <Link className="brand" href="/" aria-label="Profilo — strona główna">
       <Logo />
-      {withName && <span>Profilo</span>}
+      <span className={nameOnPhones ? undefined : 'hide-m'}>Profilo</span>
     </Link>
   );
 }
