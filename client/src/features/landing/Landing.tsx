@@ -70,15 +70,15 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
             <span className={`${styles.live} ${handwriting.className}`} aria-hidden="true">
               Zobacz na żywo
               <svg viewBox="0 0 64 64" width="56" height="56" fill="none">
-                {/* A quarter circle rising from the caption to the phone, with an arrowhead. */}
+                {/* A quarter circle bulging downwards from the caption up to the phone, with an arrowhead. */}
                 <path
-                  d="M4 60 A54 54 0 0 1 58 6"
+                  d="M4 60 A54 54 0 0 0 58 6"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
                 />
                 <path
-                  d="M49 1 L58 6 L50 13"
+                  d="M51 14 L58 6 L63 15"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
