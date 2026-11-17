@@ -197,6 +197,7 @@
 }
 
 .footer {
+  width: 100%;
   max-width: var(--container-max);
   margin: 0 auto;
   padding: var(--space-6);

@@ -2,7 +2,6 @@ import { LayoutTemplate, Lightbulb, Mail, QrCode } from 'lucide-react';
 import { Caveat } from 'next/font/google';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ClaimForm } from './ClaimForm';
-import { SiteFooter } from './SiteFooter';
 import styles from './Landing.module.css';
 
 // Handwritten caption next to the example page (self-hosted by next/font, latin-ext for Polish).
@@ -129,7 +128,6 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
           ))}
         </section>
       </main>
-      <SiteFooter />
     </>
   );
 }

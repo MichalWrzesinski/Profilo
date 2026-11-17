@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { SessionProvider } from '@/lib/session';
+import { ServiceFrame } from '@/components/ServiceFrame';
 import Home, { generateMetadata } from './page';
 
 afterEach(() => vi.unstubAllEnvs());
@@ -9,7 +10,9 @@ describe('Home', () => {
     vi.stubEnv('PUBLIC_BASE_URL', 'https://profilo.pl');
     render(
       <SessionProvider>
-        <Home />
+        <ServiceFrame>
+          <Home />
+        </ServiceFrame>
       </SessionProvider>,
     );
 
@@ -33,7 +36,9 @@ describe('Home', () => {
   it('links to sign-up, login and the legal pages', () => {
     render(
       <SessionProvider>
-        <Home />
+        <ServiceFrame>
+          <Home />
+        </ServiceFrame>
       </SessionProvider>,
     );
 

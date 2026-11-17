@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { Alert } from '@/components/Alert';
 import { SiteHeader } from '@/components/SiteHeader';
-import { SiteFooter } from '@/features/landing/SiteFooter';
 import { LEGAL_VERSION } from '@/lib/operator';
 import styles from './LegalDocument.module.css';
 
@@ -24,7 +23,6 @@ export function LegalDocument({ title, children }: Props) {
           {children}
         </article>
       </main>
-      <SiteFooter />
     </>
   );
 }
