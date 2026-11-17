@@ -19,9 +19,9 @@ ERROR_LEVEL = "h"
 
 
 def _logo_box(code: segno.QRCode) -> tuple[int, int]:
-    """An odd, module-aligned square, about a sixth of the symbol's width."""
+    """An odd, module-aligned square, about a quarter of the symbol's width."""
     width = len(code.matrix)
-    size = (width // 6) | 1
+    size = (width // 4) | 1
     return QUIET_ZONE + (width - size) // 2, size
 
 
