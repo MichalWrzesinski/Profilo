@@ -60,8 +60,8 @@ check: lint test contract ## Formatters, linters, type checks, tests with covera
 
 audit: env ## Known vulnerabilities: fails on runtime deps and on high/critical dev deps
 	$(API_RUN_NODEPS) sh -c 'uv export --frozen --no-dev --no-emit-project --quiet -o /tmp/requirements.txt && pip-audit --strict --disable-pip --require-hashes -r /tmp/requirements.txt'
-	$(CLIENT_RUN) npm audit --omit=dev --audit-level=low
-	$(CLIENT_RUN) npm audit --audit-level=high
+	$(CLIENT_RUN) node scripts/audit.mjs --omit=dev
+	$(CLIENT_RUN) node scripts/audit.mjs
 
 secrets: ## Scan the whole git history for secrets (gitleaks)
 	$(COMPOSE) run --rm --no-deps gitleaks git --redact --no-banner /repo
