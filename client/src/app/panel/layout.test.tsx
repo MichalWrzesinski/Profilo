@@ -31,7 +31,39 @@ describe('Panel', () => {
     renderPanel();
 
     expect(screen.getByRole('status')).toHaveTextContent('Wczytywanie');
-    expect(await screen.findByText(/Zalogowano jako anna@example.pl/)).toBeInTheDocument();
+    // The address is in the top bar, not in the page.
+    const account = await screen.findByText('Zalogowano jako anna@example.pl');
+    expect(account.closest('header')).not.toBeNull();
+  });
+
+  it.each([
+    ['published', true],
+    ['unpublished', false],
+    ['draft', false],
+  ])('links to the page from the top bar when it is %s: %s', async (status, shown) => {
+    mockFetch((request) =>
+      new URL(request.url).pathname === '/api/v1/me/profile'
+        ? json(200, { status, publicUrl: 'http://localhost:8080/user/anna', nick: 'anna' })
+        : json(200, SESSION),
+    );
+    renderPanel();
+
+    await screen.findByText('Zalogowano jako anna@example.pl');
+    if (shown) {
+      await waitFor(() =>
+        expect(screen.getByRole('link', { name: /Zobacz swój profil/ })).toHaveAttribute(
+          'href',
+          'http://localhost:8080/user/anna',
+        ),
+      );
+      expect(screen.getByRole('link', { name: /Zobacz swój profil/ })).toHaveAttribute(
+        'target',
+        '_blank',
+      );
+    } else {
+      await screen.findByRole('heading', { name: 'Status strony' });
+      expect(screen.queryByRole('link', { name: /Zobacz swój profil/ })).toBeNull();
+    }
   });
 
   it('sends anonymous visitors to the login page', async () => {
@@ -89,5 +121,31 @@ describe('Panel', () => {
 
     expect(screen.queryByRole('navigation', { name: 'Menu konta' })).toBeNull();
     expect(button).toHaveFocus();
+  });
+
+  it('shows the link to the page once it is published from the panel', async () => {
+    mockFetch((request) => {
+      const path = new URL(request.url).pathname;
+      if (path === '/api/v1/me/profile')
+        return json(200, { status: 'draft', nick: 'anna', version: 1, publicUrl: null });
+      if (path === '/api/v1/me/profile/publish')
+        return json(200, {
+          status: 'published',
+          nick: 'anna',
+          version: 1,
+          hasUnpublishedChanges: false,
+          publicUrl: 'http://localhost:8080/user/anna',
+        });
+      return json(200, { ...SESSION, account: { ...SESSION.account, emailConfirmed: true } });
+    });
+    renderPanel();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Opublikuj' }));
+
+    expect(await screen.findByRole('link', { name: /Zobacz swój profil/ })).toHaveAttribute(
+      'href',
+      'http://localhost:8080/user/anna',
+    );
   });
 });

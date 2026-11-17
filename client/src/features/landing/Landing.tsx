@@ -27,9 +27,9 @@ export function Landing({ host }: { host: string }) {
   return (
     <>
       <SiteHeader />
-      <main>
+      <main className={styles.page}>
         <section className={styles.hero}>
-          <div>
+          <div className={styles.intro}>
             <span className={`badge badge-neutral ${styles.badge}`}>
               Bezpłatnie · bez kodowania
             </span>
