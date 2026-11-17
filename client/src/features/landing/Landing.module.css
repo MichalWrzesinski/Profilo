@@ -95,7 +95,8 @@
   border-radius: 42px;
 }
 
-.example:hover .device {
+.example:hover .device,
+.example:focus-visible .device {
   box-shadow:
     var(--shadow-lg),
     0 0 0 4px var(--color-accent-soft);
@@ -116,6 +117,13 @@
 
 .live svg {
   margin-bottom: 14px;
+}
+
+/* Below about 1180 px the caption would sit on the form's note: it shows on wide screens only. */
+@media (max-width: 1180px) {
+  .live {
+    display: none;
+  }
 }
 
 .device {
