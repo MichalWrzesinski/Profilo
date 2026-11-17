@@ -159,7 +159,7 @@ describe('PublicPage', () => {
     expect(container.querySelector('.pp-card > .bgfill.hero-art')).not.toBeNull();
     const icons = screen.getByRole('list', { name: 'Znajdziesz mnie tutaj' });
     expect(icons).toHaveClass('icon-links');
-    const first = screen.getByRole('link', { name: 'Link 0 (otwiera się w nowej karcie)' });
+    const first = screen.getByRole('link', { name: 'GH: Link 0 (otwiera się w nowej karcie)' });
     expect(first).toHaveTextContent('GH');
     expect(first).toHaveAttribute('rel', 'nofollow ugc noopener noreferrer');
     expect(container.querySelectorAll('.vcard')).toHaveLength(1);

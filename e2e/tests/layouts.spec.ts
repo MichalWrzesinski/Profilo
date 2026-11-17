@@ -95,6 +95,9 @@ test('every layout and accent is readable at phone and desktop widths', async ({
     publicPhone: '601234567',
   });
   for (const link of links(3)) await anna.call('POST', '/api/v1/me/profile/links', link);
+  await anna.call('POST', '/api/v1/me/profile/links', { url: 'https://blog.żółw.com.pl' });
+  await anna.call('POST', '/api/v1/me/profile/links', { url: 'https://github.com' });
+  await anna.call('POST', '/api/v1/me/profile/links', longLinks(1)[0]);
 
   for (const layout of LAYOUTS) {
     for (const accent of ACCENTS) {
@@ -103,8 +106,22 @@ test('every layout and accent is readable at phone and desktop widths', async ({
     }
   }
 
+  // Six links still use Card's compact buttons, including the long domain name.
+  await check(page, `/user/${nick}`, 320);
+  await expect(page.locator('.icon-links a', { hasText: 'BlogŻółw' })).toBeVisible();
+  await expect(page.locator('.icon-links a', { hasText: 'GH' })).toBeVisible();
+  const name = page
+    .locator('.icon-links .is-text span')
+    .filter({
+      hasText: 'PrzykladBardzoDlugiejDomenyExample',
+    })
+    .first();
+  await expect(name).toBeVisible();
+  expect(await name.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  expect(await name.evaluate((el) => getComputedStyle(el).textOverflow)).toBe('ellipsis');
   // Phones with many long links (Card: list in a second card), in two accents per layout.
-  for (const link of longLinks(5)) await anna.call('POST', '/api/v1/me/profile/links', link);
+  for (const link of longLinks(5).slice(1))
+    await anna.call('POST', '/api/v1/me/profile/links', link);
   for (const layout of LAYOUTS) {
     for (const accent of ['blekit', 'miedz']) {
       await anna.publish({ layout, accent });

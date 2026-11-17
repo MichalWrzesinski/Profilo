@@ -4,7 +4,7 @@ import type { components } from '@/lib/api/schema';
 type Service = components['schemas']['LinkService'];
 
 /** Short marks of known services, as in the design system (no brand logos). */
-const MARKS: Record<Exclude<Service, 'other'>, string> = {
+export const MARKS: Record<Exclude<Service, 'other'>, string> = {
   linkedin: 'in',
   github: 'GH',
   x: 'X',
@@ -30,7 +30,20 @@ export function LinkIcon({ service }: { service: Service }) {
 }
 
 // Second-level labels under country domains: „sklep.com.pl” is Sklep, not SklepCom.
-const SECOND_LEVEL = new Set(['com', 'co', 'org', 'net', 'gov', 'edu', 'ac', 'biz', 'info']);
+const SECOND_LEVEL = new Set([
+  'com.pl',
+  'org.pl',
+  'net.pl',
+  'gov.pl',
+  'edu.pl',
+  'biz.pl',
+  'info.pl',
+  'co.uk',
+  'org.uk',
+  'net.uk',
+  'gov.uk',
+  'ac.uk',
+]);
 
 /**
  * A name for a link to a service without a mark, from its address in PascalCase: the
@@ -38,16 +51,17 @@ const SECOND_LEVEL = new Set(['com', 'co', 'org', 'net', 'gov', 'edu', 'ac', 'bi
  * `https://webhome.pl` → „Webhome”, `https://blog.webhome.pl` → „BlogWebhome”.
  */
 export function domainName(url: string): string {
-  let host: string;
-  try {
-    host = new URL(url).hostname.toLowerCase();
-  } catch {
-    return shortUrl(url);
-  }
+  // The host as stored (not URL.hostname, which turns „żabka.pl” into punycode).
+  const match = /^[a-z][a-z0-9+.-]*:\/\/(?:[^@/?#]*@)?([^/:?#]+)/i.exec(url.trim());
+  if (!match) return shortUrl(url);
+  const host = match[1]!.toLowerCase().replace(/\.$/, '');
   const labels = host.split('.').filter(Boolean);
+  // Keep the backend's ASCII display for non-Latin hosts to avoid look-alike domains.
+  if (labels.some((label) => label.startsWith('xn--'))) return shortUrl(url);
   if (labels[0] === 'www') labels.shift();
+  const suffix = labels.slice(-2).join('.');
   if (labels.length > 1) labels.pop(); // top-level domain
-  if (labels.length > 1 && SECOND_LEVEL.has(labels.at(-1)!)) labels.pop();
+  if (labels.length > 1 && SECOND_LEVEL.has(suffix)) labels.pop();
   return labels
     .flatMap((label) => label.split('-'))
     .filter(Boolean)

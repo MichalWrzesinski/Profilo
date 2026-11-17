@@ -33,7 +33,12 @@ describe('domainName', () => {
     ['https://studio-wisniewska.pl', 'StudioWisniewska'],
     ['https://sklep.com.pl', 'Sklep'],
     ['https://shop.example.co.uk', 'ShopExample'],
+    ['https://blog.net.com', 'BlogNet'],
     ['http://localhost:8080', 'Localhost'],
+    ['https://żabka.pl', 'Żabka'],
+    ['https://blog.żółw.com.pl/', 'BlogŻółw'],
+    ['https://xn--e1afmkfd.xn--p1ai/strona', 'xn--e1afmkfd.xn--p1ai/strona'],
+    ['HTTPS://Blog.Webhome.PL.', 'BlogWebhome'],
     ['nie adres', 'nie adres'],
   ])('%s → %s', (url, name) => {
     expect(domainName(url)).toBe(name);

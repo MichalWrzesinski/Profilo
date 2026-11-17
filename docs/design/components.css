@@ -283,7 +283,9 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .pp-card .icon-links a { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; text-decoration: none; background: color-mix(in srgb, var(--page-accent) 10%, #fff); color: var(--page-accent); font-weight: 700; font-size: 15px; border: 1px solid color-mix(in srgb, var(--page-accent) 20%, #fff); }
 .pp-card .icon-links a:hover { background: var(--page-accent); color: #fff; }
 /* A link named after its domain: as tall as the icons, as wide as the name. */
-.pp-card .icon-links a.is-text { width: auto; padding: 0 var(--space-4); font-size: var(--text-sm); }
+.pp-card .icon-links li { max-width: 100%; }
+.pp-card .icon-links a.is-text { width: auto; max-width: 100%; padding: 0 var(--space-4); font-size: var(--text-sm); }
+.pp-card .icon-links a.is-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .pp-card footer { justify-content: center; }
 
 @media (max-width: 860px) {

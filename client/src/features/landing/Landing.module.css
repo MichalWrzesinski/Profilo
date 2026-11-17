@@ -259,7 +259,7 @@
     transform: translateX(-24px);
   }
 
-  /* Turned a quarter: right, down, right becomes down, right, down into the phone. */
+  /* Turned a quarter: right, up, right becomes down, right, down into the phone. */
   .live svg {
     margin: 12px 0 0 10px;
     transform: rotate(90deg);
