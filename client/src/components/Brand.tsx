@@ -26,7 +26,7 @@ export function Brand({ nameOnPhones = true }: { nameOnPhones?: boolean }) {
     <Link
       className={`brand${nameOnPhones ? '' : ' brand-compact'}`}
       href="/"
-      aria-label="Profilo — strona główna"
+      aria-label="Profilo DEMO — strona główna"
     >
       <Logo />
       <span className={`brand-name${nameOnPhones ? '' : ' hide-m'}`}>

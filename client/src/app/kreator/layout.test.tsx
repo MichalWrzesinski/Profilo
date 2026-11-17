@@ -69,7 +69,7 @@ describe('WizardLayout', () => {
     );
 
     await userEvent.click(await screen.findByRole('link', { name: /później/ }));
-    await userEvent.click(screen.getByRole('link', { name: 'Profilo — strona główna' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Profilo DEMO — strona główna' }));
 
     expect(leave.mock.calls).toEqual([['/edytor'], ['/']]);
 
