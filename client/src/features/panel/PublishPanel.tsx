@@ -1,6 +1,6 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { Check, EyeOff, Pencil, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Alert } from '@/components/Alert';
@@ -130,6 +130,7 @@ export function PublishPanel() {
               aria-describedby={blocker ? 'publish-blocker' : undefined}
               onClick={() => void run('publish')}
             >
+              <Upload className="i sm" aria-hidden="true" />
               {publishLabel}
             </button>
             {published && (
@@ -139,10 +140,12 @@ export function PublishPanel() {
                 disabled={busy}
                 onClick={() => void run('unpublish')}
               >
+                <EyeOff className="i sm" aria-hidden="true" />
                 Ukryj stronę
               </button>
             )}
             <Link className="btn btn-secondary btn-sm" href="/edytor">
+              <Pencil className="i sm" aria-hidden="true" />
               Edytuj stronę
             </Link>
           </div>

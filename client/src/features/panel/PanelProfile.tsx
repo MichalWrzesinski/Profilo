@@ -38,14 +38,19 @@ export function PanelProfileProvider({ children }: { children: ReactNode }) {
 }
 
 export function usePanelProfile(): Value {
-  const value = useContext(PanelProfileContext);
+  const value = useOptionalPanelProfile();
   if (!value) throw new Error('usePanelProfile must be used inside <PanelProfileProvider>');
   return value;
 }
 
+export function useOptionalPanelProfile(): Value | null {
+  return useContext(PanelProfileContext);
+}
+
 /** Opens the published page in a new tab; nothing before the first publication. */
-export function ViewProfileLink() {
-  const { profile } = usePanelProfile();
+export function ViewProfileLink({ profile: supplied }: { profile?: OwnerProfile | null } = {}) {
+  const context = useOptionalPanelProfile();
+  const profile = supplied === undefined ? context?.profile : supplied;
   if (profile?.status !== 'published' || !profile.publicUrl) return null;
   return (
     <a

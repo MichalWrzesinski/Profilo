@@ -1,0 +1,14 @@
+.frame {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.frame[data-wizard] {
+  padding-bottom: 76px;
+}

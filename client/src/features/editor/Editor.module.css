@@ -25,7 +25,7 @@
   background: var(--color-blue-50);
 }
 
-/* Above the preview (device toggle); the page's top bar has its own class, `.top`. */
+/* The device toggle above the preview. */
 .previewBar {
   width: 100%;
   max-width: 620px;
@@ -150,49 +150,20 @@
   border-radius: 50%;
 }
 
-.actions {
-  display: contents;
-}
-
-/* Top bar on phones: shorter labels and smaller gaps. */
-.showM {
-  display: none;
-}
-
 @media (max-width: 860px) {
-  .top,
   .previewBar {
     gap: var(--space-2);
   }
-
-  .showM {
-    display: inline-block;
-  }
 }
 
-.top :global(.save-state) {
-  margin-left: calc(50px - var(--space-4));
+.publishIcon {
+  display: none;
 }
-
-@media (max-width: 860px) {
-  .top :global(.save-state) {
-    margin-left: calc(20px - var(--space-2));
-  }
-}
-
 @media (max-width: 600px) {
-  .top {
-    flex-wrap: wrap;
-    height: auto;
-    min-height: var(--topbar-height);
-    padding-block: var(--space-3);
+  .publishIcon {
+    display: block;
   }
-
-  .actions {
-    order: 1;
-    flex-basis: 100%;
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
+  .publishLabel {
+    display: none;
   }
 }

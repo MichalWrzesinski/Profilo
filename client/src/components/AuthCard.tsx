@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Brand } from './Brand';
+import { SiteHeader } from './SiteHeader';
 import styles from './AuthCard.module.css';
 
 type Props = {
@@ -14,11 +14,7 @@ type Props = {
 export function AuthCard({ title, lead, topbarAction, footer, children }: Props) {
   return (
     <>
-      <header className="topbar">
-        <Brand />
-        <span className="spacer" />
-        {topbarAction}
-      </header>
+      <SiteHeader anonymousAction={topbarAction} />
       <main className={styles.main}>
         <div className="card card-pad">
           <h1 className={styles.title}>{title}</h1>

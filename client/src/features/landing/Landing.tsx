@@ -1,8 +1,7 @@
-import { LayoutTemplate, Lightbulb, Mail, QrCode } from 'lucide-react';
+import { LayoutTemplate, Mail, QrCode } from 'lucide-react';
 import { Caveat } from 'next/font/google';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ClaimForm } from './ClaimForm';
-import { SiteFooter } from './SiteFooter';
 import styles from './Landing.module.css';
 
 // Handwritten caption next to the example page (self-hosted by next/font, latin-ext for Polish).
@@ -22,7 +21,7 @@ const FEATURES = [
   {
     icon: QrCode,
     title: 'Stały adres i kod QR',
-    text: 'Adres się nie zmienia, więc linki w CV i na wydrukowanych wizytówkach zawsze działają.',
+    text: 'Adres się nie zmienia, więc linki w CV i na wydrukowanych wizytówkach zawsze działają.',
   },
 ];
 
@@ -39,17 +38,17 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
           <div className={styles.intro}>
             <span className={`badge is-live ${styles.badge}`}>Bezpłatnie · bez kodowania</span>
             <h1>
-              Twoja wizytówka w sieci <em>gotowa w 5 minut</em>
+              Twoja wizytówka w sieci <em>gotowa w 5 minut</em>
             </h1>
             <p className={styles.lead}>
-              Jeden stały adres z opisem, kontaktem i linkami do Twoich profili, który łatwo
-              wstawisz do CV, stopki e-mail czy na wizytówkę
+              Jeden stały adres z opisem, kontaktem i linkami do Twoich profili, który łatwo
+              wstawisz do CV,
+              <br />
+              <span className={styles.nowrap}>stopki e-</span>
+              <wbr />
+              <span className={styles.nowrap}>mail czy na wizytówkę</span>
             </p>
             <ClaimForm host={host} />
-            <p className={`hint ${styles.note}`}>
-              <Lightbulb className="i sm" aria-hidden="true" />
-              Adres możesz zmienić aż do pierwszej publikacji
-            </p>
           </div>
           <a
             className={styles.example}
@@ -78,14 +77,14 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
               >
                 {/* From the caption: a short way right, up, then right again into the phone. */}
                 <path
-                  d="M3 56 H18 Q26 56 26 48 V18 Q26 10 34 10 H58"
+                  d="M3 56 C9 54 14 58 20 55 C28 53 24 44 25 37 C27 27 22 17 29 12 C36 7 47 12 58 10"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
                 <path
-                  d="M51 4 L58 10 L51 16"
+                  d="M51 4 Q55 8 59 10 Q55 13 51 17"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
@@ -100,14 +99,14 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
                 fill="none"
               >
                 <path
-                  d="M3 8 H42 Q50 8 50 16 V56"
+                  d="M3 9 C14 7 26 11 37 9 C48 7 51 13 50 23 C48 34 52 44 50 56"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
                 <path
-                  d="M44 49 L50 56 L56 49"
+                  d="M43 49 Q47 53 50 57 Q54 52 57 49"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
@@ -129,7 +128,6 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
           ))}
         </section>
       </main>
-      <SiteFooter />
     </>
   );
 }

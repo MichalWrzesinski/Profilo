@@ -138,13 +138,50 @@ test('a new owner publishes a page that looks exactly like the preview', async (
   );
   expect(await pageHtml(page)).toBe(previewHtml);
 
-  // The private pages fit a 320 px phone (same owner: the suite's registrations from one
-  // address are limited — AGENTS.md).
-  await page.setViewportSize({ width: 320, height: 800 });
-  for (const path of ['/panel', '/edytor', '/panel/konto']) {
-    await open(page, path);
-    await page.waitForLoadState('networkidle');
-    await expectNoSidewaysScroll(page, path);
+  // One owner exercises shared navigation without increasing the registration budget.
+  for (const width of [1440, 320]) {
+    await page.setViewportSize({ width, height: 800 });
+    for (const path of [
+      '/',
+      '/panel',
+      '/edytor',
+      '/panel/konto',
+      '/regulamin',
+      '/prywatnosc',
+      '/logowanie',
+      '/nie-pamietam-hasla',
+      '/nowe-haslo',
+      '/potwierdz-email',
+      '/rejestracja',
+      '/opublikowano',
+      '/kreator',
+      '/kreator/wyglad',
+      '/kreator/tresc',
+      '/kreator/podglad',
+      '/nie-istnieje',
+    ]) {
+      await open(page, path);
+      await expect(page.getByRole('button', { name: 'Menu', exact: true })).toBeVisible();
+      const header = page.locator('header.topbar');
+      await expect(header).toHaveCount(1);
+      await expect(header.getByRole('link', { name: /Zobacz swój profil/ })).toBeVisible();
+      if (path === '/edytor') {
+        await expect(header).not.toContainText('Zalogowano jako');
+        await expect(header.getByRole('button', { name: /Opublikuj/ })).toBeVisible();
+        await expect(header.getByRole('button', { name: /Udostępnij/ })).toBeVisible();
+      } else if (width > 860) await expect(header).toContainText(`Zalogowano jako ${email}`);
+      if (width === 320)
+        expect(await header.evaluate((el) => Math.round(el.getBoundingClientRect().height))).toBe(
+          56,
+        );
+      const footer = page.getByRole('contentinfo');
+      await expect(footer).toHaveCount(1);
+      await expect(footer.getByRole('link', { name: 'Regulamin', exact: true })).toBeVisible();
+      await expect(
+        footer.getByRole('link', { name: 'Polityka prywatności', exact: true }),
+      ).toBeVisible();
+      await expectNoSidewaysScroll(page, `${path} at ${width}`);
+    }
   }
   await open(page, '/edytor');
   await page.getByRole('tab', { name: 'Podgląd' }).click();

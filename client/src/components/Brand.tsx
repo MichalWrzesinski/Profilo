@@ -29,13 +29,9 @@ export function Brand({ nameOnPhones = true }: { nameOnPhones?: boolean }) {
       aria-label="Profilo DEMO — strona główna"
     >
       <Logo />
-      <span className={`brand-name${nameOnPhones ? '' : ' hide-m'}`}>
-        Profi
-        {/* „DEMO” (drawn by CSS, decorative) starts above the „l”: this server is a demo. */}
-        <span className="brand-demo">l</span>o
-      </span>
+      <span className={`brand-name${nameOnPhones ? '' : ' hide-m'}`}>Profilo</span>
       <span className="brand-mobile-demo" aria-hidden="true">
-        DEMO
+        {' DEMO'}
       </span>
     </Link>
   );

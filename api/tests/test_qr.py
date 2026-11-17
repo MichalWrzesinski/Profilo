@@ -55,7 +55,16 @@ async def test_png_is_1024_px_with_a_quiet_zone_and_encodes_the_address(
     assert image.size == (1024, 1024)
     expected = symbol()
     grid = sampled(response.content, len(expected))
-    assert grid == expected  # the same symbol: it encodes the canonical address
+    # Only the central mark may replace data modules; the rest encodes the same address.
+    for y, row in enumerate(grid):
+        for x, value in enumerate(row):
+            if not (
+                len(grid) * 0.35 < x < len(grid) * 0.65 and len(grid) * 0.35 < y < len(grid) * 0.65
+            ):
+                assert value == expected[y][x]
+    colors = image.getcolors(maxcolors=1024 * 1024)
+    assert colors
+    assert any(color == (224, 89, 42) for _, color in colors)  # logo dot
     assert not any(any(row) for row in grid[:4])  # 4-module quiet zone
     assert not any(any(row[:4]) for row in grid)
     assert image.getpixel((0, 0)) == (255, 255, 255)
@@ -76,6 +85,9 @@ async def test_svg_is_scalable_with_the_same_symbol(client: AsyncClient) -> None
     assert root.get("viewBox") == f"0 0 {size} {size}"
     assert (root.get("width"), root.get("height")) == ("1024", "1024")
     assert URL in response.text  # in the <title>
+    logo = root.find(".//{http://www.w3.org/2000/svg}g[@id='profilo-logo']")
+    assert logo is not None
+    assert logo.find(".//{http://www.w3.org/2000/svg}circle") is not None
 
 
 async def test_svg_is_the_default(client: AsyncClient) -> None:

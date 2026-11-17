@@ -6,7 +6,13 @@ import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useSession } from '@/lib/session';
 
 /** Shared account navigation; the editor saves pending changes before leaving. */
-export function AccountMenu({ beforeLeave }: { beforeLeave?: () => Promise<boolean> }) {
+export function AccountMenu({
+  beforeLeave,
+  beforeSignOut,
+}: {
+  beforeLeave?: () => Promise<boolean>;
+  beforeSignOut?: () => Promise<boolean>;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const { signOut } = useSession();
@@ -69,7 +75,8 @@ export function AccountMenu({ beforeLeave }: { beforeLeave?: () => Promise<boole
             type="button"
             className="menu-item"
             onClick={async () => {
-              if (beforeLeave && !(await beforeLeave())) return;
+              const guard = beforeSignOut ?? beforeLeave;
+              if (guard && !(await guard())) return;
               await signOut();
               router.replace('/logowanie');
             }}

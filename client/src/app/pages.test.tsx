@@ -119,7 +119,11 @@ describe('public pages', () => {
   });
 
   it('renders the password reset pages', () => {
-    render(<ResetRequestPage />);
+    render(
+      <SessionProvider>
+        <ResetRequestPage />
+      </SessionProvider>,
+    );
     expect(screen.getByRole('heading', { name: 'Nie pamiętasz hasła?' })).toBeInTheDocument();
     render(
       <SessionProvider>

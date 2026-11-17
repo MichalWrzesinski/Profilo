@@ -4,7 +4,7 @@ import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Alert } from '@/components/Alert';
-import { Brand } from '@/components/Brand';
+import { AccountHeader } from '@/components/AccountHeader';
 import type { OwnerProfile } from '@/features/editor/fields';
 import { api } from '@/lib/api/client';
 import { SharePanel } from './SharePanel';
@@ -24,13 +24,7 @@ export function PublishedScreen() {
 
   return (
     <>
-      <header className="topbar">
-        <Brand />
-        <span className="spacer" />
-        <Link className="btn btn-secondary btn-sm" href="/edytor">
-          Przejdź do edytora
-        </Link>
-      </header>
+      <AccountHeader profile={profile} />
       <main className={styles.done}>
         {failed ? (
           <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę</Alert>
@@ -48,6 +42,9 @@ export function PublishedScreen() {
               Wstaw ten adres do CV, stopki e-mail albo na wizytówkę.
             </p>
             <SharePanel publicUrl={profile.publicUrl} nick={profile.nick} />
+            <Link className="btn btn-secondary" href="/edytor">
+              Przejdź do edytora
+            </Link>
           </>
         ) : (
           <>

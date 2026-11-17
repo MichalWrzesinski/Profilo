@@ -1,0 +1,64 @@
+.bar {
+  gap: var(--space-4);
+}
+.identity {
+  display: flex;
+  flex-shrink: 0;
+}
+.account {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.editor :global(.save-state) {
+  margin-left: calc(50px - var(--space-4));
+}
+@media (max-width: 1100px) {
+  .editor :global(.brand-name),
+  .editor .actions :global(.hide-m) {
+    display: none !important;
+  }
+}
+@media (max-width: 860px) {
+  .bar {
+    gap: var(--space-2);
+  }
+  .editor :global(.save-state) {
+    margin-left: calc(20px - var(--space-2));
+  }
+}
+@media (max-width: 600px) {
+  .editor {
+    gap: 6px;
+  }
+  .editor :global(.save-state) {
+    margin-left: 14px;
+  }
+  .editor :global(.save-label) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .editor .actions {
+    gap: 6px;
+  }
+  .editor .actions :global(.btn) {
+    padding-inline: 8px;
+  }
+}
+
+@media (max-width: 359px) {
+  .editor :global(.brand-mobile-demo) {
+    display: none;
+  }
+}

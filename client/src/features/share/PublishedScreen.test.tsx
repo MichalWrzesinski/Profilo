@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { mockFetch, json } from '@/test/fetch';
+import { SessionProvider } from '@/lib/session';
 import { PublishedScreen } from './PublishedScreen';
 
 const profile = (overrides: Record<string, unknown> = {}) => ({
@@ -19,7 +20,11 @@ it('celebrates the publication and offers the address and QR code', async () => 
       : new Response('<svg/>', { status: 200 }),
   );
 
-  render(<PublishedScreen />);
+  render(
+    <SessionProvider>
+      <PublishedScreen />
+    </SessionProvider>,
+  );
 
   expect(
     await screen.findByRole('heading', { name: 'Gotowe! Twoja strona jest online' }),
@@ -35,7 +40,11 @@ it('celebrates the publication and offers the address and QR code', async () => 
 it('sends an unpublished page back to the editor', async () => {
   mockFetch(() => json(200, profile({ status: 'unpublished', publicUrl: null })));
 
-  render(<PublishedScreen />);
+  render(
+    <SessionProvider>
+      <PublishedScreen />
+    </SessionProvider>,
+  );
 
   expect(
     await screen.findByRole('heading', { name: 'Strona nie jest opublikowana' }),
@@ -45,7 +54,11 @@ it('sends an unpublished page back to the editor', async () => {
 it('reports a failed load', async () => {
   mockFetch(() => json(500, { status: 500 }));
 
-  render(<PublishedScreen />);
+  render(
+    <SessionProvider>
+      <PublishedScreen />
+    </SessionProvider>,
+  );
 
   expect(await screen.findByText(/Nie udało się wczytać Twojej strony/)).toBeVisible();
 });

@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { HydrationMarker } from '@/components/HydrationMarker';
 import { PrivacyNotice } from '@/components/PrivacyNotice';
 import { SessionProvider } from '@/lib/session';
+import { ServiceFrame } from '@/components/ServiceFrame';
 import './globals.css';
 
 const jakarta = Plus_Jakarta_Sans({
@@ -37,7 +38,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang="pl" className={jakarta.variable}>
       <body>
         <HydrationMarker />
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <ServiceFrame>{children}</ServiceFrame>
+        </SessionProvider>
         <PrivacyNotice />
       </body>
     </html>
