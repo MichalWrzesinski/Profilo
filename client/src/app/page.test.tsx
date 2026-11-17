@@ -24,6 +24,10 @@ describe('Home', () => {
     expect(within(form).getByText('/user/')).toBeInTheDocument();
     expect(field).toHaveAccessibleDescription('profilo.pl/user/twoja-nazwa');
     expect(screen.getByTitle('Przykładowa strona w Profilo')).toHaveAttribute('src', '/przyklad');
+    // The whole phone opens the example page, live, in a new tab.
+    const example = screen.getByRole('link', { name: /Zobacz na żywo przykładową stronę/ });
+    expect(example).toHaveAttribute('href', 'https://profilo.pl/user/anna-wisniewska');
+    expect(example).toHaveAttribute('target', '_blank');
   });
 
   it('links to sign-up, login and the legal pages', () => {

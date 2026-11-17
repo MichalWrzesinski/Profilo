@@ -1,8 +1,12 @@
 import { LayoutTemplate, Lightbulb, Mail, QrCode } from 'lucide-react';
+import { Caveat } from 'next/font/google';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ClaimForm } from './ClaimForm';
 import { SiteFooter } from './SiteFooter';
 import styles from './Landing.module.css';
+
+// Handwritten caption next to the example page (self-hosted by next/font, latin-ext for Polish).
+const handwriting = Caveat({ subsets: ['latin', 'latin-ext'], weight: ['600'], display: 'swap' });
 
 const FEATURES = [
   {
@@ -22,8 +26,11 @@ const FEATURES = [
   },
 ];
 
-/** Home page (PUB-BR-11): what Profilo is, and „Zarezerwuj adres” straight into sign-up. */
-export function Landing({ host }: { host: string }) {
+/**
+ * Home page (PUB-BR-11): what Profilo is, and „Zarezerwuj adres” straight into sign-up. The
+ * example page in the phone frame links to the same page, live, in a new tab.
+ */
+export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string }) {
   return (
     <>
       <SiteHeader />
@@ -46,15 +53,42 @@ export function Landing({ host }: { host: string }) {
               Adres możesz zmienić aż do pierwszej publikacji
             </p>
           </div>
-          <div className={styles.device}>
-            <iframe
-              src="/przyklad"
-              title="Przykładowa strona w Profilo"
-              loading="lazy"
-              inert
-              aria-hidden="true"
-            />
-          </div>
+          <a
+            className={styles.example}
+            href={exampleUrl}
+            target="_blank"
+            rel="noopener"
+            aria-label="Zobacz na żywo przykładową stronę Anny Wiśniewskiej (otwiera się w nowej karcie)"
+          >
+            <span className={styles.device}>
+              <iframe
+                src="/przyklad"
+                title="Przykładowa strona w Profilo"
+                loading="lazy"
+                inert
+                aria-hidden="true"
+              />
+            </span>
+            <span className={`${styles.live} ${handwriting.className}`} aria-hidden="true">
+              Zobacz na żywo
+              <svg viewBox="0 0 64 64" width="56" height="56" fill="none">
+                {/* A quarter circle rising from the caption to the phone, with an arrowhead. */}
+                <path
+                  d="M4 60 A54 54 0 0 1 58 6"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M49 1 L58 6 L50 13"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          </a>
         </section>
         <section className={styles.features} aria-label="Co dostajesz">
           {FEATURES.map(({ icon: Icon, title, text }) => (
