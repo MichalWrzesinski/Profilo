@@ -12,14 +12,16 @@ import { type OwnerProfile, usePanelProfile } from './PanelProfile';
 import styles from './PublishPanel.module.css';
 
 function badge(profile: OwnerProfile): { className: string; label: string } {
-  if (profile.status === 'blocked') return { className: 'badge-danger', label: 'Zablokowana' };
+  if (profile.status === 'blocked')
+    return { className: 'badge-danger is-off', label: 'Zablokowana' };
   if (profile.status === 'published') {
     return profile.hasUnpublishedChanges
-      ? { className: 'badge-warning', label: 'Masz nieopublikowane zmiany' }
-      : { className: 'badge-success', label: 'Opublikowana' };
+      ? { className: 'badge-warning is-live', label: 'Masz nieopublikowane zmiany' }
+      : { className: 'badge-success is-live', label: 'Opublikowana' };
   }
-  if (profile.status === 'unpublished') return { className: 'badge-neutral', label: 'Ukryta' };
-  return { className: 'badge-neutral', label: 'Nieopublikowana' };
+  if (profile.status === 'unpublished')
+    return { className: 'badge-neutral is-off', label: 'Ukryta' };
+  return { className: 'badge-neutral is-off', label: 'Nieopublikowana' };
 }
 
 const DATE = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });

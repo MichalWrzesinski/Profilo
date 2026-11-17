@@ -38,6 +38,9 @@
 
 .badge {
   margin-bottom: var(--space-5);
+  /* The darker accent: white text keeps 5:1 on it (the logo orange would give 3.7:1). */
+  background: var(--color-accent-strong);
+  color: #fff;
 }
 
 .lead {

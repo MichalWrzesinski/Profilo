@@ -96,6 +96,16 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
 .badge-neutral { background: var(--color-blue-100); color: var(--color-text-strong-muted); }
 .badge-danger { background: var(--color-danger-bg); color: var(--color-danger); }
+/* Status dot that pulses: green — the page is live (or the service is on); red — it is not. */
+.badge.is-live::before, .badge.is-off::before { animation: status-pulse 1.8s ease-out infinite; }
+.badge.is-live::before { --dot: #22C55E; background: var(--dot); }
+.badge.is-off::before { --dot: #EF4444; background: var(--dot); }
+@keyframes status-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 70%, transparent); }
+  70% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--dot) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .badge.is-live::before, .badge.is-off::before { animation: none; } }
 
 /* ---------- Alert / banner / toast ---------- */
 .alert { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); font-size: var(--text-sm); border: var(--border-width) solid transparent; }
