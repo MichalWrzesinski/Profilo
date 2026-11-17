@@ -247,7 +247,8 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 /* Classic */
 .pp-classic .banner { height: 240px; }
 .pp-classic .main { max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6) var(--space-12); }
-.pp-classic .head { display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: -56px; }
+/* Positioned, so the avatar overlapping the banner is painted above it (the banner art is positioned too). */
+.pp-classic .head { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: -56px; }
 .pp-classic .avatar { border: 5px solid var(--color-bg); margin-bottom: var(--space-5); }
 .pp-classic .meta { align-items: center; }
 .pp-classic .contact { justify-content: center; }
