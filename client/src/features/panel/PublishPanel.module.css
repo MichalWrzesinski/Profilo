@@ -37,9 +37,23 @@
   font-size: var(--text-lg);
 }
 
+.publication {
+  display: grid;
+  gap: 10px;
+}
+
+.publication > p {
+  margin: 0;
+}
+
 .published {
-  /* Three times the usual gap before the buttons. */
-  margin-bottom: calc(var(--space-3) * 2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.published > :global(svg.i.sm) {
+  margin-top: 0;
 }
 
 .address {
@@ -48,9 +62,18 @@
 }
 
 .actions {
-  display: flex;
-  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
+}
+
+.actions > :global(.btn) {
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
 }
 
 .wrap {
@@ -72,5 +95,14 @@
 
   .thumb {
     display: none;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .actions > :global(.btn) {
+    width: auto;
   }
 }

@@ -35,7 +35,7 @@ export function AccountMenu({
         aria-controls={id}
         onClick={() => setOpen((value) => !value)}
       >
-        Menu
+        Moje konto
       </button>
       {open && (
         <nav
@@ -45,7 +45,7 @@ export function AccountMenu({
           style={{ position: 'absolute', right: 0, top: '110%' }}
         >
           {[
-            { href: '/panel', label: 'Panel' },
+            { href: '/panel', label: 'Mój panel' },
             { href: '/edytor', label: 'Edytuj wizytówkę' },
             { href: '/panel/konto', label: 'Ustawienia konta' },
           ].map(({ href, label }) => (

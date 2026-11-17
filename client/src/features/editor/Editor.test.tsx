@@ -133,8 +133,8 @@ describe('Editor', () => {
     const { bodies, user } = setup();
     await user.type(await input('Nagłówek'), 'UX');
 
-    await user.click(screen.getByRole('button', { name: 'Menu' }));
-    await user.click(screen.getByRole('link', { name: 'Panel' }));
+    await user.click(screen.getByRole('button', { name: 'Moje konto' }));
+    await user.click(screen.getByRole('link', { name: 'Mój panel' }));
 
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/panel'));
     expect(bodies).toEqual([{ version: 5, headline: 'UX' }]);
@@ -165,8 +165,8 @@ describe('Editor', () => {
     const { user } = setup();
     await user.type(await input('Publiczny e-mail'), 'anna@');
 
-    await user.click(screen.getByRole('button', { name: 'Menu' }));
-    await user.click(screen.getByRole('link', { name: 'Panel' }));
+    await user.click(screen.getByRole('button', { name: 'Moje konto' }));
+    await user.click(screen.getByRole('link', { name: 'Mój panel' }));
 
     expect(confirm).toHaveBeenCalledWith(
       'Część zmian nie jest zapisana. Zostaną w tej przeglądarce do następnej edycji. Wyjść?',
@@ -223,8 +223,8 @@ describe('Editor', () => {
     });
     await user.type(await input('Firma'), 'X');
 
-    await user.click(screen.getByRole('button', { name: 'Menu' }));
-    await user.click(screen.getByRole('link', { name: 'Panel' }));
+    await user.click(screen.getByRole('button', { name: 'Moje konto' }));
+    await user.click(screen.getByRole('link', { name: 'Mój panel' }));
 
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/panel'));
     expect(bodies).toHaveLength(1);
@@ -237,8 +237,8 @@ describe('Editor', () => {
     await user.type(await input('Firma'), 'X');
 
     await user.keyboard('{Meta>}');
-    await user.click(screen.getByRole('button', { name: 'Menu' }));
-    await user.click(screen.getByRole('link', { name: 'Panel' }));
+    await user.click(screen.getByRole('button', { name: 'Moje konto' }));
+    await user.click(screen.getByRole('link', { name: 'Mój panel' }));
     await user.keyboard('{/Meta}');
 
     expect(router.push).not.toHaveBeenCalled();
@@ -738,7 +738,7 @@ describe('Editor', () => {
     const { bodies, user } = setup({ variant: 'wizard' });
     await user.type(await input('Firma'), 'Studio');
 
-    expect(screen.queryByRole('link', { name: 'Panel' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Mój panel' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Dalej: podgląd →' }));
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kreator/podglad'));
     expect(bodies).toEqual([{ version: 5, company: 'Studio' }]);

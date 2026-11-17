@@ -27,7 +27,7 @@ describe('SiteHeader', () => {
         <SiteHeader className="home-border" />
       </SessionProvider>,
     );
-    const menu = await screen.findByRole('button', { name: 'Menu' });
+    const menu = await screen.findByRole('button', { name: 'Moje konto' });
     expect(menu.closest('header')).toHaveClass('home-border');
     expect(screen.getByText(/Zalogowano jako/)).toHaveTextContent(SESSION.account.email);
   });
@@ -48,14 +48,14 @@ describe('SiteHeader', () => {
     mockFetch((request) => (request.url.endsWith('/refresh') ? json(200, SESSION) : json(204)));
     renderHeader();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Menu' }));
-    expect(screen.getByRole('link', { name: 'Panel' })).toHaveAttribute('href', '/panel');
+    await userEvent.click(await screen.findByRole('button', { name: 'Moje konto' }));
+    expect(screen.getByRole('link', { name: 'Mój panel' })).toHaveAttribute('href', '/panel');
     await userEvent.click(screen.getByRole('button', { name: 'Wyloguj się' }));
 
     await waitFor(() =>
       expect(screen.getByRole('link', { name: 'Zaloguj się' })).toBeInTheDocument(),
     );
-    expect(screen.queryByRole('button', { name: 'Menu' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Moje konto' })).toBeNull();
   });
 
   it('hides the buttons while a likely session is restored', async () => {

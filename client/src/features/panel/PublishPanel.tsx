@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, EyeOff, Pencil, Upload } from 'lucide-react';
+import { Check, Clock3, EyeOff, Pencil, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Alert } from '@/components/Alert';
@@ -116,50 +116,55 @@ export function PublishPanel() {
               </a>
             </p>
           )}
-          {profile.publishedAt && (
-            <p className={`hint ${styles.published}`}>
-              Ostatnia publikacja: {DATE.format(new Date(profile.publishedAt))}
-            </p>
+          {(profile.publishedAt || (nothingToPublish && !blocker)) && (
+            <div className={styles.publication}>
+              {profile.publishedAt && (
+                <p className={`hint ${styles.published}`}>
+                  <Clock3 className="i sm" aria-hidden="true" />
+                  Ostatnia publikacja: {DATE.format(new Date(profile.publishedAt))}
+                </p>
+              )}
+              {nothingToPublish && !blocker && (
+                <p className="hint">
+                  <Check className="i sm" aria-hidden="true" />
+                  Wszystkie zmiany są już na stronie
+                </p>
+              )}
+            </div>
           )}
           {error && <Alert variant="danger">{error}</Alert>}
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={`btn btn-primary btn-sm${busy ? ' is-loading' : ''}`}
-              disabled={busy || blocker !== null || nothingToPublish}
-              aria-describedby={blocker ? 'publish-blocker' : undefined}
-              onClick={() => void run('publish')}
-            >
-              <Upload className="i sm" aria-hidden="true" />
-              {publishLabel}
-            </button>
-            {published && (
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                disabled={busy}
-                onClick={() => void run('unpublish')}
-              >
-                <EyeOff className="i sm" aria-hidden="true" />
-                Ukryj stronę
-              </button>
-            )}
-            <Link className="btn btn-secondary btn-sm" href="/edytor">
-              <Pencil className="i sm" aria-hidden="true" />
-              Edytuj stronę
-            </Link>
-          </div>
           {blocker && (
             <p id="publish-blocker" className="hint">
               {blocker}
             </p>
           )}
-          {nothingToPublish && !blocker && (
-            <p className="hint">
-              <Check className="i sm" aria-hidden="true" />
-              Wszystkie zmiany są już na stronie
-            </p>
+        </div>
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={`btn btn-primary${busy ? ' is-loading' : ''}`}
+            disabled={busy || blocker !== null || nothingToPublish}
+            aria-describedby={blocker ? 'publish-blocker' : undefined}
+            onClick={() => void run('publish')}
+          >
+            <Upload className="i sm" aria-hidden="true" />
+            {publishLabel}
+          </button>
+          {published && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => void run('unpublish')}
+            >
+              <EyeOff className="i sm" aria-hidden="true" />
+              Ukryj stronę
+            </button>
           )}
+          <Link className="btn btn-secondary" href="/edytor">
+            <Pencil className="i sm" aria-hidden="true" />
+            Edytuj stronę
+          </Link>
         </div>
       </section>
     </div>

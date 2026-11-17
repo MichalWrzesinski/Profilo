@@ -90,6 +90,14 @@ async def test_svg_is_scalable_with_the_same_symbol(client: AsyncClient) -> None
     assert logo.find(".//{http://www.w3.org/2000/svg}circle") is not None
 
 
+def test_logo_is_larger_than_one_sixth_of_the_symbol() -> None:
+    code = codes._code(URL)
+
+    _, size = codes._logo_box(code)
+
+    assert size > ((len(code.matrix) // 6) | 1)
+
+
 async def test_svg_is_the_default(client: AsyncClient) -> None:
     auth = await owner(client)
     await publish(client, auth)

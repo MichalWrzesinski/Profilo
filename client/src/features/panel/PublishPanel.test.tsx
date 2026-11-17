@@ -40,12 +40,12 @@ function setup(
       return options.unpublish?.() ?? json(200, owner({ status: 'unpublished' }));
     return json(404, { status: 404 });
   });
-  render(
+  const { container } = render(
     <SessionProvider>
       <SignedIn confirmed={options.confirmed ?? true} />
     </SessionProvider>,
   );
-  return { fetch, user: userEvent.setup() };
+  return { container, fetch, user: userEvent.setup() };
 }
 
 const publishButton = (name = 'Opublikuj') => screen.findByRole('button', { name });
@@ -68,6 +68,32 @@ describe('PublishPanel', () => {
     expect(screen.getByText('Wszystkie zmiany są już na stronie')).toBeInTheDocument();
     const body = await (fetch.mock.calls.at(-1)![0] as Request).json();
     expect(body).toEqual({ version: 4 });
+  });
+
+  it('places standard-size actions after the thumbnail and publication status', async () => {
+    const { container } = setup(
+      owner({
+        status: 'published',
+        publicUrl: PUBLISHED.publicUrl,
+        publishedAt: '2026-11-17T12:00:00Z',
+      }),
+    );
+
+    const publishedAt = await screen.findByText(/Ostatnia publikacja:/);
+    const unchanged = screen.getByText('Wszystkie zmiany są już na stronie');
+    expect(
+      publishedAt.compareDocumentPosition(unchanged) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    const actions = screen.getByRole('button', { name: 'Opublikuj zmiany' }).parentElement!;
+    expect(actions.querySelectorAll('.btn')).toHaveLength(3);
+    for (const button of actions.querySelectorAll('.btn')) {
+      expect(button).not.toHaveClass('btn-sm');
+    }
+    const thumbnail = container.querySelector('[aria-hidden="true"]')!;
+    expect(
+      thumbnail.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('offers to publish changes and to hide the page', async () => {

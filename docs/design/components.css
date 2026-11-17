@@ -141,6 +141,7 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .brand img, .brand svg { width: 32px; height: 32px; }
 /* Small DEMO beside the wordmark or the mobile icon. */
 .brand-mobile-demo { font-size: 9px; font-weight: var(--font-weight-extrabold); letter-spacing: .08em; line-height: 1; color: var(--color-accent-strong); }
+@media (min-width: 861px) { .brand-mobile-demo { position: relative; top: 2px; } }
 .stepper { flex-shrink: 0; white-space: nowrap; display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); color: var(--color-text-muted); }
 .stepper .bars { display: flex; gap: 4px; }
 .stepper .bars i { width: 28px; height: 4px; border-radius: 2px; background: var(--color-border); }

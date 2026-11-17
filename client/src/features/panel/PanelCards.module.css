@@ -139,4 +139,14 @@
   .shortcuts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .qr {
+    width: 242px;
+    height: 242px;
+  }
+
+  .qr img {
+    width: 222px;
+    height: 222px;
+  }
 }

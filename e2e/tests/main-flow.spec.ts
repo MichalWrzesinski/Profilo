@@ -161,7 +161,7 @@ test('a new owner publishes a page that looks exactly like the preview', async (
       '/nie-istnieje',
     ]) {
       await open(page, path);
-      await expect(page.getByRole('button', { name: 'Menu', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Moje konto', exact: true })).toBeVisible();
       const header = page.locator('header.topbar');
       await expect(header).toHaveCount(1);
       await expect(header.getByRole('link', { name: /Zobacz swój profil/ })).toBeVisible();

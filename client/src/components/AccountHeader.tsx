@@ -74,13 +74,13 @@ function Header({
         <Brand nameOnPhones={false} />
       </div>
       {saveState}
+      <span className="spacer" />
       {actions && (
         <div className={styles.actions}>
           {actions}
           <ViewProfileLink profile={profile} />
         </div>
       )}
-      <span className="spacer" />
       {badge}
       {!actions && !saveState && (
         <span className={`muted hide-m ${styles.account}`}>

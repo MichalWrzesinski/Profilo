@@ -98,7 +98,7 @@ describe('Panel', () => {
     renderPanel();
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole('button', { name: 'Menu' }));
+    await user.click(await screen.findByRole('button', { name: 'Moje konto' }));
     await user.click(screen.getByRole('button', { name: 'Wyloguj się' }));
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/logowanie'));
@@ -114,12 +114,12 @@ describe('Panel', () => {
     renderPanel();
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole('button', { name: 'Menu' }));
+    await user.click(await screen.findByRole('button', { name: 'Moje konto' }));
     const settings = screen.getByRole('link', { name: 'Ustawienia konta' });
     expect(settings).toHaveAttribute('href', '/panel/konto');
     // Back to the panel from any page of it; the current page is marked.
-    expect(screen.getByRole('link', { name: 'Panel' })).toHaveAttribute('href', '/panel');
-    expect(screen.getByRole('link', { name: 'Panel' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Mój panel' })).toHaveAttribute('href', '/panel');
+    expect(screen.getByRole('link', { name: 'Mój panel' })).toHaveAttribute('aria-current', 'page');
     await user.click(settings);
 
     expect(screen.queryByRole('navigation', { name: 'Menu konta' })).toBeNull();
@@ -129,11 +129,11 @@ describe('Panel', () => {
     mockFetch(api());
     renderPanel();
     const user = userEvent.setup();
-    const button = await screen.findByRole('button', { name: 'Menu' });
+    const button = await screen.findByRole('button', { name: 'Moje konto' });
 
     await user.click(button);
     expect(button).toHaveAttribute('aria-expanded', 'true');
-    screen.getByRole('link', { name: 'Panel' }).focus();
+    screen.getByRole('link', { name: 'Mój panel' }).focus();
     await user.keyboard('{Escape}');
 
     expect(screen.queryByRole('navigation', { name: 'Menu konta' })).toBeNull();
