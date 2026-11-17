@@ -250,7 +250,8 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 /* Positioned, so the avatar overlapping the banner is painted above it (the banner art is positioned too). */
 .pp-classic .head { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: -56px; }
 .pp-classic .avatar { border: 5px solid var(--color-bg); margin-bottom: var(--space-5); }
-.pp-classic .meta { align-items: center; }
+/* Classic on a wide screen: the details may share one centred line. */
+.pp-classic .meta { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: var(--space-2) var(--space-5); }
 .pp-classic .contact { justify-content: center; }
 .pp-classic .bio { margin-inline: auto; }
 .pp-classic .no-banner .head { margin-top: var(--space-16); }
@@ -271,6 +272,8 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .pp-card footer { justify-content: center; }
 
 @media (max-width: 860px) {
+  /* Phones (also the phone preview): one detail per line, aligned left in every layout. */
+  .pp .meta, .pp-classic .meta, .pp-card .meta { flex-direction: column; align-items: flex-start; justify-content: flex-start; align-self: stretch; text-align: left; }
   .topbar { padding: 0 var(--space-4); height: 56px; }
   .hide-m { display: none !important; }
   .pp-split { grid-template-columns: 1fr; align-content: start; }
