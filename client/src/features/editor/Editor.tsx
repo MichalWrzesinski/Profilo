@@ -1,10 +1,10 @@
 'use client';
 
-import { ChevronDown, ChevronUp, CircleAlert, LayoutGrid, Share2 } from 'lucide-react';
-import Link from 'next/link';
+import { ChevronDown, ChevronUp, CircleAlert, Share2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from '@/components/Alert';
+import { AccountMenu } from '@/components/AccountMenu';
 import { Brand } from '@/components/Brand';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
 import { BlockedNotice } from '@/features/panel/BlockedNotice';
@@ -170,17 +170,20 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
 
   /** Save what was typed a moment ago, then go; ask when something cannot be saved. */
   const { unsaved, settle } = draft;
+  const beforeLeave = useCallback(async () => {
+    const saved = !unsaved || (await settle());
+    const leave =
+      saved ||
+      window.confirm(
+        'Część zmian nie jest zapisana. Zostaną w tej przeglądarce do następnej edycji. Wyjść?',
+      );
+    return leave;
+  }, [unsaved, settle]);
   const leaveTo = useCallback(
     async (href: string) => {
-      const saved = !unsaved || (await settle());
-      const leave =
-        saved ||
-        window.confirm(
-          'Część zmian nie jest zapisana. Zostaną w tej przeglądarce do następnej edycji. Wyjść?',
-        );
-      if (leave) router.push(href);
+      if (await beforeLeave()) router.push(href);
     },
-    [unsaved, settle, router],
+    [beforeLeave, router],
   );
   const leaveWizard = useCallback((href: string) => void leaveTo(href), [leaveTo]);
   useWizardExit(wizard ? leaveWizard : null);
@@ -253,50 +256,37 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
           <SaveState status={draft.shownStatus} invalid={draft.invalid} />
           <span className="spacer" />
           {status_ && <span className={`badge ${status_.className} hide-m`}>{status_.label}</span>}
-          <Link
-            className="btn btn-ghost btn-sm"
-            href="/panel"
-            aria-label="Panel"
-            onClick={(event) => {
-              // Opening the panel in a new tab (Cmd/Ctrl/Shift or middle click) leaves this one.
-              if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
-              if (!draft.unsaved) return;
-              // Save the change typed a moment ago before the panel reads the draft.
-              event.preventDefault();
-              void leaveTo('/panel');
-            }}
-          >
-            <LayoutGrid className={`i sm ${styles.showM}`} aria-hidden="true" />
-            <span className="hide-m">Panel</span>
-          </Link>
-          {profile.publicUrl && (
+          <div className={styles.actions}>
+            {profile.publicUrl && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                aria-haspopup="dialog"
+                aria-label="Udostępnij: adres i kod QR"
+                onClick={() => setSharing(true)}
+              >
+                <Share2 className="i sm" aria-hidden="true" />
+                <span className="hide-m">Udostępnij</span>
+              </button>
+            )}
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
-              aria-haspopup="dialog"
-              aria-label="Udostępnij: adres i kod QR"
-              onClick={() => setSharing(true)}
+              className={`btn btn-primary btn-sm${publishing ? ' is-loading' : ''}`}
+              disabled={!canPublish}
+              title={publishHint}
+              aria-describedby={publishHint ? 'ed-publish-hint' : undefined}
+              onClick={() => void publish()}
             >
-              <Share2 className="i sm" aria-hidden="true" />
-              <span className="hide-m">Udostępnij</span>
+              {published ? (
+                <span>
+                  Opublikuj<span className="hide-m"> zmiany</span>
+                </span>
+              ) : (
+                'Opublikuj'
+              )}
             </button>
-          )}
-          <button
-            type="button"
-            className={`btn btn-primary btn-sm${publishing ? ' is-loading' : ''}`}
-            disabled={!canPublish}
-            title={publishHint}
-            aria-describedby={publishHint ? 'ed-publish-hint' : undefined}
-            onClick={() => void publish()}
-          >
-            {published ? (
-              <span>
-                Opublikuj<span className="hide-m"> zmiany</span>
-              </span>
-            ) : (
-              'Opublikuj'
-            )}
-          </button>
+          </div>
+          <AccountMenu beforeLeave={beforeLeave} />
           {publishHint && (
             <span id="ed-publish-hint" className="sr-only">
               {publishHint}

@@ -150,7 +150,11 @@
   border-radius: 50%;
 }
 
-/* Top bar on phones: icons for Panel and Udostępnij, shorter labels, smaller gaps (fits 320 px). */
+.actions {
+  display: contents;
+}
+
+/* Top bar on phones: shorter labels and smaller gaps. */
 .showM {
   display: none;
 }
@@ -175,5 +179,22 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+}
+
+@media (max-width: 600px) {
+  .top {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--topbar-height);
+    padding-block: var(--space-3);
+  }
+
+  .actions {
+    order: 1;
+    flex-basis: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
   }
 }
