@@ -8,6 +8,9 @@ for (const path of ['/', '/regulamin', '/prywatnosc']) {
     test(`${path} is accessible and fits ${width} px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await open(page, path);
+      await expect(page.locator('.topbar .brand')).toHaveAccessibleName(
+        'Profilo DEMO — strona główna',
+      );
       if (path === '/') {
         // Scan the example page too, loaded (it is lazy) and inert.
         const frame = page.locator('iframe[title="Przykładowa strona w Profilo"]');

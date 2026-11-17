@@ -23,12 +23,19 @@ export function Logo({ size }: { size?: number }) {
  */
 export function Brand({ nameOnPhones = true }: { nameOnPhones?: boolean }) {
   return (
-    <Link className="brand" href="/" aria-label="Profilo — strona główna">
+    <Link
+      className={`brand${nameOnPhones ? '' : ' brand-compact'}`}
+      href="/"
+      aria-label="Profilo DEMO — strona główna"
+    >
       <Logo />
-      <span className={nameOnPhones ? undefined : 'hide-m'}>
+      <span className={`brand-name${nameOnPhones ? '' : ' hide-m'}`}>
         Profi
         {/* „DEMO” (drawn by CSS, decorative) starts above the „l”: this server is a demo. */}
         <span className="brand-demo">l</span>o
+      </span>
+      <span className="brand-mobile-demo" aria-hidden="true">
+        DEMO
       </span>
     </Link>
   );

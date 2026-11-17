@@ -133,6 +133,7 @@ describe('Editor', () => {
     const { bodies, user } = setup();
     await user.type(await input('Nagłówek'), 'UX');
 
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
     await user.click(screen.getByRole('link', { name: 'Panel' }));
 
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/panel'));
@@ -146,6 +147,7 @@ describe('Editor', () => {
     const { user } = setup();
     await user.type(await input('Publiczny e-mail'), 'anna@');
 
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
     await user.click(screen.getByRole('link', { name: 'Panel' }));
 
     expect(confirm).toHaveBeenCalledWith(
@@ -203,6 +205,7 @@ describe('Editor', () => {
     });
     await user.type(await input('Firma'), 'X');
 
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
     await user.click(screen.getByRole('link', { name: 'Panel' }));
 
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/panel'));
@@ -216,6 +219,7 @@ describe('Editor', () => {
     await user.type(await input('Firma'), 'X');
 
     await user.keyboard('{Meta>}');
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
     await user.click(screen.getByRole('link', { name: 'Panel' }));
     await user.keyboard('{/Meta}');
 

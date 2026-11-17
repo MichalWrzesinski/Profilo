@@ -52,7 +52,7 @@
 .lead {
   font-size: 19px;
   color: var(--color-text-strong-muted);
-  margin-bottom: var(--space-8);
+  margin-bottom: calc(var(--space-8) - 5px);
   max-width: 34ch;
 }
 
@@ -78,8 +78,7 @@
 }
 
 .address {
-  /* The same space above as below (the note's margin-top). */
-  margin-top: var(--space-3);
+  margin-top: calc(var(--space-3) + 5px);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
@@ -132,6 +131,10 @@
 .live svg {
   margin-bottom: 6px;
   margin-left: 15px;
+}
+
+.mobileArrow {
+  display: none;
 }
 
 /* Below about 1180 px the caption would sit on the form's note: it shows on wide screens only. */
@@ -259,10 +262,16 @@
     transform: translateX(-24px);
   }
 
-  /* Turned a quarter: right, up, right becomes down, right, down into the phone. */
   .live svg {
     margin: 12px 0 0 10px;
-    transform: rotate(90deg);
+  }
+
+  .live .desktopArrow {
+    display: none;
+  }
+
+  .live .mobileArrow {
+    display: block;
   }
 
   /* 30 % larger than before (230 × 470), 283 px inside the frame: scale 283 / 390. */
