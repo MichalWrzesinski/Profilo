@@ -14,8 +14,45 @@ PNG_SIZE = 1024
 QUIET_ZONE = 4  # modules (ISO/IEC 18004)
 DARK = "#0F2747"  # brand navy: contrast with white about 15:1, reads like black
 LIGHT = "#FFFFFF"
-# M recovers ~15 % of damage (a crease or smudge on a printed card) and keeps the code small.
-ERROR_LEVEL = "m"
+# High correction leaves room for the small central brand mark and printing damage.
+ERROR_LEVEL = "h"
+
+
+def _logo_box(code: segno.QRCode) -> tuple[int, int]:
+    """An odd, module-aligned square, about a sixth of the symbol's width."""
+    width = len(code.matrix)
+    size = (width // 6) | 1
+    return QUIET_ZONE + (width - size) // 2, size
+
+
+def _logo_png(image: Image.Image, code: segno.QRCode, edges: list[int]) -> None:
+    start, size = _logo_box(code)
+    left, right = edges[start], edges[start + size]
+    ImageDraw.Draw(image).rectangle((left, left, right - 1, right - 1), fill=LIGHT)
+    inset = edges[start + 1]
+    pixels = edges[start + size - 1] - inset
+    # Draw only the logo at a larger size for smooth curves; QR modules stay pixel-sharp.
+    logo = Image.new("RGB", (pixels * 4, pixels * 4), LIGHT)
+    draw = ImageDraw.Draw(logo)
+    scale = logo.width / 44
+
+    def box(values: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+        a, b, c, d = values
+        return a * scale, b * scale, c * scale, d * scale
+
+    draw.rounded_rectangle(box((0, 0, 44, 44)), radius=11 * scale, fill=DARK)
+    stroke = round(3.6 * scale)
+    draw.line(
+        [(15 * scale, 32 * scale), (15 * scale, 12 * scale), (23.5 * scale, 12 * scale)],
+        fill=LIGHT,
+        width=stroke,
+    )
+    draw.arc(box((17, 12, 30, 25)), -90, 90, fill=LIGHT, width=stroke)
+    draw.line([(23.5 * scale, 25 * scale), (15 * scale, 25 * scale)], fill=LIGHT, width=stroke)
+    for x, y in [(15, 32), (15, 12), (15, 25)]:
+        draw.ellipse(box((x - 1.8, y - 1.8, x + 1.8, y + 1.8)), fill=LIGHT)
+    draw.ellipse(box((27.6, 27.6, 34.4, 34.4)), fill="#E0592A")
+    image.paste(logo.resize((pixels, pixels), Image.Resampling.LANCZOS), (inset, inset))
 
 
 def _code(url: str) -> segno.QRCode:
@@ -36,6 +73,7 @@ def _png(code: segno.QRCode) -> bytes:
                 box = (edges[x], edges[y], edges[x + 1] - 1, edges[y + 1] - 1)
                 draw.rectangle(box, fill=DARK)
     out = io.BytesIO()
+    _logo_png(image, code, edges)
     image.save(out, format="PNG", optimize=True)
     return out.getvalue()
 
@@ -57,6 +95,16 @@ def _svg(code: segno.QRCode, url: str) -> bytes:
     svg = svg.replace(
         "<svg ", f'<svg width="{PNG_SIZE}" height="{PNG_SIZE}" shape-rendering="crispEdges" ', 1
     )
+    start, size = _logo_box(code)
+    logo = f'''<g id="profilo-logo" shape-rendering="geometricPrecision">
+<rect x="{start}" y="{start}" width="{size}" height="{size}" fill="{LIGHT}"/>
+<svg x="{start + 1}" y="{start + 1}" width="{size - 2}" height="{size - 2}" viewBox="0 0 44 44">
+<rect width="44" height="44" rx="11" fill="{DARK}"/>
+<path d="M15 32V12h8.5a6.5 6.5 0 0 1 0 13H15" fill="none" stroke="#fff"
+stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="31" cy="31" r="3.4" fill="#E0592A"/>
+</svg></g>'''
+    svg = svg.replace("</svg>", logo + "</svg>")
     return svg.encode()
 
 
