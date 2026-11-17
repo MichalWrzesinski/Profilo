@@ -24,3 +24,34 @@ export function publicProfile(content: Partial<PublicProfile['content']> = {}): 
     },
   };
 }
+
+type OwnerState = {
+  status?: 'never_published' | 'published' | 'unpublished' | 'blocked';
+  nick?: string | null;
+  hasUnpublishedChanges?: boolean;
+  publicUrl?: string | null;
+  publishedAt?: string | null;
+  draft?: Partial<PublicProfile['content']>;
+};
+
+/** The owner's profile as GET /me/profile returns it. */
+export function ownerProfile({
+  status = 'never_published',
+  nick = 'anna-wisniewska',
+  hasUnpublishedChanges = false,
+  publicUrl = null,
+  publishedAt = null,
+  draft = {},
+}: OwnerState = {}) {
+  return {
+    nick,
+    nickLocked: status !== 'never_published',
+    status,
+    hasUnpublishedChanges,
+    publishedAt,
+    version: 4,
+    draftUpdatedAt: '2026-11-10T10:00:00Z',
+    publicUrl,
+    draft: { ...publicProfile({ headline: null, accent: 'granat' }).content, ...draft },
+  };
+}

@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import { Alert } from '@/components/Alert';
+import { draftToPublic } from '@/features/preview/draftToPublic';
+import { LivePreview } from '@/features/preview/LivePreview';
 import { api, type Problem } from '@/lib/api/client';
 import { useSession } from '@/lib/session';
 import { BlockedNotice } from './BlockedNotice';
@@ -19,10 +22,16 @@ function badge(profile: OwnerProfile): { className: string; label: string } {
   return { className: 'badge-neutral', label: 'Nieopublikowana' };
 }
 
-/** Status of the page and the publish / unpublish actions (PRF-US-9, PRF-BR-16, PRF-BR-17). */
+const DATE = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+
+/**
+ * „Twoja strona”: a thumbnail of the draft, the status, the address and the publish / unpublish
+ * actions (PRF-US-9, PRF-BR-16, PRF-BR-17).
+ */
 export function PublishPanel() {
   const { account } = useSession();
   const { profile, loadFailed, setProfile } = usePanelProfile();
+  const preview = useMemo(() => (profile ? draftToPublic(profile) : null), [profile]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,55 +83,75 @@ export function PublishPanel() {
 
   const status = badge(profile);
   return (
-    <>
+    <div className={styles.wrap}>
       {blocked && (
         <div className={styles.notice}>
           <BlockedNotice />
         </div>
       )}
       <section className={`card card-pad ${styles.panel}`} aria-labelledby="page-status">
-        <div className={styles.row}>
-          <h2 id="page-status" className={styles.title}>
-            Status strony
-          </h2>
-          <span className={`badge ${status.className}`}>{status.label}</span>
+        <div className={styles.thumb}>
+          <LivePreview
+            profile={preview!}
+            device="phone"
+            label="Miniatura Twojej strony"
+            className={styles.thumbBox}
+          />
         </div>
-        {profile.publicUrl && (
-          <p className={styles.address}>
-            <a href={profile.publicUrl} target="_blank" rel="noopener">
-              {profile.publicUrl.replace(/^https?:\/\//, '')}
-            </a>
-          </p>
-        )}
-        {error && <Alert variant="danger">{error}</Alert>}
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={`btn btn-primary${busy ? ' is-loading' : ''}`}
-            disabled={busy || blocker !== null || nothingToPublish}
-            aria-describedby={blocker ? 'publish-blocker' : undefined}
-            onClick={() => void run('publish')}
-          >
-            {publishLabel}
-          </button>
-          {published && (
+        <div className={styles.body}>
+          <div className={styles.row}>
+            <h2 id="page-status" className={styles.title}>
+              Twoja strona
+            </h2>
+            <span className={`badge ${status.className}`}>{status.label}</span>
+          </div>
+          {profile.publicUrl && (
+            <p className={styles.address}>
+              <a href={profile.publicUrl} target="_blank" rel="noopener">
+                {profile.publicUrl.replace(/^https?:\/\//, '')}
+              </a>
+            </p>
+          )}
+          {profile.publishedAt && (
+            <p className="hint">
+              Ostatnia publikacja: {DATE.format(new Date(profile.publishedAt))}
+            </p>
+          )}
+          {error && <Alert variant="danger">{error}</Alert>}
+          <div className={styles.actions}>
             <button
               type="button"
-              className="btn btn-secondary"
-              disabled={busy}
-              onClick={() => void run('unpublish')}
+              className={`btn btn-primary${busy ? ' is-loading' : ''}`}
+              disabled={busy || blocker !== null || nothingToPublish}
+              aria-describedby={blocker ? 'publish-blocker' : undefined}
+              onClick={() => void run('publish')}
             >
-              Ukryj stronę
+              {publishLabel}
             </button>
+            {published && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={busy}
+                onClick={() => void run('unpublish')}
+              >
+                Ukryj stronę
+              </button>
+            )}
+            <Link className="btn btn-secondary" href="/edytor">
+              Edytuj stronę
+            </Link>
+          </div>
+          {blocker && (
+            <p id="publish-blocker" className="hint">
+              {blocker}
+            </p>
+          )}
+          {nothingToPublish && !blocker && (
+            <p className="hint">Wszystkie zmiany są już na stronie</p>
           )}
         </div>
-        {blocker && (
-          <p id="publish-blocker" className="hint">
-            {blocker}
-          </p>
-        )}
-        {nothingToPublish && !blocker && <p className="hint">Wszystkie zmiany są już na stronie</p>}
       </section>
-    </>
+    </div>
   );
 }

@@ -1,7 +1,28 @@
 .panel {
   display: grid;
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* A small phone-shaped thumbnail of the draft. */
+.thumb {
+  width: 120px;
+  height: 220px;
+}
+
+.thumbBox {
+  min-height: 0;
+  height: 100%;
+  border-radius: 18px;
+  border: 5px solid var(--color-navy-950);
+  box-shadow: none;
 }
 
 .row {
@@ -27,6 +48,18 @@
   gap: var(--space-3);
 }
 
-.notice {
-  margin-bottom: var(--space-4);
+.wrap {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .thumb {
+    display: none;
+  }
 }

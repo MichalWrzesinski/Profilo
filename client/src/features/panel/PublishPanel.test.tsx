@@ -4,48 +4,11 @@ import { useEffect } from 'react';
 import { tokenStore } from '@/lib/api/client';
 import { SessionProvider, useSession } from '@/lib/session';
 import { json, mockFetch, SESSION } from '@/test/fetch';
+import { ownerProfile } from '@/test/profiles';
 import { PanelProfileProvider } from './PanelProfile';
 import { PublishPanel } from './PublishPanel';
 
-type State = {
-  status?: string;
-  nick?: string | null;
-  hasUnpublishedChanges?: boolean;
-  publicUrl?: string | null;
-};
-
-function owner({
-  status = 'never_published',
-  nick = 'anna-wisniewska',
-  hasUnpublishedChanges = false,
-  publicUrl = null,
-}: State = {}) {
-  return {
-    nick,
-    nickLocked: status !== 'never_published',
-    status,
-    hasUnpublishedChanges,
-    publishedAt: null,
-    version: 4,
-    draftUpdatedAt: '2026-11-10T10:00:00Z',
-    publicUrl,
-    draft: {
-      displayName: 'Anna Wiśniewska',
-      headline: null,
-      bio: null,
-      city: null,
-      company: null,
-      position: null,
-      publicEmail: null,
-      publicPhone: null,
-      layout: 'classic',
-      accent: 'granat',
-      avatar: null,
-      background: null,
-      links: [],
-    },
-  };
-}
+const owner = ownerProfile;
 
 const PUBLISHED = owner({
   status: 'published',

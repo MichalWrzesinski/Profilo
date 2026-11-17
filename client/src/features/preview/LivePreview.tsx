@@ -8,7 +8,13 @@ import styles from './LivePreview.module.css';
 export type Device = 'desktop' | 'phone';
 const WIDTH: Record<Device, number> = { desktop: 1280, phone: 390 };
 
-type Props = { profile: PublicProfile; device: Device; label?: string };
+type Props = {
+  profile: PublicProfile;
+  device: Device;
+  label?: string;
+  /** Extra class for the box, e.g. a small thumbnail instead of the full-height preview. */
+  className?: string;
+};
 
 /**
  * Fetch draft images with the access token once per URL; the frame gets blob URLs. Each URL
@@ -82,7 +88,7 @@ function useImageUrls(profile: PublicProfile): PublicProfile | null {
  * The draft as visitors will see it: the public page (/podglad) in a frame of desktop or
  * phone width, scaled to fit. Same component as /user/{nick}, so it matches exactly.
  */
-export function LivePreview({ profile, device, label = 'Podgląd strony' }: Props) {
+export function LivePreview({ profile, device, label = 'Podgląd strony', className }: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
   const send = (profile: PublicProfile) =>
     frame.current?.contentWindow?.postMessage(
@@ -132,7 +138,10 @@ export function LivePreview({ profile, device, label = 'Podgląd strony' }: Prop
   const width = WIDTH[device];
   const scale = boxSize.width ? Math.min(1, boxSize.width / width) : 1;
   return (
-    <div ref={box} className={`${styles.box} ${device === 'phone' ? styles.phone : ''}`}>
+    <div
+      ref={box}
+      className={`${styles.box} ${device === 'phone' ? styles.phone : ''} ${className ?? ''}`}
+    >
       <iframe
         ref={frame}
         src="/podglad"
