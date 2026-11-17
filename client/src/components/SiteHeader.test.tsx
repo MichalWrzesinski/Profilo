@@ -19,6 +19,18 @@ afterEach(() => {
 });
 
 describe('SiteHeader', () => {
+  it('keeps page styling and panel navigation for a signed-in visitor', async () => {
+    window.localStorage.setItem('profilo:signed-in', '1');
+    mockFetch(() => json(200, SESSION));
+    render(
+      <SessionProvider>
+        <SiteHeader className="home-border" />
+      </SessionProvider>,
+    );
+    const menu = await screen.findByRole('button', { name: 'Menu' });
+    expect(menu.closest('header')).toHaveClass('home-border');
+    expect(screen.getByText(/Zalogowano jako/)).toHaveTextContent(SESSION.account.email);
+  });
   it('offers login and sign-up without asking the API in a new browser', () => {
     const fetch = mockFetch(() => json(200, SESSION));
     renderHeader();
@@ -36,16 +48,14 @@ describe('SiteHeader', () => {
     mockFetch((request) => (request.url.endsWith('/refresh') ? json(200, SESSION) : json(204)));
     renderHeader();
 
-    expect(await screen.findByRole('link', { name: 'Moje konto' })).toHaveAttribute(
-      'href',
-      '/panel',
-    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Menu' }));
+    expect(screen.getByRole('link', { name: 'Panel' })).toHaveAttribute('href', '/panel');
     await userEvent.click(screen.getByRole('button', { name: 'Wyloguj się' }));
 
     await waitFor(() =>
       expect(screen.getByRole('link', { name: 'Zaloguj się' })).toBeInTheDocument(),
     );
-    expect(screen.queryByRole('link', { name: 'Moje konto' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Menu' })).toBeNull();
   });
 
   it('hides the buttons while a likely session is restored', async () => {

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { Brand } from '@/components/Brand';
+import { AccountHeader } from '@/components/AccountHeader';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
 import { Stepper } from '@/features/wizard/Stepper';
 import { WizardExitProvider, useWizardExitHandler } from '@/features/wizard/WizardExit';
@@ -39,26 +39,35 @@ function WizardFrame({ children }: { children: ReactNode }) {
   return (
     <>
       {/* A step may save first before the top-bar links leave it (step 3: pending edits). */}
-      <header
-        className="topbar"
+      <div
         onClickCapture={(event) => {
           const link = (event.target as Element).closest('a');
           const leave = exit?.get();
-          if (!link || !leave || event.metaKey || event.ctrlKey || event.shiftKey) return;
+          if (
+            !link ||
+            link.target === '_blank' ||
+            !leave ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey
+          )
+            return;
           event.preventDefault();
           leave(link.getAttribute('href') ?? '/edytor');
         }}
       >
-        <Brand nameOnPhones={false} />
-        <Stepper step={current.step} label={current.label} />
-        <span className="spacer" />
-        <Link className="btn btn-primary btn-sm" href="/edytor">
-          {/* One flex item: the button's gap would otherwise split the words. */}
-          <span>
-            <span className="hide-m">Dokończę </span>później
-          </span>
-        </Link>
-      </header>
+        <AccountHeader beforeSignOut={async () => await (exit?.getGuard()?.() ?? true)} />
+        <div className="topbar" style={{ position: 'static' }}>
+          <Stepper step={current.step} label={current.label} />
+          <span className="spacer" />
+          <Link className="btn btn-primary btn-sm" href="/edytor">
+            {/* One flex item: the button's gap would otherwise split the words. */}
+            <span>
+              <span className="hide-m">Dokończę </span>później
+            </span>
+          </Link>
+        </div>
+      </div>
       <ConfirmEmailBanner />
       {children}
     </>

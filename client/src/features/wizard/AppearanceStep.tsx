@@ -48,15 +48,18 @@ function Pickers({ initial, storageKey }: { initial: OwnerProfile; storageKey: s
   const draft = useAutosave(initial, storageKey);
   const { unsaved, settle } = draft;
 
+  const beforeLeave = useCallback(async () => {
+    const saved = !unsaved || (await settle());
+    return saved || window.confirm('Wybór nie jest zapisany. Wyjść mimo to?');
+  }, [unsaved, settle]);
   const leaveTo = useCallback(
     async (href: string) => {
-      const saved = !unsaved || (await settle());
-      if (saved || window.confirm('Wybór nie jest zapisany. Wyjść mimo to?')) router.push(href);
+      if (await beforeLeave()) router.push(href);
     },
-    [unsaved, settle, router],
+    [beforeLeave, router],
   );
   const leave = useCallback((href: string) => void leaveTo(href), [leaveTo]);
-  useWizardExit(leave);
+  useWizardExit(leave, beforeLeave);
 
   return (
     <>

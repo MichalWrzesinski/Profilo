@@ -1,11 +1,10 @@
 'use client';
 
-import { ChevronDown, ChevronUp, CircleAlert, Share2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleAlert, Share2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from '@/components/Alert';
-import { AccountMenu } from '@/components/AccountMenu';
-import { Brand } from '@/components/Brand';
+import { AccountHeader } from '@/components/AccountHeader';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
 import { BlockedNotice } from '@/features/panel/BlockedNotice';
 import { draftToPublic } from '@/features/preview/draftToPublic';
@@ -55,9 +54,12 @@ export function Editor({ variant = 'editor' }: { variant?: Variant }) {
 
   if (failed) {
     return (
-      <main className={styles.message}>
-        <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę</Alert>
-      </main>
+      <>
+        {variant === 'editor' && <AccountHeader profile={null} />}
+        <main className={styles.message}>
+          <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę</Alert>
+        </main>
+      </>
     );
   }
   if (!profile || !account) return <EditorLoading topbar={variant === 'editor'} />;
@@ -79,13 +81,15 @@ function EditorLoading({ topbar }: { topbar: boolean }) {
   return (
     <>
       {topbar ? (
-        <header className={`topbar ${styles.top}`}>
-          <Brand nameOnPhones={false} />
-          <span className="save-state" role="status">
-            <span className="spinner" aria-hidden="true" />
-            Wczytywanie…
-          </span>
-        </header>
+        <AccountHeader
+          profile={null}
+          saveState={
+            <span className="save-state" role="status">
+              <span className="spinner" aria-hidden="true" />
+              Wczytywanie…
+            </span>
+          }
+        />
       ) : (
         <p className="sr-only" role="status">
           Wczytywanie…
@@ -131,7 +135,9 @@ function SaveState({ status, invalid }: { status: SaveStatus; invalid: boolean }
       ) : (
         <span className="dot" aria-hidden="true" />
       )}
-      <span>{invalid && status === 'saved' ? 'Nie zapisano' : STATUS_LABEL[status]}</span>
+      <span className="save-label">
+        {invalid && status === 'saved' ? 'Nie zapisano' : STATUS_LABEL[status]}
+      </span>
     </span>
   );
 }
@@ -184,7 +190,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
     [beforeLeave, router],
   );
   const leaveWizard = useCallback((href: string) => void leaveTo(href), [leaveTo]);
-  useWizardExit(wizard ? leaveWizard : null);
+  useWizardExit(wizard ? leaveWizard : null, beforeLeave);
 
   const published = profile.status === 'published';
   const canPublish =
@@ -249,48 +255,59 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
   return (
     <>
       {!wizard && (
-        <header className={`topbar ${styles.top}`}>
-          <Brand nameOnPhones={false} />
-          <SaveState status={draft.shownStatus} invalid={draft.invalid} />
-          <span className="spacer" />
-          {status_ && <span className={`badge ${status_.className} hide-m`}>{status_.label}</span>}
-          <div className={styles.actions}>
-            {profile.publicUrl && (
+        <AccountHeader
+          profile={profile}
+          beforeLeave={beforeLeave}
+          saveState={<SaveState status={draft.shownStatus} invalid={draft.invalid} />}
+          badge={
+            status_ && <span className={`badge ${status_.className} hide-m`}>{status_.label}</span>
+          }
+          actions={
+            <>
+              {profile.publicUrl && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  aria-haspopup="dialog"
+                  aria-label="Udostępnij: adres i kod QR"
+                  onClick={() => setSharing(true)}
+                >
+                  <Share2 className="i sm" aria-hidden="true" />
+                  <span className="hide-m">Udostępnij</span>
+                </button>
+              )}
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
-                aria-haspopup="dialog"
-                aria-label="Udostępnij: adres i kod QR"
-                onClick={() => setSharing(true)}
+                className={`btn btn-primary btn-sm${publishing ? ' is-loading' : ''}`}
+                disabled={!canPublish}
+                title={publishHint}
+                aria-describedby={publishHint ? 'ed-publish-hint' : undefined}
+                aria-label={published ? 'Opublikuj zmiany' : 'Opublikuj'}
+                onClick={() => void publish()}
               >
-                <Share2 className="i sm" aria-hidden="true" />
-                <span className="hide-m">Udostępnij</span>
-              </button>
-            )}
-            <button
-              type="button"
-              className={`btn btn-primary btn-sm${publishing ? ' is-loading' : ''}`}
-              disabled={!canPublish}
-              title={publishHint}
-              aria-describedby={publishHint ? 'ed-publish-hint' : undefined}
-              onClick={() => void publish()}
-            >
-              {published ? (
-                <span>
-                  Opublikuj<span className="hide-m"> zmiany</span>
+                <Upload className={`i sm ${styles.publishIcon}`} aria-hidden="true" />
+                <span className={styles.publishLabel}>
+                  {published ? (
+                    <span>
+                      Opublikuj<span className="hide-m"> zmiany</span>
+                    </span>
+                  ) : (
+                    'Opublikuj'
+                  )}
                 </span>
-              ) : (
-                'Opublikuj'
-              )}
-            </button>
-          </div>
-          <AccountMenu beforeLeave={beforeLeave} />
+              </button>
+            </>
+          }
+        />
+      )}
+      {!wizard && (
+        <>
           {publishHint && (
             <span id="ed-publish-hint" className="sr-only">
               {publishHint}
             </span>
           )}
-        </header>
+        </>
       )}
       <div className={`tabs ${styles.tabsM}`} role="tablist" aria-label="Widok edytora">
         {(['edit', 'preview'] as const).map((name) => (

@@ -1,8 +1,0 @@
-/* The signed-in address in the top bar: a long one is shortened, never pushes the buttons. */
-.account {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--text-sm);
-}

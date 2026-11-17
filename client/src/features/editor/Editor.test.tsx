@@ -142,6 +142,24 @@ describe('Editor', () => {
     confirm.mockRestore();
   });
 
+  it('saves a pending change before the logo opens the home page', async () => {
+    const { bodies, user } = setup();
+    await user.type(await input('Nagłówek'), 'UX');
+    await user.click(screen.getByRole('link', { name: 'Profilo DEMO — strona główna' }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/'));
+    expect(bodies).toEqual([{ version: 5, headline: 'UX' }]);
+  });
+
+  it('keeps the editor open when leaving through the logo is cancelled', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const { user } = setup();
+    await user.type(await input('Publiczny e-mail'), 'anna@');
+    await user.click(screen.getByRole('link', { name: 'Profilo DEMO — strona główna' }));
+    expect(confirm).toHaveBeenCalled();
+    expect(router.push).not.toHaveBeenCalled();
+    confirm.mockRestore();
+  });
+
   it('asks before leaving when a change cannot be saved', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     const { user } = setup();
