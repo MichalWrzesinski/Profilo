@@ -13,7 +13,7 @@ export const SAMPLE_PROFILE: PublicProfile = {
     displayName: 'Anna Wiśniewska',
     headline: 'Projektantka UX/UI i konsultantka produktowa',
     bio: 'Od 9 lat pomagam firmom projektować aplikacje, z których ludzie chętnie korzystają. Prowadzę badania z użytkownikami, warsztaty produktowe i projekty interfejsów — od pierwszego szkicu po gotowy design system.',
-    city: 'Kraków',
+    city: 'Bydgoszcz',
     company: 'Studio Wiśniewska',
     position: 'Właścicielka',
     publicEmail: 'kontakt@example.com',
