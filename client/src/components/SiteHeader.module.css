@@ -2,6 +2,12 @@
   display: contents;
 }
 
+@media (max-width: 359px) {
+  .bar :global(.btn) {
+    padding-inline: var(--space-2);
+  }
+}
+
 /* Keeps the place of the buttons while the session is restored (see SiteHeader). */
 .actions[hidden] {
   display: flex;
@@ -15,12 +21,16 @@
   }
 
   /* The logo stays; the wordmark next to it makes room for both buttons. */
-  .bar :global(.brand) > span {
+  .bar :global(.brand) > :global(.brand-name) {
     position: absolute;
     width: 1px;
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  .bar :global(.brand-mobile-demo) {
+    display: inline;
   }
 }
