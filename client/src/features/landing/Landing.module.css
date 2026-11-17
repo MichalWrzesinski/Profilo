@@ -1,6 +1,10 @@
 /* The top bar's bottom line is darker than the gradient's start, so the bar stands out. */
 .topbar {
-  border-bottom-color: color-mix(in srgb, var(--color-blue-400) 55%, var(--color-navy-800));
+  border-bottom-color: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--color-blue-400) 55%, var(--color-navy-800)) 90%,
+    white
+  );
 }
 
 /* A gradient under the top bar, fading into the page background over about 500 px. The
