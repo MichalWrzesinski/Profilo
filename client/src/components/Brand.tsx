@@ -18,14 +18,18 @@ export function Logo({ size }: { size?: number }) {
 }
 
 /**
- * Logo and name, linking home. Crowded top bars (panel, wizard, editor) pass
+ * Logo and name with a small „DEMO” mark, linking home. Crowded top bars (panel, wizard, editor) pass
  * `nameOnPhones={false}`: the name then shows above 860 px only, so they still fit 320 px.
  */
 export function Brand({ nameOnPhones = true }: { nameOnPhones?: boolean }) {
   return (
     <Link className="brand" href="/" aria-label="Profilo — strona główna">
       <Logo />
-      <span className={nameOnPhones ? undefined : 'hide-m'}>Profilo</span>
+      <span className={nameOnPhones ? undefined : 'hide-m'}>
+        Profi
+        {/* „DEMO” (drawn by CSS, decorative) starts above the „l”: this server is a demo. */}
+        <span className="brand-demo">l</span>o
+      </span>
     </Link>
   );
 }

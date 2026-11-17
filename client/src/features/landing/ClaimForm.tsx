@@ -1,5 +1,6 @@
 'use client';
 
+import { Globe } from 'lucide-react';
 import { useId, useState } from 'react';
 import { normaliseNickInput } from '@/lib/nick';
 import styles from './Landing.module.css';
@@ -38,8 +39,11 @@ export function ClaimForm({ host }: { host: string }) {
           Zarezerwuj adres
         </button>
       </form>
-      <p id={addressId} className={styles.address}>
-        {host}/user/<b>{value || PLACEHOLDER}</b>
+      <p id={addressId} className={`hint ${styles.address}`}>
+        <Globe className="i sm" aria-hidden="true" />
+        <span>
+          {host}/user/<b>{value || PLACEHOLDER}</b>
+        </span>
       </p>
     </>
   );

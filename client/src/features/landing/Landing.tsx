@@ -37,9 +37,7 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
       <main className={styles.page}>
         <section className={styles.hero}>
           <div className={styles.intro}>
-            <span className={`badge badge-neutral ${styles.badge}`}>
-              Bezpłatnie · bez kodowania
-            </span>
+            <span className={`badge is-live ${styles.badge}`}>Bezpłatnie · bez kodowania</span>
             <h1>
               Twoja wizytówka w sieci <em>gotowa w 5 minut</em>
             </h1>

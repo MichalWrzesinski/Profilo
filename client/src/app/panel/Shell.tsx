@@ -35,7 +35,9 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
       <header className="topbar">
         <Brand nameOnPhones={false} />
         <span className="spacer" />
-        <span className={`muted hide-m ${styles.account}`}>Zalogowano jako {account?.email}</span>
+        <span className={`muted hide-m ${styles.account}`}>
+          Zalogowano jako <b>{account?.email}</b>
+        </span>
         <ViewProfileLink />
         <div style={{ position: 'relative' }} onKeyDown={onMenuKey}>
           <button

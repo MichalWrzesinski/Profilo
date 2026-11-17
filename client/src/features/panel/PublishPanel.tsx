@@ -1,5 +1,6 @@
 'use client';
 
+import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Alert } from '@/components/Alert';
@@ -12,14 +13,16 @@ import { type OwnerProfile, usePanelProfile } from './PanelProfile';
 import styles from './PublishPanel.module.css';
 
 function badge(profile: OwnerProfile): { className: string; label: string } {
-  if (profile.status === 'blocked') return { className: 'badge-danger', label: 'Zablokowana' };
+  if (profile.status === 'blocked')
+    return { className: 'badge-danger is-off', label: 'Zablokowana' };
   if (profile.status === 'published') {
     return profile.hasUnpublishedChanges
-      ? { className: 'badge-warning', label: 'Masz nieopublikowane zmiany' }
-      : { className: 'badge-success', label: 'Opublikowana' };
+      ? { className: 'badge-warning is-live', label: 'Masz nieopublikowane zmiany' }
+      : { className: 'badge-success is-live', label: 'Opublikowana' };
   }
-  if (profile.status === 'unpublished') return { className: 'badge-neutral', label: 'Ukryta' };
-  return { className: 'badge-neutral', label: 'Nieopublikowana' };
+  if (profile.status === 'unpublished')
+    return { className: 'badge-neutral is-off', label: 'Ukryta' };
+  return { className: 'badge-neutral is-off', label: 'Nieopublikowana' };
 }
 
 const DATE = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -122,7 +125,7 @@ export function PublishPanel() {
           <div className={styles.actions}>
             <button
               type="button"
-              className={`btn btn-primary${busy ? ' is-loading' : ''}`}
+              className={`btn btn-primary btn-sm${busy ? ' is-loading' : ''}`}
               disabled={busy || blocker !== null || nothingToPublish}
               aria-describedby={blocker ? 'publish-blocker' : undefined}
               onClick={() => void run('publish')}
@@ -132,14 +135,14 @@ export function PublishPanel() {
             {published && (
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-secondary btn-sm"
                 disabled={busy}
                 onClick={() => void run('unpublish')}
               >
                 Ukryj stronę
               </button>
             )}
-            <Link className="btn btn-secondary" href="/edytor">
+            <Link className="btn btn-secondary btn-sm" href="/edytor">
               Edytuj stronę
             </Link>
           </div>
@@ -149,7 +152,10 @@ export function PublishPanel() {
             </p>
           )}
           {nothingToPublish && !blocker && (
-            <p className="hint">Wszystkie zmiany są już na stronie</p>
+            <p className="hint">
+              <Check className="i sm" aria-hidden="true" />
+              Wszystkie zmiany są już na stronie
+            </p>
           )}
         </div>
       </section>

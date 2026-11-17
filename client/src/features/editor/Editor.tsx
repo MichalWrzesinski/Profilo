@@ -134,11 +134,12 @@ function SaveState({ status, invalid }: { status: SaveStatus; invalid: boolean }
 }
 
 function badge(profile: OwnerProfile): { className: string; label: string } | null {
-  if (profile.status === 'blocked') return { className: 'badge-danger', label: 'Zablokowana' };
+  if (profile.status === 'blocked')
+    return { className: 'badge-danger is-off', label: 'Zablokowana' };
   if (profile.status !== 'published')
-    return { className: 'badge-neutral', label: 'Nieopublikowana' };
+    return { className: 'badge-neutral is-off', label: 'Nieopublikowana' };
   return profile.hasUnpublishedChanges
-    ? { className: 'badge-warning', label: 'Masz nieopublikowane zmiany' }
+    ? { className: 'badge-warning is-live', label: 'Masz nieopublikowane zmiany' }
     : null;
 }
 
