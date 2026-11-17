@@ -38,7 +38,7 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
           <div className={styles.intro}>
             <span className={`badge is-live ${styles.badge}`}>Bezpłatnie · bez kodowania</span>
             <h1>
-              Twoja wizytówka w sieci <em>gotowa w 5 minut</em>
+              Twoja wizytówka w sieci <em>gotowa w 5 minut</em>
             </h1>
             <p className={styles.lead}>
               Jeden stały adres z opisem, kontaktem i linkami do Twoich profili, który łatwo
