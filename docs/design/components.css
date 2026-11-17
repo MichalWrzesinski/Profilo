@@ -129,6 +129,9 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .topbar .spacer { flex: 1; }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: var(--font-weight-extrabold); font-size: 21px; letter-spacing: -0.03em; color: var(--color-navy-900); }
 .brand img, .brand svg { width: 32px; height: 32px; }
+/* Small „DEMO” above the „l” of the name (the service runs as a demo): decorative, no alt text. */
+.brand-demo { position: relative; }
+.brand-demo::before { content: "DEMO"; content: "DEMO" / ""; position: absolute; left: 0; bottom: calc(100% - 4px); font-size: 9px; font-weight: var(--font-weight-extrabold); letter-spacing: .08em; line-height: 1; color: var(--color-accent-strong); }
 .stepper { flex-shrink: 0; white-space: nowrap; display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); color: var(--color-text-muted); }
 .stepper .bars { display: flex; gap: 4px; }
 .stepper .bars i { width: 28px; height: 4px; border-radius: 2px; background: var(--color-border); }
