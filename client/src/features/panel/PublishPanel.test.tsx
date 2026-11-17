@@ -88,8 +88,9 @@ describe('PublishPanel', () => {
     const actions = screen.getByRole('button', { name: 'Opublikuj zmiany' }).parentElement!;
     expect(actions.querySelectorAll('.btn')).toHaveLength(3);
     for (const button of actions.querySelectorAll('.btn')) {
-      expect(button).not.toHaveClass('btn-sm');
+      expect(button).toHaveClass('btn-sm');
     }
+    expect(unchanged.className).toMatch(/upToDate/);
     const thumbnail = container.querySelector('[aria-hidden="true"]')!;
     expect(
       thumbnail.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING,

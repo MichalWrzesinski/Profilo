@@ -29,7 +29,10 @@ export function ShareCard() {
   const { profile } = usePanelProfile();
   const ready = profile?.status === 'published' && profile.publicUrl && profile.nick;
   return (
-    <section className={`card card-pad ${styles.card}`} aria-labelledby="panel-share">
+    <section
+      className={`card card-pad ${styles.card} ${styles.shareCard}`}
+      aria-labelledby="panel-share"
+    >
       <h2 id="panel-share" className={styles.title}>
         Udostępnij
       </h2>
@@ -74,42 +77,44 @@ function ShareActions({ publicUrl, nick }: { publicUrl: string; nick: string }) 
         aria-label="Adres strony"
         tabIndex={-1}
       />
-      <div className={styles.buttons}>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={() => void copy()}>
-          {copied ? (
-            <Check className="i sm" aria-hidden="true" />
-          ) : (
-            <Copy className="i sm" aria-hidden="true" />
-          )}
-          {copied ? 'Skopiowano' : 'Kopiuj adres'}
-        </button>
-        {(['png', 'svg'] as const).map((format) => (
-          <button
-            key={format}
-            type="button"
-            className={`btn btn-secondary btn-sm${downloading === format ? ' is-loading' : ''}`}
-            aria-disabled={downloading !== null}
-            aria-label={`Pobierz kod QR w formacie ${format.toUpperCase()}`}
-            onClick={() => void download(format)}
-          >
-            <Download className="i sm" aria-hidden="true" />
-            {format.toUpperCase()}
+      <div className={styles.shareFooter}>
+        <div className={styles.buttons}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => void copy()}>
+            {copied ? (
+              <Check className="i sm" aria-hidden="true" />
+            ) : (
+              <Copy className="i sm" aria-hidden="true" />
+            )}
+            {copied ? 'Skopiowano' : 'Kopiuj adres'}
           </button>
-        ))}
+          {(['png', 'svg'] as const).map((format) => (
+            <button
+              key={format}
+              type="button"
+              className={`btn btn-secondary btn-sm${downloading === format ? ' is-loading' : ''}`}
+              aria-disabled={downloading !== null}
+              aria-label={`Pobierz kod QR w formacie ${format.toUpperCase()}`}
+              onClick={() => void download(format)}
+            >
+              <Download className="i sm" aria-hidden="true" />
+              {format.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <div role="status" aria-live="polite" className="sr-only">
+          {copied ? 'Skopiowano link' : ''}
+        </div>
+        {copyFailed && (
+          <p className={`hint ${styles.wrap}`} role="alert">
+            Nie udało się skopiować. Skopiuj adres ręcznie: {address}
+          </p>
+        )}
+        {downloadFailed && (
+          <p className="hint is-error" role="alert">
+            Nie udało się pobrać pliku. Spróbuj ponownie
+          </p>
+        )}
       </div>
-      <div role="status" aria-live="polite" className="sr-only">
-        {copied ? 'Skopiowano link' : ''}
-      </div>
-      {copyFailed && (
-        <p className={`hint ${styles.wrap}`} role="alert">
-          Nie udało się skopiować. Skopiuj adres ręcznie: {address}
-        </p>
-      )}
-      {downloadFailed && (
-        <p className="hint is-error" role="alert">
-          Nie udało się pobrać pliku. Spróbuj ponownie
-        </p>
-      )}
     </>
   );
 }

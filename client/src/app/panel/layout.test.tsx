@@ -125,6 +125,19 @@ describe('Panel', () => {
     expect(screen.queryByRole('navigation', { name: 'Menu konta' })).toBeNull();
   });
 
+  it('closes the account menu when clicking outside it', async () => {
+    mockFetch(api());
+    renderPanel();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Moje konto' }));
+    expect(screen.getByRole('navigation', { name: 'Menu konta' })).toBeInTheDocument();
+
+    await user.click(await screen.findByRole('heading', { name: 'Cześć, Anna' }));
+
+    expect(screen.queryByRole('navigation', { name: 'Menu konta' })).toBeNull();
+  });
+
   it('closes the menu with Escape and gives the focus back', async () => {
     mockFetch(api());
     renderPanel();

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useSession } from '@/lib/session';
 
 /** Shared account navigation; the editor saves pending changes before leaving. */
@@ -17,8 +17,19 @@ export function AccountMenu({
   const pathname = usePathname();
   const { signOut } = useSession();
   const [open, setOpen] = useState(false);
+  const container = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !container.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer);
+  }, [open]);
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key !== 'Escape' || !open) return;
     setOpen(false);
@@ -26,7 +37,7 @@ export function AccountMenu({
   };
 
   return (
-    <div style={{ position: 'relative' }} onKeyDown={onKeyDown}>
+    <div ref={container} style={{ position: 'relative' }} onKeyDown={onKeyDown}>
       <button
         ref={button}
         type="button"
