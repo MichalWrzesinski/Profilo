@@ -51,11 +51,12 @@ function ShareActions({ publicUrl, nick }: { publicUrl: string; nick: string }) 
   const { downloading, downloadFailed, download } = useQrDownload(nick);
   return (
     <>
+      <p className="muted">Kod QR do CV i na wizytówkę</p>
       <div className={styles.qrRow}>
         <div className={styles.qr}>
           {qr.src ? (
             // eslint-disable-next-line @next/next/no-img-element -- blob URL, not optimisable
-            <img src={qr.src} alt={`Kod QR z adresem ${address}`} width={72} height={72} />
+            <img src={qr.src} alt={`Kod QR z adresem ${address}`} width={148} height={148} />
           ) : qr.failed ? (
             <button type="button" className="btn btn-ghost btn-sm" onClick={qr.retry}>
               Wczytaj kod
@@ -64,7 +65,6 @@ function ShareActions({ publicUrl, nick }: { publicUrl: string; nick: string }) 
             <span className="spinner" role="status" aria-label="Wczytywanie kodu QR" />
           )}
         </div>
-        <p className="muted">Kod QR do CV i na wizytówkę</p>
       </div>
       <input
         ref={input}

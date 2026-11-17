@@ -1,5 +1,6 @@
 'use client';
 
+import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Alert } from '@/components/Alert';
@@ -124,7 +125,7 @@ export function PublishPanel() {
           <div className={styles.actions}>
             <button
               type="button"
-              className={`btn btn-primary${busy ? ' is-loading' : ''}`}
+              className={`btn btn-primary btn-sm${busy ? ' is-loading' : ''}`}
               disabled={busy || blocker !== null || nothingToPublish}
               aria-describedby={blocker ? 'publish-blocker' : undefined}
               onClick={() => void run('publish')}
@@ -134,14 +135,14 @@ export function PublishPanel() {
             {published && (
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-secondary btn-sm"
                 disabled={busy}
                 onClick={() => void run('unpublish')}
               >
                 Ukryj stronę
               </button>
             )}
-            <Link className="btn btn-secondary" href="/edytor">
+            <Link className="btn btn-secondary btn-sm" href="/edytor">
               Edytuj stronę
             </Link>
           </div>
@@ -151,7 +152,10 @@ export function PublishPanel() {
             </p>
           )}
           {nothingToPublish && !blocker && (
-            <p className="hint">Wszystkie zmiany są już na stronie</p>
+            <p className="hint">
+              <Check className="i sm" aria-hidden="true" />
+              Wszystkie zmiany są już na stronie
+            </p>
           )}
         </div>
       </section>

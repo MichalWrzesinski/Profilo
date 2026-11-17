@@ -41,7 +41,9 @@ describe('Panel', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Wczytywanie');
     // The address is in the top bar, not in the page.
-    const account = await screen.findByText('Zalogowano jako anna@example.pl');
+    const account = await screen.findByText(
+      (_, element) => element?.textContent === 'Zalogowano jako anna@example.pl',
+    );
     expect(account.closest('header')).not.toBeNull();
   });
 
@@ -61,7 +63,9 @@ describe('Panel', () => {
     );
     renderPanel();
 
-    await screen.findByText('Zalogowano jako anna@example.pl');
+    await screen.findByText(
+      (_, element) => element?.textContent === 'Zalogowano jako anna@example.pl',
+    );
     if (shown) {
       await waitFor(() =>
         expect(screen.getByRole('link', { name: /Zobacz swój profil/ })).toHaveAttribute(

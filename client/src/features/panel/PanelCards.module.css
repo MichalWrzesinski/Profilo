@@ -22,12 +22,12 @@
 }
 
 .qr {
-  width: 84px;
-  height: 84px;
+  width: 168px;
+  height: 168px;
   flex: none;
   display: grid;
   place-items: center;
-  padding: 5px;
+  padding: 10px;
   background: #fff;
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-md);
@@ -35,8 +35,8 @@
 
 .qr img {
   display: block;
-  width: 72px;
-  height: 72px;
+  width: 148px;
+  height: 148px;
 }
 
 .wrap {
