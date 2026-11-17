@@ -1,4 +1,4 @@
-import { LayoutTemplate, Lightbulb, Mail, QrCode } from 'lucide-react';
+import { LayoutTemplate, Mail, QrCode } from 'lucide-react';
 import { Caveat } from 'next/font/google';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ClaimForm } from './ClaimForm';
@@ -45,10 +45,6 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
               wstawisz do CV, stopki e-mail czy na wizytówkę
             </p>
             <ClaimForm host={host} />
-            <p className={`hint ${styles.note}`}>
-              <Lightbulb className="i sm" aria-hidden="true" />
-              Adres możesz zmienić aż do pierwszej publikacji
-            </p>
           </div>
           <a
             className={styles.example}

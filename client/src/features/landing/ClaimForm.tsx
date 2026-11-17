@@ -1,6 +1,6 @@
 'use client';
 
-import { Globe } from 'lucide-react';
+import { Globe, Lightbulb } from 'lucide-react';
 import { useId, useState } from 'react';
 import { normaliseNickInput } from '@/lib/nick';
 import styles from './Landing.module.css';
@@ -39,6 +39,10 @@ export function ClaimForm({ host }: { host: string }) {
           Zarezerwuj adres
         </button>
       </form>
+      <p className={`hint ${styles.note}`}>
+        <Lightbulb className="i sm" aria-hidden="true" />
+        Adres możesz zmienić aż do pierwszej publikacji
+      </p>
       <p id={addressId} className={`hint ${styles.address}`}>
         <Globe className="i sm" aria-hidden="true" />
         <span>
