@@ -77,14 +77,14 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
               >
                 {/* From the caption: a short way right, up, then right again into the phone. */}
                 <path
-                  d="M3 56 H18 Q26 56 26 48 V18 Q26 10 34 10 H58"
+                  d="M3 56 C9 54 14 58 20 55 C28 53 24 44 25 37 C27 27 22 17 29 12 C36 7 47 12 58 10"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
                 <path
-                  d="M51 4 L58 10 L51 16"
+                  d="M51 4 Q55 8 59 10 Q55 13 51 17"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
@@ -99,14 +99,14 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
                 fill="none"
               >
                 <path
-                  d="M3 8 H42 Q50 8 50 16 V56"
+                  d="M3 9 C14 7 26 11 37 9 C48 7 51 13 50 23 C48 34 52 44 50 56"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
                 <path
-                  d="M44 49 L50 56 L56 49"
+                  d="M43 49 Q47 53 50 57 Q54 52 57 49"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
