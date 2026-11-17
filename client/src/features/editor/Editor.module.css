@@ -25,7 +25,8 @@
   background: var(--color-blue-50);
 }
 
-.bar {
+/* Above the preview (device toggle); the page's top bar has its own class, `.top`. */
+.previewBar {
   width: 100%;
   max-width: 620px;
   display: flex;
@@ -143,7 +144,8 @@
 }
 
 @media (max-width: 860px) {
-  .bar {
+  .top,
+  .previewBar {
     gap: var(--space-2);
   }
 

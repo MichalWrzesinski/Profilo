@@ -74,7 +74,7 @@ function EditorLoading({ topbar }: { topbar: boolean }) {
   return (
     <>
       {topbar ? (
-        <header className={`topbar ${styles.bar}`}>
+        <header className={`topbar ${styles.top}`}>
           <Brand withName={false} />
           <span className="save-state" role="status">
             <span className="spinner" aria-hidden="true" />
@@ -242,7 +242,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
   return (
     <>
       {!wizard && (
-        <header className={`topbar ${styles.bar}`}>
+        <header className={`topbar ${styles.top}`}>
           <Brand withName={false} />
           <SaveState status={draft.shownStatus} invalid={draft.invalid} />
           <span className="spacer" />
@@ -518,7 +518,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
           role="tabpanel"
           aria-labelledby="ed-tab-preview"
         >
-          <div className={styles.bar}>
+          <div className={styles.previewBar}>
             <span className="label-caps">Podgląd wersji roboczej</span>
             <DeviceToggle device={device} onChange={setDevice} />
           </div>
