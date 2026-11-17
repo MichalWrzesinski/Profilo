@@ -21,7 +21,7 @@ const FEATURES = [
   {
     icon: QrCode,
     title: 'Stały adres i kod QR',
-    text: 'Adres się nie zmienia, więc linki w CV i na wydrukowanych wizytówkach zawsze działają.',
+    text: 'Adres się nie zmienia, więc linki w CV i na wydrukowanych wizytówkach zawsze działają.',
   },
 ];
 
@@ -38,11 +38,15 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
           <div className={styles.intro}>
             <span className={`badge is-live ${styles.badge}`}>Bezpłatnie · bez kodowania</span>
             <h1>
-              Twoja wizytówka w sieci <em>gotowa w 5 minut</em>
+              Twoja wizytówka w sieci <em>gotowa w 5 minut</em>
             </h1>
             <p className={styles.lead}>
-              Jeden stały adres z opisem, kontaktem i linkami do Twoich profili, który łatwo
-              wstawisz do CV, stopki e-mail czy na wizytówkę
+              Jeden stały adres z opisem, kontaktem i linkami do Twoich profili, który łatwo
+              wstawisz do CV,
+              <br />
+              <span className={styles.nowrap}>stopki e-</span>
+              <wbr />
+              <span className={styles.nowrap}>mail czy na wizytówkę</span>
             </p>
             <ClaimForm host={host} />
           </div>

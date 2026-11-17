@@ -160,6 +160,10 @@
   display: none;
 }
 
+.nowrap {
+  white-space: nowrap;
+}
+
 /* Below about 1180 px the caption would sit on the form's note: it shows on wide screens only. */
 @media (max-width: 1180px) {
   .live {
