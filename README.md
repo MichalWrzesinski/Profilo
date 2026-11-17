@@ -44,4 +44,6 @@ Local credentials in `.env.example` are for local development only.
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+This project is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Michał Wrzesiński.

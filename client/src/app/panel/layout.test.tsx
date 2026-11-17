@@ -2,10 +2,19 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { router, pathname } from '@/test/navigation';
 import { json, mockFetch, SESSION } from '@/test/fetch';
+import { ownerProfile } from '@/test/profiles';
 import { tokenStore } from '@/lib/api/client';
 import { SessionProvider } from '@/lib/session';
 import PanelLayout from './layout';
 import PanelPage from './page';
+
+/** The session for auth calls and an owner profile for GET /me/profile. */
+const api =
+  (profile = ownerProfile()) =>
+  (request: Request) =>
+    new URL(request.url).pathname === '/api/v1/me/profile'
+      ? json(200, profile)
+      : json(200, SESSION);
 
 function renderPanel() {
   render(
@@ -26,7 +35,7 @@ afterEach(() => {
 
 describe('Panel', () => {
   it('restores the session and shows the panel', async () => {
-    mockFetch(() => json(200, SESSION));
+    mockFetch(api());
 
     renderPanel();
 
@@ -39,12 +48,16 @@ describe('Panel', () => {
   it.each([
     ['published', true],
     ['unpublished', false],
-    ['draft', false],
+    ['never_published', false],
   ])('links to the page from the top bar when it is %s: %s', async (status, shown) => {
-    mockFetch((request) =>
-      new URL(request.url).pathname === '/api/v1/me/profile'
-        ? json(200, { status, publicUrl: 'http://localhost:8080/user/anna', nick: 'anna' })
-        : json(200, SESSION),
+    mockFetch(
+      api(
+        ownerProfile({
+          status: status as 'published' | 'unpublished' | 'never_published',
+          publicUrl: 'http://localhost:8080/user/anna',
+          nick: 'anna',
+        }),
+      ),
     );
     renderPanel();
 
@@ -61,7 +74,7 @@ describe('Panel', () => {
         '_blank',
       );
     } else {
-      await screen.findByRole('heading', { name: 'Status strony' });
+      await screen.findByRole('heading', { name: 'Twoja strona' });
       expect(screen.queryByRole('link', { name: /Zobacz swój profil/ })).toBeNull();
     }
   });
@@ -76,7 +89,7 @@ describe('Panel', () => {
 
   it('logs out from the menu', async () => {
     const fetch = mockFetch((request) =>
-      request.url.endsWith('/logout') ? new Response(null, { status: 204 }) : json(200, SESSION),
+      request.url.endsWith('/logout') ? new Response(null, { status: 204 }) : api()(request),
     );
     renderPanel();
     const user = userEvent.setup();
@@ -93,7 +106,7 @@ describe('Panel', () => {
 
   it('links to the account settings and closes the menu', async () => {
     pathname.current = '/panel';
-    mockFetch(() => json(200, SESSION));
+    mockFetch(api());
     renderPanel();
     const user = userEvent.setup();
 
@@ -109,7 +122,7 @@ describe('Panel', () => {
   });
 
   it('closes the menu with Escape and gives the focus back', async () => {
-    mockFetch(() => json(200, SESSION));
+    mockFetch(api());
     renderPanel();
     const user = userEvent.setup();
     const button = await screen.findByRole('button', { name: 'Menu' });
@@ -126,16 +139,16 @@ describe('Panel', () => {
   it('shows the link to the page once it is published from the panel', async () => {
     mockFetch((request) => {
       const path = new URL(request.url).pathname;
-      if (path === '/api/v1/me/profile')
-        return json(200, { status: 'draft', nick: 'anna', version: 1, publicUrl: null });
+      if (path === '/api/v1/me/profile') return json(200, ownerProfile({ nick: 'anna' }));
       if (path === '/api/v1/me/profile/publish')
-        return json(200, {
-          status: 'published',
-          nick: 'anna',
-          version: 1,
-          hasUnpublishedChanges: false,
-          publicUrl: 'http://localhost:8080/user/anna',
-        });
+        return json(
+          200,
+          ownerProfile({
+            status: 'published',
+            nick: 'anna',
+            publicUrl: 'http://localhost:8080/user/anna',
+          }),
+        );
       return json(200, { ...SESSION, account: { ...SESSION.account, emailConfirmed: true } });
     });
     renderPanel();

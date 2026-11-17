@@ -46,6 +46,7 @@
   --color-accent:   #E0592A;   /* logo dot, focus ring, highlights; primary button hover
                                    (owner's decision 2026-11-16, white text 3.73:1, below WCAG AA) */
   --color-accent-soft: #FFB396;
+  --color-accent-strong: #C2410C;   /* the accent as text on tinted backgrounds (≥ 3:1 for large text) */
 
   /* ---------- Neutral / surfaces ---------- */
   --color-bg: #EEF2F7;             /* page background — light, not white */
