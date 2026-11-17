@@ -131,9 +131,7 @@ function SaveState({ status, invalid }: { status: SaveStatus; invalid: boolean }
       ) : (
         <span className="dot" aria-hidden="true" />
       )}
-      <span className={styles.saveLabel}>
-        {invalid && status === 'saved' ? 'Nie zapisano' : STATUS_LABEL[status]}
-      </span>
+      <span>{invalid && status === 'saved' ? 'Nie zapisano' : STATUS_LABEL[status]}</span>
     </span>
   );
 }

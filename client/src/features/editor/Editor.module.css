@@ -170,15 +170,13 @@
   }
 }
 
-@media (max-width: 400px) {
-  /* The dot and its colour stay; the word is still read by screen readers. */
-  .saveLabel {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+.top :global(.save-state) {
+  margin-left: calc(50px - var(--space-4));
+}
+
+@media (max-width: 860px) {
+  .top :global(.save-state) {
+    margin-left: calc(20px - var(--space-2));
   }
 }
 
