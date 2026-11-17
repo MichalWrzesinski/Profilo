@@ -1,8 +1,9 @@
-/* A gradient under the top bar, fading into the page background over about 500 px. */
+/* A gradient under the top bar, fading into the page background over about 500 px. At most
+   12 % blue: the orange headline highlight keeps 3:1 against it (large text, WCAG AA). */
 .page {
   background: linear-gradient(
       180deg,
-      color-mix(in srgb, var(--color-blue-400) 24%, var(--color-bg)) 0,
+      color-mix(in srgb, var(--color-blue-400) 12%, var(--color-bg)) 0,
       var(--color-bg) 500px
     )
     no-repeat;
