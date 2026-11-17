@@ -110,10 +110,10 @@
     0 0 0 4px var(--color-accent-soft);
 }
 
-/* „Zobacz na żywo” with a curved arrow, 50 px to the left of the phone. */
+/* „Zobacz na żywo” with a curved arrow ending 35 px to the left of the phone. */
 .live {
   position: absolute;
-  right: calc(100% + 50px);
+  right: calc(100% + 35px);
   bottom: 24px;
   display: flex;
   align-items: flex-end;
@@ -125,6 +125,7 @@
 
 .live svg {
   margin-bottom: 14px;
+  margin-left: 15px;
 }
 
 /* Below about 1180 px the caption would sit on the form's note: it shows on wide screens only. */
