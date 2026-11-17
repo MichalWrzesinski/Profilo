@@ -41,7 +41,7 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
               Twoja wizytówka w sieci <em>gotowa w 5 minut</em>
             </h1>
             <p className={styles.lead}>
-              Jeden stały adres z opisem, kontaktem i linkami do Twoich profili, który łatwo
+              Jeden stały adres z opisem, kontaktem i linkami do Twoich profili, który łatwo
               wstawisz do CV,
               <br />
               <span className={styles.nowrap}>stopki e-</span>
