@@ -174,6 +174,8 @@ function Footer({ canonicalUrl, abuseEmail }: { canonicalUrl: string; abuseEmail
       <a href={mailtoHref(abuseEmail, `Zgłoszenie nadużycia: ${canonicalUrl}`)}>
         Zgłoś nadużycie
       </a>
+      <Link href="/regulamin" target="_blank" rel="noopener">Regulamin<span className="sr-only">{NEW_TAB}</span></Link>
+      <Link href="/prywatnosc" target="_blank" rel="noopener">Polityka prywatności<span className="sr-only">{NEW_TAB}</span></Link>
     </footer>
   );
 }
