@@ -1,9 +1,9 @@
-/* A gradient under the top bar, fading into the page background over about 500 px. At most
-   12 % blue: the orange headline highlight keeps 3:1 against it (large text, WCAG AA). */
+/* A gradient under the top bar, fading into the page background over about 500 px. The
+   headline highlight uses the darker accent, which keeps 3:1 on its top (large text, WCAG AA). */
 .page {
   background: linear-gradient(
       180deg,
-      color-mix(in srgb, var(--color-blue-400) 12%, var(--color-bg)) 0,
+      color-mix(in srgb, var(--color-blue-400) 35%, var(--color-bg)) 0,
       var(--color-bg) 500px
     )
     no-repeat;
@@ -28,7 +28,7 @@
 
 .hero h1 em {
   font-style: normal;
-  color: var(--color-accent);
+  color: var(--color-accent-strong);
 }
 
 /* The text column is indented like the phone preview on the right. */
