@@ -84,15 +84,50 @@
   margin-top: var(--space-3);
 }
 
+/* The whole phone opens the example page, live, in a new tab. */
+.example {
+  position: relative;
+  display: block;
+  width: max-content;
+  margin: 0 auto;
+  color: var(--color-accent-strong);
+  text-decoration: none;
+  border-radius: 42px;
+}
+
+.example:hover .device {
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 4px var(--color-accent-soft);
+}
+
+/* „Zobacz na żywo” with a curved arrow, 50 px to the left of the phone. */
+.live {
+  position: absolute;
+  right: calc(100% + 50px);
+  bottom: 24px;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  font-size: 30px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.live svg {
+  margin-bottom: 14px;
+}
+
 .device {
+  display: block;
   width: 290px;
   height: 590px;
   border-radius: 42px;
   border: 10px solid var(--color-navy-950);
   overflow: hidden;
-  margin: 0 auto;
   box-shadow: var(--shadow-lg);
   background: var(--color-bg);
+  transition: box-shadow var(--duration-base);
 }
 
 .device iframe {
@@ -183,6 +218,11 @@
 
   .intro {
     padding-left: 0;
+  }
+
+  /* Stacked on phones: no room beside the phone for the caption. */
+  .live {
+    display: none;
   }
 
   .device {

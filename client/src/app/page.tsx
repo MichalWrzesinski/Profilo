@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Landing } from '@/features/landing/Landing';
+import { SAMPLE_PROFILE } from '@/features/landing/sample';
 import { siteUrl } from '@/lib/site';
 
 const TITLE = 'Profilo — Twoja wizytówka w sieci';
@@ -28,5 +29,6 @@ export function generateMetadata(): Metadata {
 export const dynamic = 'force-dynamic';
 
 export default function Home() {
-  return <Landing host={new URL(siteUrl()).host} />;
+  const site = siteUrl();
+  return <Landing host={new URL(site).host} exampleUrl={`${site}/user/${SAMPLE_PROFILE.nick}`} />;
 }
