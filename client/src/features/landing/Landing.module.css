@@ -1,3 +1,13 @@
+/* A gradient under the top bar, fading into the page background over about 500 px. */
+.page {
+  background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-blue-400) 24%, var(--color-bg)) 0,
+      var(--color-bg) 500px
+    )
+    no-repeat;
+}
+
 .hero {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
@@ -20,6 +30,11 @@
   color: var(--color-accent);
 }
 
+/* The text column is indented like the phone preview on the right. */
+.intro {
+  padding-left: 80px;
+}
+
 .badge {
   margin-bottom: var(--space-5);
 }
@@ -40,6 +55,8 @@
   flex: 1;
   min-width: 0;
   border-radius: var(--radius-md) 0 0 var(--radius-md);
+  /* The button closes the field on the right. */
+  border-right: none;
 }
 
 .claim :global(.input) {
@@ -152,6 +169,19 @@
   .claim :global(.input-group),
   .claim :global(.btn) {
     border-radius: var(--radius-md);
+  }
+
+  /* Field and button are stacked on phones: the field keeps its whole border. */
+  .claim :global(.input-group) {
+    border-right: var(--border-width-strong) solid var(--color-border-input);
+  }
+
+  .claim :global(.input-group:focus-within) {
+    border-right-color: var(--color-navy-900);
+  }
+
+  .intro {
+    padding-left: 0;
   }
 
   .device {
