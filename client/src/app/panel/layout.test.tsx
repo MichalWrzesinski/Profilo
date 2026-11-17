@@ -49,7 +49,6 @@ describe('Panel', () => {
     renderPanel();
 
     await screen.findByText('Zalogowano jako anna@example.pl');
-    const link = screen.queryByRole('link', { name: /Zobacz swój profil/ });
     if (shown) {
       await waitFor(() =>
         expect(screen.getByRole('link', { name: /Zobacz swój profil/ })).toHaveAttribute(
@@ -63,7 +62,6 @@ describe('Panel', () => {
       );
     } else {
       await screen.findByRole('heading', { name: 'Status strony' });
-      expect(link).toBeNull();
       expect(screen.queryByRole('link', { name: /Zobacz swój profil/ })).toBeNull();
     }
   });
@@ -123,5 +121,31 @@ describe('Panel', () => {
 
     expect(screen.queryByRole('navigation', { name: 'Menu konta' })).toBeNull();
     expect(button).toHaveFocus();
+  });
+
+  it('shows the link to the page once it is published from the panel', async () => {
+    mockFetch((request) => {
+      const path = new URL(request.url).pathname;
+      if (path === '/api/v1/me/profile')
+        return json(200, { status: 'draft', nick: 'anna', version: 1, publicUrl: null });
+      if (path === '/api/v1/me/profile/publish')
+        return json(200, {
+          status: 'published',
+          nick: 'anna',
+          version: 1,
+          hasUnpublishedChanges: false,
+          publicUrl: 'http://localhost:8080/user/anna',
+        });
+      return json(200, { ...SESSION, account: { ...SESSION.account, emailConfirmed: true } });
+    });
+    renderPanel();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Opublikuj' }));
+
+    expect(await screen.findByRole('link', { name: /Zobacz swój profil/ })).toHaveAttribute(
+      'href',
+      'http://localhost:8080/user/anna',
+    );
   });
 });
