@@ -17,7 +17,7 @@
   height: 220px;
 }
 
-.thumbBox {
+.thumb .thumbBox {
   min-height: 0;
   height: 100%;
   border-radius: 18px;

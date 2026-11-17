@@ -100,7 +100,7 @@ function ShareActions({ publicUrl, nick }: { publicUrl: string; nick: string }) 
         {copied ? 'Skopiowano link' : ''}
       </div>
       {copyFailed && (
-        <p className="hint" role="alert">
+        <p className={`hint ${styles.wrap}`} role="alert">
           Nie udało się skopiować. Skopiuj adres ręcznie: {address}
         </p>
       )}

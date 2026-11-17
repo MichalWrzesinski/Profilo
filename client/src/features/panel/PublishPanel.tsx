@@ -90,7 +90,8 @@ export function PublishPanel() {
         </div>
       )}
       <section className={`card card-pad ${styles.panel}`} aria-labelledby="page-status">
-        <div className={styles.thumb}>
+        {/* A picture of the page, not a second copy to tab or read through. */}
+        <div className={styles.thumb} inert aria-hidden="true">
           <LivePreview
             profile={preview!}
             device="phone"

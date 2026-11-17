@@ -39,6 +39,11 @@
   height: 72px;
 }
 
+.wrap {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
 .buttons {
   display: flex;
   flex-wrap: wrap;
