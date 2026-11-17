@@ -1,6 +1,9 @@
 import type { PublicProfile } from '@/lib/publicProfile';
 
-/** The example page on the landing (mockup `public-split`), made-up data. */
+/**
+ * The example page on the landing (mockup `public-split`), made-up data. The demo server has the
+ * same page live at /user/anna-wisniewska; the landing links to it.
+ */
 export const SAMPLE_PROFILE: PublicProfile = {
   nick: 'anna-wisniewska',
   canonicalUrl: 'https://profilo.pl/user/anna-wisniewska',
@@ -17,26 +20,31 @@ export const SAMPLE_PROFILE: PublicProfile = {
     publicPhone: '+48500000000', // fictional
     layout: 'split',
     accent: 'granat',
-    avatar: null,
+    // Static files in public/przyklad (an AI-generated portrait supplied by the owner).
+    avatar: {
+      id: '00000000-0000-7000-8000-0000000000a1',
+      urls: { '256': '/przyklad/anna-256.jpg', '512': '/przyklad/anna-512.jpg' },
+    },
     background: null,
+    // The same links as the live page on the demo server.
     links: [
       {
         id: '00000000-0000-7000-8000-000000000001',
-        url: 'https://www.linkedin.com/',
+        url: 'https://linkedin.com',
         label: 'LinkedIn',
         service: 'linkedin',
       },
       {
         id: '00000000-0000-7000-8000-000000000002',
-        url: 'https://www.behance.net/',
-        label: 'Portfolio na Behance',
-        service: 'behance',
+        url: 'https://github.com',
+        label: 'GitHub',
+        service: 'github',
       },
       {
         id: '00000000-0000-7000-8000-000000000003',
-        url: 'https://example.com/',
-        label: 'Strona studia',
-        service: 'other',
+        url: 'https://x.com',
+        label: 'X',
+        service: 'x',
       },
     ],
   },
