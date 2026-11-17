@@ -1,9 +1,10 @@
 /* A gradient under the top bar, fading into the page background over about 500 px. The
-   headline highlight uses the darker accent, which keeps 3:1 on its top (large text, WCAG AA). */
+   headline highlight uses the darker accent, which keeps 3:1 on its top (large text, WCAG AA);
+   50 % is as dark as the start can get without changing that colour. */
 .page {
   background: linear-gradient(
       180deg,
-      color-mix(in srgb, var(--color-blue-400) 35%, var(--color-bg)) 0,
+      color-mix(in srgb, var(--color-blue-400) 50%, var(--color-bg)) 0,
       var(--color-bg) 500px
     )
     no-repeat;
@@ -76,6 +77,10 @@
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
+}
+
+.address span {
+  min-width: 0;
 }
 
 .address b {
