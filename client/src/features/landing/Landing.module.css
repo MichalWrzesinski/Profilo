@@ -52,7 +52,7 @@
 .lead {
   font-size: 19px;
   color: var(--color-text-strong-muted);
-  margin-bottom: var(--space-8);
+  margin-bottom: calc(var(--space-8) - 5px);
   max-width: 34ch;
 }
 
@@ -78,8 +78,7 @@
 }
 
 .address {
-  /* The same space above as below (the note's margin-top). */
-  margin-top: var(--space-3);
+  margin-top: calc(var(--space-3) + 5px);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
