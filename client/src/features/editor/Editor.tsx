@@ -364,7 +364,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
             className={`panel-sec${appearanceOpen ? '' : ' is-collapsed'}`}
             aria-labelledby="ed-appearance"
           >
-            <header>
+            <header className={styles.toggleHeader}>
               <h3 id="ed-appearance">
                 <button
                   type="button"
