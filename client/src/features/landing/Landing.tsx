@@ -69,7 +69,13 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
             </span>
             <span className={`${styles.live} ${handwriting.className}`} aria-hidden="true">
               Zobacz na żywo
-              <svg viewBox="0 0 64 64" width="56" height="56" fill="none">
+              <svg
+                className={styles.desktopArrow}
+                viewBox="0 0 64 64"
+                width="56"
+                height="56"
+                fill="none"
+              >
                 {/* From the caption: a short way right, up, then right again into the phone. */}
                 <path
                   d="M3 56 H18 Q26 56 26 48 V18 Q26 10 34 10 H58"
@@ -80,6 +86,28 @@ export function Landing({ host, exampleUrl }: { host: string; exampleUrl: string
                 />
                 <path
                   d="M51 4 L58 10 L51 16"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <svg
+                className={styles.mobileArrow}
+                viewBox="0 0 64 64"
+                width="56"
+                height="56"
+                fill="none"
+              >
+                <path
+                  d="M3 8 H42 Q50 8 50 16 V56"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M44 49 L50 56 L56 49"
                   stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
