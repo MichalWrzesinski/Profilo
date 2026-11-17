@@ -165,6 +165,30 @@ describe('PublicPage', () => {
     expect(container.querySelectorAll('.vcard')).toHaveLength(1);
   });
 
+  it('names a Card link without a mark after its domain', () => {
+    render(
+      <PublicPage
+        profile={publicProfile({
+          layout: 'card',
+          links: [
+            {
+              id: 'l1',
+              service: 'other',
+              label: 'Mój blog',
+              url: 'https://blog.webhome.pl',
+            },
+          ],
+        })}
+      />,
+    );
+
+    const link = screen.getByRole('link', {
+      name: 'BlogWebhome: Mój blog (otwiera się w nowej karcie)',
+    });
+    expect(link).toHaveTextContent('BlogWebhome');
+    expect(link).toHaveClass('is-text');
+  });
+
   it('lists more than six links in a second card below the card', () => {
     const { container } = render(
       <PublicPage profile={publicProfile({ layout: 'card', background, links: links(7) })} />,
