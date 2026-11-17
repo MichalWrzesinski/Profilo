@@ -61,8 +61,12 @@ describe('panel cards', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Kopiuj adres' }));
     expect(writeText).toHaveBeenCalledWith('https://profilo.pl/user/anna');
     expect(await screen.findByRole('button', { name: 'Skopiowano' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'QR PNG' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'QR SVG' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pobierz kod QR w formacie PNG' })).toHaveTextContent(
+      'PNG',
+    );
+    expect(screen.getByRole('button', { name: 'Pobierz kod QR w formacie SVG' })).toHaveTextContent(
+      'SVG',
+    );
   });
 
   it('counts what is still missing', async () => {

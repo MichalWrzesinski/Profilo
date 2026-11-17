@@ -10,7 +10,12 @@ import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
 import { BlockedNotice } from '@/features/panel/BlockedNotice';
 import { draftToPublic } from '@/features/preview/draftToPublic';
 import { ShareDialog } from '@/features/share/ShareDialog';
-import { DeviceToggle, LivePreview, type Device } from '@/features/preview/LivePreview';
+import {
+  defaultDevice,
+  DeviceToggle,
+  LivePreview,
+  type Device,
+} from '@/features/preview/LivePreview';
 import {
   AccentPicker,
   LayoutPicker,
@@ -157,7 +162,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
-  const [device, setDevice] = useState<Device>('desktop');
+  const [device, setDevice] = useState<Device>(defaultDevice);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
   const preview = useMemo(() => draftToPublic(profile, values), [profile, values]);
@@ -364,7 +369,7 @@ function EditorView({ variant, initial, storageKey, emailConfirmed }: ViewProps)
             className={`panel-sec${appearanceOpen ? '' : ' is-collapsed'}`}
             aria-labelledby="ed-appearance"
           >
-            <header>
+            <header className={styles.toggleHeader}>
               <h3 id="ed-appearance">
                 <button
                   type="button"

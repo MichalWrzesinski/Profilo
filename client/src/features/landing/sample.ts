@@ -42,9 +42,9 @@ export const SAMPLE_PROFILE: PublicProfile = {
       },
       {
         id: '00000000-0000-7000-8000-000000000003',
-        url: 'https://x.com',
-        label: 'X',
-        service: 'x',
+        url: 'https://facebook.com',
+        label: 'Facebook',
+        service: 'facebook',
       },
     ],
   },

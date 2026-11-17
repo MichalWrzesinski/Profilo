@@ -89,10 +89,11 @@ function ShareActions({ publicUrl, nick }: { publicUrl: string; nick: string }) 
             type="button"
             className={`btn btn-secondary btn-sm${downloading === format ? ' is-loading' : ''}`}
             aria-disabled={downloading !== null}
+            aria-label={`Pobierz kod QR w formacie ${format.toUpperCase()}`}
             onClick={() => void download(format)}
           >
             <Download className="i sm" aria-hidden="true" />
-            QR {format.toUpperCase()}
+            {format.toUpperCase()}
           </button>
         ))}
       </div>

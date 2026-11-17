@@ -176,3 +176,16 @@ describe('DeviceToggle', () => {
     expect(changes).toEqual(['phone']);
   });
 });
+
+describe('defaultDevice', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each([
+    [true, 'phone'],
+    [false, 'desktop'],
+  ])('narrow screen %s → %s', async (matches, device) => {
+    vi.stubGlobal('matchMedia', () => ({ matches }));
+    const { defaultDevice } = await import('./LivePreview');
+    expect(defaultDevice()).toBe(device);
+  });
+});

@@ -37,6 +37,11 @@
   font-size: var(--text-lg);
 }
 
+.published {
+  /* Three times the usual gap before the buttons. */
+  margin-bottom: calc(var(--space-3) * 2);
+}
+
 .address {
   overflow-wrap: anywhere;
   font-weight: var(--font-weight-semibold);
@@ -49,9 +54,15 @@
 }
 
 .wrap {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
+}
+
+/* Fills the row, so it is as tall as the share card next to it. */
+.wrap > .panel {
+  flex: 1;
 }
 
 @media (max-width: 860px) {

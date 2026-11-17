@@ -90,7 +90,7 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 /* ---------- Chip, badge ---------- */
 .chip { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--tap-target-min); padding: 0 var(--space-4); border-radius: var(--radius-full); border: var(--border-width-strong) solid var(--color-border-strong); background: var(--color-surface); color: var(--color-navy-900); font-weight: var(--font-weight-semibold); font-size: var(--text-sm); cursor: pointer; }
 .chip:hover { border-color: var(--color-navy-900); background: var(--color-blue-100); }
-.badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: var(--font-weight-semibold); white-space: nowrap; }
+.badge { display: inline-flex; align-items: center; gap: 11px; padding: 4px 10px; border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: var(--font-weight-semibold); white-space: nowrap; }
 .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .badge-success { background: var(--color-success-bg); color: var(--color-success); }
 .badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
@@ -141,7 +141,7 @@ textarea.input { min-height: 120px; resize: vertical; line-height: var(--leading
 .brand img, .brand svg { width: 32px; height: 32px; }
 /* Small „DEMO” above the „l” of the name (the service runs as a demo): decorative, no alt text. */
 .brand-demo { position: relative; }
-.brand-demo::before { content: "DEMO"; content: "DEMO" / ""; position: absolute; left: 0; bottom: calc(100% - 4px); font-size: 9px; font-weight: var(--font-weight-extrabold); letter-spacing: .08em; line-height: 1; color: var(--color-accent-strong); }
+.brand-demo::before { content: "DEMO"; content: "DEMO" / ""; position: absolute; left: 8px; bottom: calc(100% - 7px); font-size: 9px; font-weight: var(--font-weight-extrabold); letter-spacing: .08em; line-height: 1; color: var(--color-accent-strong); }
 .stepper { flex-shrink: 0; white-space: nowrap; display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); color: var(--color-text-muted); }
 .stepper .bars { display: flex; gap: 4px; }
 .stepper .bars i { width: 28px; height: 4px; border-radius: 2px; background: var(--color-border); }

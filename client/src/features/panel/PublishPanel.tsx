@@ -117,7 +117,7 @@ export function PublishPanel() {
             </p>
           )}
           {profile.publishedAt && (
-            <p className="hint">
+            <p className={`hint ${styles.published}`}>
               Ostatnia publikacja: {DATE.format(new Date(profile.publishedAt))}
             </p>
           )}

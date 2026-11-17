@@ -115,6 +115,18 @@
   }
 }
 
+/* The whole header of a collapsible section opens and closes it: the button covers it. */
+.toggleHeader {
+  position: relative;
+  cursor: pointer;
+}
+
+.sectionToggle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
 .sectionToggle {
   border: 0;
   background: transparent;
