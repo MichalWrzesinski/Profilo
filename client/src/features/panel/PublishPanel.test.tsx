@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { tokenStore } from '@/lib/api/client';
 import { SessionProvider, useSession } from '@/lib/session';
 import { json, mockFetch, SESSION } from '@/test/fetch';
+import { PanelProfileProvider } from './PanelProfile';
 import { PublishPanel } from './PublishPanel';
 
 type State = {
@@ -56,7 +57,11 @@ function SignedIn({ confirmed }: { confirmed: boolean }) {
   useEffect(() => {
     signIn({ ...SESSION, account: { ...SESSION.account, emailConfirmed: confirmed } });
   }, [signIn, confirmed]);
-  return <PublishPanel />;
+  return (
+    <PanelProfileProvider>
+      <PublishPanel />
+    </PanelProfileProvider>
+  );
 }
 
 function setup(

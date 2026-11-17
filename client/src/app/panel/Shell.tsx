@@ -5,12 +5,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Brand } from '@/components/Brand';
 import { ConfirmEmailBanner } from '@/features/auth/ConfirmEmailBanner';
+import { PanelProfileProvider, ViewProfileLink } from '@/features/panel/PanelProfile';
 import { useRequireSession } from '@/lib/useRequireSession';
+import styles from './Shell.module.css';
 
 export default function PanelLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { status, signOut } = useRequireSession();
+  const { status, account, signOut } = useRequireSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   // A disclosure, not an ARIA menu: Escape closes it and gives the focus back to the button.
@@ -29,10 +31,12 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <>
+    <PanelProfileProvider>
       <header className="topbar">
         <Brand withName={false} />
         <span className="spacer" />
+        <span className={`muted hide-m ${styles.account}`}>Zalogowano jako {account?.email}</span>
+        <ViewProfileLink />
         <div style={{ position: 'relative' }} onKeyDown={onMenuKey}>
           <button
             ref={menuButton}
@@ -82,6 +86,6 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
       </header>
       <ConfirmEmailBanner />
       {children}
-    </>
+    </PanelProfileProvider>
   );
 }

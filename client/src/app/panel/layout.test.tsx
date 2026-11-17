@@ -31,7 +31,41 @@ describe('Panel', () => {
     renderPanel();
 
     expect(screen.getByRole('status')).toHaveTextContent('Wczytywanie');
-    expect(await screen.findByText(/Zalogowano jako anna@example.pl/)).toBeInTheDocument();
+    // The address is in the top bar, not in the page.
+    const account = await screen.findByText('Zalogowano jako anna@example.pl');
+    expect(account.closest('header')).not.toBeNull();
+  });
+
+  it.each([
+    ['published', true],
+    ['unpublished', false],
+    ['draft', false],
+  ])('links to the page from the top bar when it is %s: %s', async (status, shown) => {
+    mockFetch((request) =>
+      new URL(request.url).pathname === '/api/v1/me/profile'
+        ? json(200, { status, publicUrl: 'http://localhost:8080/user/anna', nick: 'anna' })
+        : json(200, SESSION),
+    );
+    renderPanel();
+
+    await screen.findByText('Zalogowano jako anna@example.pl');
+    const link = screen.queryByRole('link', { name: /Zobacz swój profil/ });
+    if (shown) {
+      await waitFor(() =>
+        expect(screen.getByRole('link', { name: /Zobacz swój profil/ })).toHaveAttribute(
+          'href',
+          'http://localhost:8080/user/anna',
+        ),
+      );
+      expect(screen.getByRole('link', { name: /Zobacz swój profil/ })).toHaveAttribute(
+        'target',
+        '_blank',
+      );
+    } else {
+      await screen.findByRole('heading', { name: 'Status strony' });
+      expect(link).toBeNull();
+      expect(screen.queryByRole('link', { name: /Zobacz swój profil/ })).toBeNull();
+    }
   });
 
   it('sends anonymous visitors to the login page', async () => {

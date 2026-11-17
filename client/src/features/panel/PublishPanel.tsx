@@ -1,14 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert } from '@/components/Alert';
 import { api, type Problem } from '@/lib/api/client';
-import type { components } from '@/lib/api/schema';
 import { useSession } from '@/lib/session';
 import { BlockedNotice } from './BlockedNotice';
+import { type OwnerProfile, usePanelProfile } from './PanelProfile';
 import styles from './PublishPanel.module.css';
-
-type OwnerProfile = components['schemas']['OwnerProfile'];
 
 function badge(profile: OwnerProfile): { className: string; label: string } {
   if (profile.status === 'blocked') return { className: 'badge-danger', label: 'Zablokowana' };
@@ -24,17 +22,9 @@ function badge(profile: OwnerProfile): { className: string; label: string } {
 /** Status of the page and the publish / unpublish actions (PRF-US-9, PRF-BR-16, PRF-BR-17). */
 export function PublishPanel() {
   const { account } = useSession();
-  const [profile, setProfile] = useState<OwnerProfile | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const { profile, loadFailed, setProfile } = usePanelProfile();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api
-      .GET('/api/v1/me/profile')
-      .then(({ data }) => (data ? setProfile(data) : setLoadFailed(true)))
-      .catch(() => setLoadFailed(true));
-  }, []);
 
   if (loadFailed) {
     return <Alert variant="danger">Nie udało się wczytać Twojej strony. Odśwież stronę</Alert>;
