@@ -6,6 +6,12 @@ import type { PublicProfile } from '@/lib/publicProfile';
 import styles from './LivePreview.module.css';
 
 export type Device = 'desktop' | 'phone';
+
+/** The preview a visitor most likely wants first: the phone on a phone, the computer otherwise. */
+export function defaultDevice(): Device {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'desktop';
+  return window.matchMedia('(max-width: 860px)').matches ? 'phone' : 'desktop';
+}
 const WIDTH: Record<Device, number> = { desktop: 1280, phone: 390 };
 
 type Props = {
