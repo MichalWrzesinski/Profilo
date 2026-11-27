@@ -4,7 +4,7 @@
 # server-wide: no firewall, no SSH settings, no packages. Idempotent. Run as root (sudo):
 #
 #   sudo bash setup-shared-host.sh <environment> <domain> "<deploy SSH public key>" \
-#       [app_dir=/srv/Profilo] [deploy_user=profilo_deploy] [proxy_port=8090] \
+#       [app_dir=/srv/Profilo] [deploy_user=deploy-profilo] [proxy_port=8090] \
 #       [subnet=172.28.0.0/24]
 #
 # It creates the deploy user (SSH key only, member of the docker group), the app directory
@@ -15,7 +15,7 @@ ENVIRONMENT="${1:?environment (staging|production) required}"
 DOMAIN="${2:?domain required}"
 DEPLOY_PUBKEY="${3:?deploy SSH public key required}"
 APP_DIR="${4:-/srv/Profilo}"
-DEPLOY_USER="${5:-profilo_deploy}"
+DEPLOY_USER="${5:-deploy-profilo}"
 PROXY_PORT="${6:-8090}"
 SUBNET="${7:-172.28.0.0/24}"
 
