@@ -35,7 +35,7 @@ Operations for staging and production. Files: `infra/server/` (`compose.yml`, `C
 
 Staging runs on a VPS shared with other projects (Debian 13, nginx with certbot, Docker already installed). `bootstrap.sh` must **not** run there: it changes the firewall and SSH for the whole server. Instead Profilo's Caddy listens only on `127.0.0.1:8090` without TLS (`TLS_MODE=proxied`, `compose.proxied.yml`), and the host's nginx terminates TLS for the domain and forwards to it. Caddy still sets HSTS, the fallback CSP and the other headers (pages send their own CSP with a script nonce); it trusts `X-Forwarded-For` only from the Docker gateway nginx connects through, and nginx replaces (never appends) that header with the visitor's address.
 
-Once, on your computer and on the server (example values: `profilo.gitpush.app`, `/srv/Profilo`, user `profilo_deploy`, port 8090; `SERVER` = the server's address, `you` = your sudo account):
+Once, on your computer and on the server (example values: `profilo.gitpush.app`, `/srv/Profilo`, user `deploy-profilo`, port 8090; `SERVER` = the server's address, `you` = your sudo account):
 
 1. **Deploy key** (on your computer):
    ```bash
@@ -55,13 +55,13 @@ Once, on your computer and on the server (example values: `profilo.gitpush.app`,
 3. **Prepare the server** — creates the deploy user (key only, `restrict`ed: no tunnels), `/srv/Profilo` and its `.env`; changes nothing else:
    ```bash
    scp infra/server/setup-shared-host.sh infra/server/nginx-profilo.conf you@SERVER:/tmp/
-   ssh -t you@SERVER "sudo bash /tmp/setup-shared-host.sh staging profilo.gitpush.app \"$(cat profilo-staging-deploy.pub)\" /srv/Profilo profilo_deploy 8090"
+   ssh -t you@SERVER "sudo bash /tmp/setup-shared-host.sh staging profilo.gitpush.app \"$(cat profilo-staging-deploy.pub)\" /srv/Profilo deploy-profilo 8090"
    ```
    It stops with a message if the user already exists (and was not created by it), if port 8090 or the Docker subnet `172.28.0.0/16` is taken, or if another Compose project is called `profilo` (pass other values as the 6th and 7th argument).
-   **The `profilo_deploy` user can run Docker, which is root-equivalent on the whole server, including the other projects.** Its key lives only in the GitHub secret; anyone who can change the deploy workflow on GitHub can act as it.
+   **The `deploy-profilo` user can run Docker, which is root-equivalent on the whole server, including the other projects.** Its key lives only in the GitHub secret; anyone who can change the deploy workflow on GitHub can act as it.
 4. **Check the key login** (an `AllowUsers` line in `/etc/ssh/sshd_config` may need the new user):
    ```bash
-   ssh -i profilo-staging-deploy profilo_deploy@SERVER 'docker ps --format "{{.Names}}" | head -3'
+   ssh -i profilo-staging-deploy deploy-profilo@SERVER 'docker ps --format "{{.Names}}" | head -3'
    ```
 5. **GitHub secrets and variables** (from the repository folder on your computer, `gh` logged in):
    ```bash
@@ -69,7 +69,7 @@ Once, on your computer and on the server (example values: `profilo.gitpush.app`,
    gh secret set STAGING_SSH_KEY < profilo-staging-deploy
    ssh-keyscan -t ed25519 SERVER | gh secret set STAGING_SSH_KNOWN_HOSTS
    gh variable set STAGING_DOMAIN --body "profilo.gitpush.app"
-   gh variable set STAGING_SSH_USER --body "profilo_deploy"
+   gh variable set STAGING_SSH_USER --body "deploy-profilo"
    gh variable set STAGING_APP_DIR --body "/srv/Profilo"
    gh variable set STAGING_SMTP_HOST --body "smtp.example.pl"     # your mailbox's SMTP server
    gh variable set STAGING_SMTP_PORT --body "587"                 # or 465
